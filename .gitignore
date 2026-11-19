@@ -1,0 +1,27 @@
+# 환경변수 (예시 파일만 올린다)
+.env
+.env.*
+!.env.example
+
+# Java / Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+*.class
+*.log
+
+# Node / Vite
+node_modules/
+dist/
+*.local
+npm-debug.log*
+
+# IDE
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+
+# OS
+.DS_Store
+Thumbs.db
