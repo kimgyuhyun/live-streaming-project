@@ -192,3 +192,95 @@ public enum ErrorCode {
 | `[예외] PUT /api/channels/{channelId} — should return 400 with code INVALID_INPUT when the name is blank`<br>`[예외] PUT /api/channels/{channelId} — should return 400 with code INVALID_INPUT when the description is missing` | 이름 2자 미만의 한 형태(공백만)와 본문에 소개가 빠진 요청. 검증 없이 DB로 가면 NOT NULL 위반(500)이 난다 |
 
 **커버리지:** AC 4개 / 시나리오 29개 / 미커버 0개
+
+---
+
+## AC 검증
+
+> `harness:ac-verifier` (2026-11-21, HEAD da46ec2). 변이 최대 3번·20분·스크래치 복사본·클래스 단위 테스트로 제한해 띄웠다. 아래는 검증자 출력 원문이다(제목 수준만 한 단계 낮췄다). 구현자는 맨 아래 `### 구현자 이견`에만 쓴다.
+
+### 이슈 #8 AC 검증 결과 (feat/channel/issue-8, HEAD da46ec2)
+
+**AC 4개 모두 충족(✅ 4 / ⚠️ 0 / ❌ 0).** HEAD에서 `Channel*Test` 29개가 모두 통과했습니다. 스크래치 복사본에서 변이 3번을 돌렸고, 세 번 다 테스트가 잡아냈습니다. 가짜 테스트는 없었습니다. 저장소 작업 트리는 건드리지 않았습니다(마지막에 `git status --short` 출력이 비어 있음).
+
+#### AC별 판정
+
+| AC | 판정 | 근거 테스트 (@DisplayName, 파일:줄) | 구현 (파일:줄) | 판단 이유 |
+| --- | --- | --- | --- | --- |
+| 1. 비로그인 시청자가 채널 페이지를 보면 이름·소개·`오프라인`이 보인다 | ✅ | `should show name, description and offline status to a visitor without login` (ChannelIntegrationTest.java:123)<br>`should return name, description and offline status when the channel exists` (ChannelServiceTest.java:46)<br>`should return 200 with name, description and live false when service finds the channel` (ChannelControllerTest.java:78)<br>`should return an empty description when the stored description is null` (ChannelServiceTest.java:56) | SecurityConfig.java:56 (`GET /api/channels/*` permitAll)<br>ChannelController.java:22-25<br>ChannelService.java:17-19, 45-48 (live는 늘 false, NULL 소개는 "")<br>ChannelPage.tsx:23-25 (h1 이름, `live ? '방송 중' : '오프라인'`, 소개) | 통합 테스트가 쿠키 없이 실제 보안 필터를 거쳐 GET을 보내고, name·description·live=false를 단언한다. 변이 1(permitAll 제거)에서 이 테스트를 포함해 5개가 실패했다. 화면은 문서 issue-8.md:169에 기록된 수동 확인만 있다(프론트 테스트 도구는 아직 없음). |
+| 2. 없는 채널 ID를 조회하면 404 | ✅ | `should return 404 with code CHANNEL_NOT_FOUND when a visitor requests a channel id that does not exist` (ChannelIntegrationTest.java:137)<br>`should throw CHANNEL_NOT_FOUND when the channel does not exist` (ChannelServiceTest.java:65)<br>`should return 404 with code CHANNEL_NOT_FOUND and its message when service reports the channel does not exist` (ChannelControllerTest.java:92) | ChannelService.java:39-42 (`findChannel` orElseThrow)<br>ErrorCode.java `CHANNEL_NOT_FOUND(HttpStatus.NOT_FOUND, …)`<br>ChannelPage.tsx:17-18 | 통합 테스트가 실제 DB의 `MAX(id)+1000`으로 비로그인 GET을 보내고, 404와 code를 단언한다. 서비스 테스트는 예외 타입 `BusinessException`과 코드까지 단언한다. |
+| 3. 주인 스트리머가 이름 2자·20자, 소개 0자·200자로 바꾸면 바뀌고, 이름 1자·21자나 소개 201자면 400 | ✅ | 바뀜(실제 DB, 보안 필터 포함): `should save a 20-character name and a 200-character description and show them on the channel page when the owner updates` (ChannelIntegrationTest.java:147), `should save a 2-character name and an empty description and show the description as empty on the channel page` (:163)<br>통과: `should accept a name of 2 characters` (ChannelControllerTest.java:137), `…20 characters` (:145), `should accept an empty description` (:154), `should accept a description of 200 characters` (:162)<br>400: `should return 400 with code INVALID_INPUT when the name has 1 character` (:173), `…name has 21 characters` (:183), `…description has 201 characters` (:193)<br>저장: `should save the new name and description and return them when the owner updates` (ChannelServiceTest.java:106) | UpdateChannelRequest.java:8-12 (`@NotBlank @Size(min=2,max=20)`, `@NotNull @Size(max=200)`)<br>ChannelController.java:27-31 (`@Valid`)<br>ChannelService.java:28-37<br>ChannelMapper.xml:23-26 (UPDATE) | 경계값 6개(2/20, 0/200 통과, 1/21/201 거절)가 모두 각자 테스트로 있다. 통과 쪽 네 값은 통합 테스트가 다시 GET해서 실제로 저장됐는지 확인한다. 한글 20자·200자로 `VARCHAR2(n CHAR)`에 들어가는지도 본다. 400 테스트는 code·message와 함께 `verify(never()).update`까지 단언한다. 변이 3(name `min=1,max=21`, 소개 `max=201`)에서 400 테스트 3개가 모두 실패했다. |
+| 4. 다른 스트리머의 채널을 고치려 하면 403 | ✅ | `should return 403 with code CHANNEL_NOT_OWNER and keep the channel unchanged when another streamer updates it` (ChannelIntegrationTest.java:177)<br>`should throw CHANNEL_NOT_OWNER without saving when another member updates the channel` (ChannelServiceTest.java:118)<br>`should return 403 with code CHANNEL_NOT_OWNER and its message when service rejects a member who does not own the channel` (ChannelControllerTest.java:226) | ChannelService.java:30-32 (`channel.getMemberId() != memberId`면 throw. `memberId`는 primitive `long`이라 박싱 비교 문제 없음)<br>ErrorCode.java `CHANNEL_NOT_OWNER(HttpStatus.FORBIDDEN, …)` | 통합 테스트는 실제 승인 흐름으로 스트리머 둘을 만들고, B의 세션으로 A의 채널에 PUT을 보낸다. 403과 code를 단언하고 이름이 바뀌지 않았는지도 확인한다. 서비스 테스트는 `never().update`를 단언한다. 변이 2(주인 확인을 `if (false)`로)에서 이 두 테스트가 실패했다. |
+
+#### 갭을 메울 시나리오 제안
+
+⚠️·❌가 없어서 반드시 넣어야 할 것은 없습니다. 아래 두 개는 AC 충족에는 영향이 없고, 단언을 조이는 선택 사항입니다.
+
+- [ ] [예외] `ChannelIntegration` — should keep the description unchanged when another streamer updates the channel. 지금 :186은 이름만 확인하고, 소개가 그대로인지는 서비스 테스트의 `never().update`에만 기대고 있다.
+- [ ] [예외] `PUT /api/channels/{channelId}` — should not call the service when the name is blank. :203·:212의 400 테스트에는 다른 400 테스트와 달리 `verify(never())`가 없다.
+
+#### 가짜 테스트
+
+없음.
+- 예외 단언은 모두 `isInstanceOf(BusinessException.class).extracting("code").isEqualTo(ErrorCode.X)` 형태다. `Exception`이나 `RuntimeException`으로 넓게 받는 것이 없다.
+- 비동기 호출이 없다. MockMvc는 동기로 돈다.
+- 단언이 없는 테스트가 없다.
+- ChannelControllerTest의 accept 4개는 목이 요청을 그대로 돌려주는 값을 단언한다(`serviceEchoesRequest`, :65-71). 하지만 핵심 단언은 실제 Bean Validation을 통과한 200 상태다. 저장 여부는 통합 테스트(:147, :163)가 실제 DB로 따로 확인하므로 목 반환값만 검사하는 테스트에 해당하지 않는다.
+
+#### 확인하지 않은 것
+
+- **프론트 화면(ChannelPage·StudioPage):** 코드만 읽었다. 브라우저 확인은 하지 않았고, 구현자의 수동 확인 기록(issue-8.md:162-173)에 기댄다. "스트리머만 쓸 수 있습니다" 문구는 구현자도 보지 않았다고 적어 두었다.
+- **비로그인 PUT → 401:** 시그니처의 에러 표에는 있지만 이 이슈에 해당 테스트가 없다. AC 범위 밖이라 판정에 넣지 않았다.
+- **전체 테스트 스위트:** 지시대로 돌리지 않았다. `Channel*Test`와 변이용 클래스만 돌렸다.
+- **400 경계의 실제 필터 경로:** 1자·21자·201자 거절은 `@WebMvcTest(addFilters=false)`에서만 확인된다. 검증(`@Valid`)은 필터와 관계없는 같은 경로라 충분하다고 판단했다. 통합 테스트로 400을 다시 확인하지는 않았다.
+
+#### 실행한 명령과 읽은 파일
+
+1. `cat .claude/harness.json && gh issue view 8 && git diff origin/main...HEAD --stat` → 설정 확인, AC 4개, 변경 파일 18개
+2. `cat -n docs/result/scenarios/issue-8.md` → 시나리오 29개, AC 대조표, 수동 확인 기록
+3. `cat -n` ChannelController / ChannelService / UpdateChannelRequest / ChannelResponse / ChannelMapper.java / ChannelMapper.xml, `git diff origin/main...HEAD -- backend/src/main/java/com/livestream/common` → 구현과 ErrorCode·SecurityConfig 변경 확인
+4. `cat -n` ChannelServiceTest / ChannelIntegrationTest, `grep` Channel.java의 필드 타입 → 테스트 본문 확인, `memberId`가 `long`임을 확인
+5. `cat -n` ChannelControllerTest.java → 테스트 본문 확인
+6. (백그라운드) `cd backend && JAVA_HOME=… ./gradlew test --tests "Channel*Test"` → BUILD SUCCESSFUL, 44s
+7. `cat -n` ChannelPage.tsx / channels.ts / StudioPage.tsx, `grep "Mapping(\"/api/channels"` → 화면 코드 확인, `/api/channels` 매핑은 ChannelController에만 있음
+8. `git archive HEAD backend | tar -x -C …/scratchpad/verify8` → 스크래치 복사본 생성. 이때 `git status --short` 출력 없음
+9. `sed`로 스크래치의 SecurityConfig에서 GET permitAll 줄 삭제 (변이 1 준비)
+10. `grep -n "2~20\|200자…" spec-fixed.md prd/channel.md` → 확정 사양 69-70줄의 이름 2~20자, 소개 0~200자, 방송 상태 확인
+11. 테스트 결과 XML에서 `<testsuite>` 집계 → 8 + 14 + 7 = 29개, 실패 0
+12. 변이 1: `./gradlew test --tests "ChannelIntegrationTest"` (스크래치) → 7개 중 5개 실패. 비로그인 조회와 404 테스트 포함, 잡힘
+13. 변이 2: SecurityConfig를 `git show HEAD:`로 되돌리고 서비스의 주인 확인을 `if (false)`로 바꾼 뒤 `--tests ChannelServiceTest --tests ChannelIntegrationTest` → 15개 중 2개 실패(`CHANNEL_NOT_OWNER` 서비스·통합), 잡힘
+14. 변이 3: 서비스를 되돌리고 `@Size`를 (1,21)과 201로 넓힌 뒤 `--tests ChannelControllerTest` → 14개 중 3개 실패(1자·21자·201자), 잡힘
+15. `git status --short && git rev-parse --short HEAD` → 출력이 비어 있어 작업 트리 깨끗함, HEAD는 da46ec2
+
+스크래치 복사본: C:\Users\USER\AppData\Local\Temp\claude\1cbb40fc7d76b7b0\ad17e800-4c27-40f4-ae12-ad63eb406d97\scratchpad\verify8\backend. 지금은 변이 3이 적용된 상태로 남아 있습니다(UpdateChannelRequest.java).
+
+### 구현자 이견
+
+- **선택 제안 2개는 넣지 않았다.** 검증자가 ⚠️·❌가 아닌 "단언을 조이는 선택 사항"이라고 적었다. 사전 승인 범위는 ⚠️·❌를 메우는 것이라 1차 검증으로 끝냈다(2차 검증 없음). 첫째(남의 수정에 소개도 그대로)는 서비스가 `update`를 부르지 않는 한 이름·소개가 같이 남는 한 문장 UPDATE라 이름 확인으로 같은 것을 본다. 둘째(공백 이름에 서비스 미호출)는 `@Valid`가 실패하면 컨트롤러 메서드가 불리지 않는 같은 경로를 1자·21자 테스트의 `never()`가 이미 본다.
+- 스크래치 복사본(`verify8`)은 저장소 밖이라 그대로 둔다.
+
+---
+
+## 리팩터
+
+고칠 대상 없음(2026-11-21). 이번 이슈가 바꾼 `backend/src/main` 8개·`frontend/src` 5개 파일을 다섯 기준으로 봤다. 서비스는 공개 메서드 3개에 "채널 찾기"(`findChannel`)·"응답 만들기"(`toResponse`)가 이미 나뉘어 있고, 컨트롤러는 위임 한 줄씩이다. `findMine`의 `orElseThrow`는 `findChannel`과 모양이 같지만 조회 키가 달라(회원 id) 두 번째 반복이라 묶지 않았다. 프론트 화면은 테스트 도구가 없어 손대지 않았다(#12에서 Vitest).
+
+---
+
+## 보안 점검
+
+> `/harness:security-review 8` (2026-11-21, HEAD da46ec2). 대장(`securityExceptions`)은 설정에 없다.
+
+**수집 결과:** 타입 검사(`compileJava compileTestJava`, `tsc -b`) 오류 없음 · `npm audit` 취약점 0 · 비밀값 패턴·알려진 키 접두사 없음 · `.env` 커밋·스테이지 없음 · 프론트 `console.log`·`dangerouslySetInnerHTML`·`VITE_` 없음 · channel 패키지 로그 출력 없음
+
+| 분류 | 파일·줄 | 내용 | 판단 |
+| --- | --- | --- | --- |
+| 🔴 | — | 없음 | |
+| 🟡 | — | 없음 | |
+| ⚪ | `PUT /api/channels/{id}` | 남의 채널 id를 넣는 요청(IDOR) | 서비스가 세션의 회원 id와 채널의 `member_id`를 비교해 403. 통합 테스트(스트리머 둘)와 변이(주인 확인 제거 → 실패)로 확인. 회원 id는 세션에서만 읽는다 |
+| ⚪ | `GET /api/channels/*` permitAll | 비로그인 공개 | 확정 사양("로그인하지 않아도 시청")대로다. 응답은 id·이름·소개·방송 여부뿐이고 주인 회원 id·이메일은 싣지 않는다. 채널 id는 비밀이 아니다(PRD 작은 결정) |
+| ⚪ | `ChannelPage.tsx`·`StudioPage.tsx` | 채널 이름·소개(사용자 입력) 출력 | React가 글자로만 넣는다(`dangerouslySetInnerHTML` 없음) |
+| ⚪ | `/api/studio/**` | 역할 규칙이 세션의 역할을 본다 | 승인되면 #7이 그 회원 세션을 지우므로 낡은 `MEMBER` 세션으로 스튜디오에 못 들어오는 일은 다시 로그인하면 풀린다. 권한이 더 높은 쪽으로 낡는 경로(스트리머 회수)는 기능이 없다 |
+| ⚪ | `UpdateChannelRequest` | 입력 검증 | 이름 `@NotBlank @Size(2,20)`, 소개 `@NotNull @Size(max=200)`. DB 컬럼도 `VARCHAR2(20 CHAR)`·`(200 CHAR)`라 검증을 지나 DB에서 터지는 길이 없다. SQL은 바인드 변수 |
+
+즉시 수정할 항목이 없어 코드를 고치지 않았다. 재스캔 대상 변경도 없다.
