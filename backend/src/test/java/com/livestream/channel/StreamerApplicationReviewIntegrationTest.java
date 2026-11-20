@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -357,6 +358,21 @@ class StreamerApplicationReviewIntegrationTest {
                 @Override
                 public void insert(Channel channel) {
                     throw failure;
+                }
+
+                @Override
+                public Optional<Channel> findById(long id) {
+                    return channelMapper.findById(id);
+                }
+
+                @Override
+                public Optional<Channel> findByMemberId(long memberId) {
+                    return channelMapper.findByMemberId(memberId);
+                }
+
+                @Override
+                public void update(long id, String name, String description) {
+                    channelMapper.update(id, name, description);
                 }
             };
             StreamerApplicationReviewService service = new StreamerApplicationReviewService(
