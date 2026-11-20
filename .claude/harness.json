@@ -1,0 +1,36 @@
+{
+  "scenariosDir": "docs/result/scenarios",
+  "specDoc": "docs/result/spec-fixed.md",
+  "prdDir": "docs/result/prd",
+  "adrDir": "docs/result/adr",
+  "buildOrder": "docs/result/build-order.md",
+  "issuesDoc": "docs/result/issues.md",
+  "glossary": "",
+  "conventions": "CLAUDE.md",
+  "securityExceptions": "",
+  "designTokens": "",
+  "baseBranch": "main",
+  "branch": "feat/{domain}/issue-{N}",
+  "test": "(cd backend && JAVA_HOME=\"${JAVA_HOME:-$HOME/.jdks/liberica-21.0.7}\" ./gradlew test)",
+  "testFile": "(cd backend && JAVA_HOME=\"${JAVA_HOME:-$HOME/.jdks/liberica-21.0.7}\" ./gradlew test --tests \"$(basename {file} .java)*\")",
+  "testGlobs": ["backend/src/test/*Test.java"],
+  "coverage": "",
+  "verify": "(cd backend && JAVA_HOME=\"${JAVA_HOME:-$HOME/.jdks/liberica-21.0.7}\" ./gradlew build) && (cd frontend && npm run lint && npm run build)",
+  "typecheck": "(cd backend && JAVA_HOME=\"${JAVA_HOME:-$HOME/.jdks/liberica-21.0.7}\" ./gradlew compileJava compileTestJava) && (cd frontend && npx tsc -b)",
+  "audit": "(cd frontend && npm audit)",
+  "migrate": "",
+  "e2e": "(cd frontend && npx playwright test)",
+  "e2eInstall": "(cd frontend && npm install -D @playwright/test && npx playwright install chromium)",
+  "e2eReport": "(cd frontend && npx playwright show-report)",
+  "e2eConfig": "frontend/playwright.config.ts",
+  "e2eDir": "frontend/e2e",
+  "srcGlobs": ["backend/src/main", "frontend/src"],
+  "generatedGlobs": ["**/build/**", "**/dist/**", "**/node_modules/**"],
+  "blockedCommands": [
+    {
+      "pattern": "\\bdocker\\b.*\\b(compose\\b.*\\bdown\\b.*\\s(-v|--volumes)\\b|volume\\s+(rm|prune)\\b|system\\s+prune\\b)",
+      "unless": null,
+      "reason": "Oracle 데이터 볼륨이 지워진다. 같은 도커에 다른 프로젝트(ott) 컨테이너·볼륨도 있다. 컨테이너만 내릴 때는 docker compose down(볼륨 옵션 없이)을 쓴다"
+    }
+  ]
+}
