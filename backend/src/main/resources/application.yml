@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: live-streaming
+  # IDE에서 실행할 때 루트의 .env를 읽는다. 컨테이너에서는 compose가 환경변수로 넣는다.
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+  datasource:
+    url: ${DB_URL:jdbc:oracle:thin:@localhost:1521/FREEPDB1}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+
+# nginx가 /api/ 만 Spring으로 넘기므로 actuator도 그 아래에 둔다. 기본 노출은 health 하나뿐이다.
+management:
+  endpoints:
+    web:
+      base-path: /api/actuator
+  endpoint:
+    health:
+      show-components: always

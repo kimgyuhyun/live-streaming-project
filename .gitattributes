@@ -1,0 +1,6 @@
+# 컨테이너(리눅스)에서 도는 파일이 많아서 줄바꿈을 LF로 고정한다.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.jar binary
+*.png binary

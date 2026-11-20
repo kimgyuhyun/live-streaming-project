@@ -1,0 +1,21 @@
+# 여기에 없는 항목은 MediaMTX 기본값을 쓴다.
+# 지금은 누구나 송출할 수 있다. 스트림 키 검증(Spring 연동)은 인프라 검증 단계에서 넣는다 — 그 전에는 서버에 올리지 않는다.
+
+logLevel: info
+
+rtmp: yes
+rtmpAddress: :1935
+
+hls: yes
+hlsAddress: :8888
+hlsVariant: lowLatency
+
+# 쓰지 않는 프로토콜은 끈다.
+rtsp: no
+webrtc: no
+srt: no
+api: no
+metrics: no
+
+paths:
+  all_others:
