@@ -41,6 +41,8 @@ app:
   operator:
     email: ${OPERATOR_EMAIL:}
     password: ${OPERATOR_PASSWORD:}
+  # 스튜디오 OBS 안내의 "서버" 값(PRD channel 송출 주소). 서버 배포 때 실제 주소로 바꾼다
+  obs-server: ${APP_OBS_SERVER:rtmp://localhost/live}
 
 # nginx가 /api/ 만 Spring으로 넘기므로 actuator도 그 아래에 둔다. 기본 노출은 health 하나뿐이다.
 management:

@@ -9,19 +9,24 @@
     </insert>
 
     <select id="findById" resultType="com.livestream.channel.Channel">
-        SELECT id, member_id, name, description
+        SELECT id, member_id, name, description, stream_key_hash, stream_key_prefix
         FROM channel
         WHERE id = #{id}
     </select>
 
     <select id="findByMemberId" resultType="com.livestream.channel.Channel">
-        SELECT id, member_id, name, description
+        SELECT id, member_id, name, description, stream_key_hash, stream_key_prefix
         FROM channel
         WHERE member_id = #{memberId}
     </select>
 
     <update id="update">
         UPDATE channel SET name = #{name}, description = #{description,jdbcType=VARCHAR}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateStreamKey">
+        UPDATE channel SET stream_key_hash = #{hash}, stream_key_prefix = #{prefix}
         WHERE id = #{id}
     </update>
 </mapper>

@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import { fetchMyChannel, updateChannel, type ChannelResponse } from '../api/channels.ts'
 import { errorMessage } from '../api/client.ts'
 import { fetchMe } from '../api/members.ts'
+import StreamKeySection from './StreamKeySection.tsx'
 
 function StudioPage() {
   // RootLayout과 같은 쿼리를 쓴다. 401이면 비로그인으로 본다
@@ -31,6 +32,7 @@ function StudioPage() {
       </p>
       {/* 입력란은 처음 읽은 값으로 채운다. 저장하면 입력한 값이 곧 저장된 값이다 */}
       <ChannelForm channel={channel.data} />
+      <StreamKeySection channelId={channel.data.id} />
     </section>
   )
 }
