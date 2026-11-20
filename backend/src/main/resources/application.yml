@@ -37,6 +37,10 @@ mybatis:
 app:
   # 상태를 바꾸는 요청을 받아 줄 출처(Origin). 로컬은 nginx(:8080)와 Vite 개발 서버(:5173)
   allowed-origins: ${APP_ALLOWED_ORIGINS:http://localhost:8080,http://localhost:5173}
+  # 둘 다 있으면 앱 시작 때 운영자 계정을 만든다. 그 이메일의 계정이 이미 있으면 그대로 둔다(PRD member M4)
+  operator:
+    email: ${OPERATOR_EMAIL:}
+    password: ${OPERATOR_PASSWORD:}
 
 # nginx가 /api/ 만 Spring으로 넘기므로 actuator도 그 아래에 둔다. 기본 노출은 health 하나뿐이다.
 management:
