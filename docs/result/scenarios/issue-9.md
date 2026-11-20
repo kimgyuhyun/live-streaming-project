@@ -116,31 +116,31 @@ class StreamKeyController {
 
 ### 정상
 
-- [ ] [정상] `StreamKeyService.issue` — should return the full key and save only its SHA-256 hash and first 4 characters when the streamer has no key
-- [ ] [정상] `StreamKeyService.issue` — should replace the saved hash and prefix with those of the new key when the streamer already has a key
-- [ ] [정상] `StreamKeyService.issue` — should return the OBS server and the stream key field value made of the channel id and the key
-- [ ] [정상] `StreamKeyService.find` — should return only the first 4 characters and the OBS server when the streamer has a key
-- [ ] [정상] `POST /api/studio/stream-key` — should return 200 with the full key, prefix, OBS server and OBS stream key value when service issues a key
-- [ ] [정상] `GET /api/studio/stream-key` — should return 200 with the key prefix and the OBS server
-- [ ] [정상] `StreamKeyIntegration` — should return the full key and store only its SHA-256 hash and first 4 characters when a streamer without a key issues one
-- [ ] [정상] `StreamKeyIntegration` — should return only the first 4 characters and never the full key when a streamer with a key views it in the studio
-- [ ] [정상] `StreamKeyIntegration` — should store the hash of the new key when a streamer with a key reissues it
-- [ ] [정상] `StreamKeyIntegration` — should return the configured OBS server and the stream key field value with the channel id when a streamer issues a key
+- [x] [정상] `StreamKeyService.issue` — should return the full key and save only its SHA-256 hash and first 4 characters when the streamer has no key
+- [x] [정상] `StreamKeyService.issue` — should replace the saved hash and prefix with those of the new key when the streamer already has a key
+- [x] [정상] `StreamKeyService.issue` — should return the OBS server and the stream key field value made of the channel id and the key
+- [x] [정상] `StreamKeyService.find` — should return only the first 4 characters and the OBS server when the streamer has a key
+- [x] [정상] `POST /api/studio/stream-key` — should return 200 with the full key, prefix, OBS server and OBS stream key value when service issues a key
+- [x] [정상] `GET /api/studio/stream-key` — should return 200 with the key prefix and the OBS server
+- [x] [정상] `StreamKeyIntegration` — should return the full key and store only its SHA-256 hash and first 4 characters when a streamer without a key issues one
+- [x] [정상] `StreamKeyIntegration` — should return only the first 4 characters and never the full key when a streamer with a key views it in the studio
+- [x] [정상] `StreamKeyIntegration` — should store the hash of the new key when a streamer with a key reissues it
+- [x] [정상] `StreamKeyIntegration` — should return the configured OBS server and the stream key field value with the channel id when a streamer issues a key
 
 ### 경계
 
-- [ ] [경계] `StreamKeyService.issue` — should make the key from 32 random bytes written in URL-safe characters
-- [ ] [경계] `StreamKeyService.issue` — should make a different key on each issue
-- [ ] [경계] `StreamKeyService.find` — should return no prefix when the streamer has no key
+- [x] [경계] `StreamKeyService.issue` — should make the key from 32 random bytes written in URL-safe characters
+- [x] [경계] `StreamKeyService.issue` — should make a different key on each issue
+- [x] [경계] `StreamKeyService.find` — should return no prefix when the streamer has no key
 
 ### 예외
 
-- [ ] [예외] `StreamKeyService.issue` — should throw CHANNEL_NOT_FOUND when the member has no channel
-- [ ] [예외] `StreamKeyService.find` — should throw CHANNEL_NOT_FOUND when the member has no channel
-- [ ] [예외] `StreamKeyIntegration` — should return 403 with code FORBIDDEN when a member who is not a streamer issues a key
-- [ ] [예외] `StreamKeyIntegration` — should return 403 with code FORBIDDEN when a member who is not a streamer views the key
-- [ ] [예외] `StreamKeyIntegration` — should return 401 with code UNAUTHENTICATED when a visitor without login issues a key
-- [ ] [예외] `StreamKeyIntegration` — should return 401 with code UNAUTHENTICATED when a visitor without login views the key
+- [x] [예외] `StreamKeyService.issue` — should throw CHANNEL_NOT_FOUND when the member has no channel
+- [x] [예외] `StreamKeyService.find` — should throw CHANNEL_NOT_FOUND when the member has no channel
+- [x] [예외] `StreamKeyIntegration` — should return 403 with code FORBIDDEN when a member who is not a streamer issues a key
+- [x] [예외] `StreamKeyIntegration` — should return 403 with code FORBIDDEN when a member who is not a streamer views the key
+- [x] [예외] `StreamKeyIntegration` — should return 401 with code UNAUTHENTICATED when a visitor without login issues a key
+- [x] [예외] `StreamKeyIntegration` — should return 401 with code UNAUTHENTICATED when a visitor without login views the key
 
 ### 수동 확인 (테스트 도구가 없는 화면 — 시나리오 수에 넣지 않는다)
 
@@ -150,6 +150,17 @@ class StreamKeyController {
 - "발급"을 누르면 전체 키(43자)와 "지금 한 번만 보여 줍니다", 스트림 키 칸 값 `{채널ID}?key={전체 키}`가 보인다
 - 새로고침하면 전체 키는 사라지고 `앞4자리••••`와 "재발급" 버튼, `{채널ID}?key=앞4자리••••`가 보인다
 - "재발급"을 누르면 다른 전체 키가 보인다
+
+**확인 결과 (2026-11-21, Green):** 로컬 개발 DB(compose Oracle)로 `backend`·`frontend` 미리보기를 띄웠다. 앱이 뜨면서 V4가 개발 DB에 적용됐다(이 PR의 마이그레이션은 확정본). #8 수동 확인 때 만든 테스트 스트리머(`st820640@example.com`, 채널 1, 키 없음)로 로그인했다. 키 값은 이 문서에 옮기지 않는다.
+
+- 발급 전 `/studio`: "스트림 키 아직 발급하지 않았습니다", "발급" 버튼, OBS 서버 `rtmp://localhost/live`, 스트림 키 "키를 발급하면 보입니다", "OBS 출력 설정에서 키프레임 간격을 1~2초로 설정하세요" ✅
+- "발급": 전체 키(43자)와 "이 키는 지금 한 번만 보여 줍니다", OBS 스트림 키 칸 값 `1?key={전체 키}`, 버튼이 "재발급"으로 ✅
+- 새로고침: 전체 키는 화면 어디에도 없고(앞 4자리 뒤 조각도 없음) `앞4자리••••`, `1?key=앞4자리••••`, "재발급하면 이전 키는 바로 쓸 수 없습니다" ✅
+- "재발급": 앞의 키와 다른 43자 키, `[A-Za-z0-9_-]`만 ✅
+- 개발 DB `channel` 1번 행: `stream_key_hash` 길이 64, `stream_key_prefix`는 재발급한 키의 앞 4자리 ✅
+- 콘솔 오류는 네트워크 응답(앞선 확인의 400·401·404, 백엔드 기동 전 502)뿐, 스크립트 오류 없음
+
+**401·403 테스트 변이 확인 (Green):** 이 4개는 #8의 `/api/studio/**` 스트리머 전용 규칙이 이미 막고 있어 Red에서 구현 없이 통과했다. `SecurityConfig`에서 이 규칙을 `permitAll()`로 바꾸자 `StreamKeyIntegrationTest` 8개 중 정확히 이 4개만 실패했다. `git checkout --`으로 되돌렸다.
 
 ---
 
