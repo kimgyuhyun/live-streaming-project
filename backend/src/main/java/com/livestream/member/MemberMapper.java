@@ -23,4 +23,6 @@ public interface MemberMapper {
     void updateNickname(@Param("id") long id, @Param("nickname") String nickname);
 
     void updatePasswordHash(@Param("id") long id, @Param("passwordHash") String passwordHash);
+
+    void updateRole(@Param("id") long id, @Param("role") Role role);
 }
