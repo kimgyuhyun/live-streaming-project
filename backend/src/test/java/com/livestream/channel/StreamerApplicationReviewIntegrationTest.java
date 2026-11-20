@@ -374,6 +374,11 @@ class StreamerApplicationReviewIntegrationTest {
                 public void update(long id, String name, String description) {
                     channelMapper.update(id, name, description);
                 }
+
+                @Override
+                public void updateStreamKey(long id, String hash, String prefix) {
+                    channelMapper.updateStreamKey(id, hash, prefix);
+                }
             };
             StreamerApplicationReviewService service = new StreamerApplicationReviewService(
                     applicationMapper, memberMapper, failing, transactionTemplate, sessionRepository);

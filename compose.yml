@@ -13,6 +13,8 @@ x-api: &api
     # 비어 있으면 운영자 계정을 만들지 않는다
     OPERATOR_EMAIL: ${OPERATOR_EMAIL:-}
     OPERATOR_PASSWORD: ${OPERATOR_PASSWORD:-}
+    # 스튜디오 OBS 안내의 송출 서버 주소
+    APP_OBS_SERVER: ${APP_OBS_SERVER:-rtmp://localhost/live}
     JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=60
   depends_on:
     oracle:

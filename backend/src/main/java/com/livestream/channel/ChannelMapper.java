@@ -16,4 +16,6 @@ public interface ChannelMapper {
     Optional<Channel> findByMemberId(long memberId);
 
     void update(@Param("id") long id, @Param("name") String name, @Param("description") String description);
+
+    void updateStreamKey(@Param("id") long id, @Param("hash") String hash, @Param("prefix") String prefix);
 }

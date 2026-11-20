@@ -7,6 +7,9 @@ public class Channel {
     private String name;
     // Oracle은 빈 문자열을 NULL로 저장한다. 빈 소개는 NULL로 읽힌다
     private String description;
+    // 스트림 키의 SHA-256 해시(소문자 16진수)와 앞 4자리. 키가 없으면 null (PRD channel C1)
+    private String streamKeyHash;
+    private String streamKeyPrefix;
 
     public Channel() {
     }
@@ -47,5 +50,21 @@ public class Channel {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getStreamKeyHash() {
+        return streamKeyHash;
+    }
+
+    public void setStreamKeyHash(String streamKeyHash) {
+        this.streamKeyHash = streamKeyHash;
+    }
+
+    public String getStreamKeyPrefix() {
+        return streamKeyPrefix;
+    }
+
+    public void setStreamKeyPrefix(String streamKeyPrefix) {
+        this.streamKeyPrefix = streamKeyPrefix;
     }
 }
