@@ -40,13 +40,18 @@ class SecurityConfig {
                         .logoutRequestMatcher(PathPatternRequestMatcher.withDefaults()
                                 .matcher(HttpMethod.POST, "/api/auth/logout"))
                         .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)))
-                .exceptionHandling(exception -> exception.authenticationEntryPoint(
-                        (request, response, e) -> ErrorResponseWriter.write(response, ErrorCode.UNAUTHENTICATED)))
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(
+                                (request, response, e) -> ErrorResponseWriter.write(response, ErrorCode.UNAUTHENTICATED))
+                        .accessDeniedHandler(
+                                (request, response, e) -> ErrorResponseWriter.write(response, ErrorCode.FORBIDDEN)))
                 .addFilterAfter(new OriginValidationFilter(allowedOrigins), HeaderWriterFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/members").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers("/api/actuator/health").permitAll()
+                        // 로그인할 때 ROLE_{역할} 권한을 싣는다(AuthController)
+                        .requestMatchers("/api/operator/**").hasRole("OPERATOR")
                         .anyRequest().authenticated());
         return http.build();
     }

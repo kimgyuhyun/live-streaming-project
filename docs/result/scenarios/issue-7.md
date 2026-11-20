@@ -149,40 +149,40 @@ public enum ErrorCode {
 
 ### 정상
 
-- [ ] [정상] `StreamerApplicationReviewService.approve` — should mark the application approved, change the role to STREAMER and create a channel named after the nickname with an empty description when the application is pending
-- [ ] [정상] `StreamerApplicationReviewService.approve` — should delete every session of the applicant after the approval is committed
-- [ ] [정상] `StreamerApplicationReviewService.reject` — should mark the application rejected without changing the role or creating a channel when the application is pending
-- [ ] [정상] `GET /api/operator/streamer-applications` — should return 200 with id, nickname, email and applied time of each pending application
-- [ ] [정상] `POST /api/operator/streamer-applications/{id}/approve` — should return 200 with status APPROVED when service approves
-- [ ] [정상] `POST /api/operator/streamer-applications/{id}/reject` — should return 200 with status REJECTED when service rejects
-- [ ] [정상] `StreamerApplicationReviewIntegration` — should list pending applications oldest first with nickname, email and applied time when operator requests the pending list
-- [ ] [정상] `StreamerApplicationReviewIntegration` — should mark the application approved, make the member STREAMER and create one channel named after the nickname with an empty description when operator approves
-- [ ] [정상] `StreamerApplicationReviewIntegration` — should return 401 for the applicant's existing cookie and STREAMER after logging in again when the application is approved
-- [ ] [정상] `StreamerApplicationReviewIntegration` — should mark the application rejected and keep the member role MEMBER when operator rejects
+- [x] [정상] `StreamerApplicationReviewService.approve` — should mark the application approved, change the role to STREAMER and create a channel named after the nickname with an empty description when the application is pending
+- [x] [정상] `StreamerApplicationReviewService.approve` — should delete every session of the applicant after the approval is committed
+- [x] [정상] `StreamerApplicationReviewService.reject` — should mark the application rejected without changing the role or creating a channel when the application is pending
+- [x] [정상] `GET /api/operator/streamer-applications` — should return 200 with id, nickname, email and applied time of each pending application
+- [x] [정상] `POST /api/operator/streamer-applications/{id}/approve` — should return 200 with status APPROVED when service approves
+- [x] [정상] `POST /api/operator/streamer-applications/{id}/reject` — should return 200 with status REJECTED when service rejects
+- [x] [정상] `StreamerApplicationReviewIntegration` — should list pending applications oldest first with nickname, email and applied time when operator requests the pending list
+- [x] [정상] `StreamerApplicationReviewIntegration` — should mark the application approved, make the member STREAMER and create one channel named after the nickname with an empty description when operator approves
+- [x] [정상] `StreamerApplicationReviewIntegration` — should return 401 for the applicant's existing cookie and STREAMER after logging in again when the application is approved
+- [x] [정상] `StreamerApplicationReviewIntegration` — should mark the application rejected and keep the member role MEMBER when operator rejects
 
 ### 경계
 
-- [ ] [경계] `StreamerApplicationReviewIntegration` — should leave approved and rejected applications out of the pending list
-- [ ] [경계] `StreamerApplicationReviewIntegration` — should create one channel and reject the other approval when two approvals of the same application arrive at once
-- [ ] [경계] `StreamerApplicationReviewIntegration` — should reject a second channel for the same member
+- [x] [경계] `StreamerApplicationReviewIntegration` — should leave approved and rejected applications out of the pending list
+- [x] [경계] `StreamerApplicationReviewIntegration` — should create one channel and reject the other approval when two approvals of the same application arrive at once
+- [x] [경계] `StreamerApplicationReviewIntegration` — should reject a second channel for the same member
 
 ### 예외
 
-- [ ] [예외] `StreamerApplicationReviewService.approve` — should throw CHANNEL_APPLICATION_NOT_FOUND when the application does not exist
-- [ ] [예외] `StreamerApplicationReviewService.approve` — should throw CHANNEL_APPLICATION_ALREADY_DECIDED without changing the role, creating a channel or deleting sessions when the application is no longer pending
-- [ ] [예외] `StreamerApplicationReviewService.approve` — should not delete sessions when channel creation fails
-- [ ] [예외] `StreamerApplicationReviewService.reject` — should throw CHANNEL_APPLICATION_NOT_FOUND when the application does not exist
-- [ ] [예외] `StreamerApplicationReviewService.reject` — should throw CHANNEL_APPLICATION_ALREADY_DECIDED when the application is no longer pending
-- [ ] [예외] `POST /api/operator/streamer-applications/{id}/approve` — should return 409 with code CHANNEL_APPLICATION_ALREADY_DECIDED and its message when service reports the application is already decided
-- [ ] [예외] `POST /api/operator/streamer-applications/{id}/approve` — should return 404 with code CHANNEL_APPLICATION_NOT_FOUND and its message when service reports the application does not exist
-- [ ] [예외] `StreamerApplicationReviewIntegration` — should return 409 with code CHANNEL_APPLICATION_ALREADY_DECIDED when operator approves an application that is already approved
-- [ ] [예외] `StreamerApplicationReviewIntegration` — should return 409 with code CHANNEL_APPLICATION_ALREADY_DECIDED when operator rejects an application that is already rejected
-- [ ] [예외] `StreamerApplicationReviewIntegration` — should throw CHANNEL_APPLICATION_ALREADY_DECIDED and keep the application rejected with no channel when a rejected application is approved
-- [ ] [예외] `StreamerApplicationReviewIntegration` — should throw CHANNEL_APPLICATION_ALREADY_DECIDED and keep the application approved when an approved application is rejected
-- [ ] [예외] `StreamerApplicationReviewIntegration` — should keep the application pending, the member role MEMBER and no channel when channel creation fails during approval
-- [ ] [예외] `StreamerApplicationReviewIntegration` — should return 403 with code FORBIDDEN when a member who is not an operator requests the pending list
-- [ ] [예외] `StreamerApplicationReviewIntegration` — should return 403 with code FORBIDDEN and keep the application pending when a member who is not an operator approves
-- [ ] [예외] `StreamerApplicationReviewIntegration` — should return 403 with code FORBIDDEN and keep the application pending when a member who is not an operator rejects
+- [x] [예외] `StreamerApplicationReviewService.approve` — should throw CHANNEL_APPLICATION_NOT_FOUND when the application does not exist
+- [x] [예외] `StreamerApplicationReviewService.approve` — should throw CHANNEL_APPLICATION_ALREADY_DECIDED without changing the role, creating a channel or deleting sessions when the application is no longer pending
+- [x] [예외] `StreamerApplicationReviewService.approve` — should not delete sessions when channel creation fails
+- [x] [예외] `StreamerApplicationReviewService.reject` — should throw CHANNEL_APPLICATION_NOT_FOUND when the application does not exist
+- [x] [예외] `StreamerApplicationReviewService.reject` — should throw CHANNEL_APPLICATION_ALREADY_DECIDED when the application is no longer pending
+- [x] [예외] `POST /api/operator/streamer-applications/{id}/approve` — should return 409 with code CHANNEL_APPLICATION_ALREADY_DECIDED and its message when service reports the application is already decided
+- [x] [예외] `POST /api/operator/streamer-applications/{id}/approve` — should return 404 with code CHANNEL_APPLICATION_NOT_FOUND and its message when service reports the application does not exist
+- [x] [예외] `StreamerApplicationReviewIntegration` — should return 409 with code CHANNEL_APPLICATION_ALREADY_DECIDED when operator approves an application that is already approved
+- [x] [예외] `StreamerApplicationReviewIntegration` — should return 409 with code CHANNEL_APPLICATION_ALREADY_DECIDED when operator rejects an application that is already rejected
+- [x] [예외] `StreamerApplicationReviewIntegration` — should throw CHANNEL_APPLICATION_ALREADY_DECIDED and keep the application rejected with no channel when a rejected application is approved
+- [x] [예외] `StreamerApplicationReviewIntegration` — should throw CHANNEL_APPLICATION_ALREADY_DECIDED and keep the application approved when an approved application is rejected
+- [x] [예외] `StreamerApplicationReviewIntegration` — should keep the application pending, the member role MEMBER and no channel when channel creation fails during approval
+- [x] [예외] `StreamerApplicationReviewIntegration` — should return 403 with code FORBIDDEN when a member who is not an operator requests the pending list
+- [x] [예외] `StreamerApplicationReviewIntegration` — should return 403 with code FORBIDDEN and keep the application pending when a member who is not an operator approves
+- [x] [예외] `StreamerApplicationReviewIntegration` — should return 403 with code FORBIDDEN and keep the application pending when a member who is not an operator rejects
 
 ---
 
