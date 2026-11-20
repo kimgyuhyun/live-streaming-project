@@ -9,19 +9,23 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willAnswer;
 import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.livestream.common.error.BusinessException;
 import com.livestream.common.error.ErrorCode;
+import com.livestream.common.error.RetryLaterException;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -31,10 +35,14 @@ class MemberServiceTest {
     private MemberMapper memberMapper;
     private MemberService memberService;
 
+    private static final String IP = "203.0.113.10";
+    private LoginAttemptLimiter loginAttemptLimiter;
+
     @BeforeEach
     void setUp() {
         memberMapper = mock(MemberMapper.class);
-        memberService = new MemberService(memberMapper, new BCryptPasswordEncoder());
+        loginAttemptLimiter = mock(LoginAttemptLimiter.class);
+        memberService = new MemberService(memberMapper, new BCryptPasswordEncoder(), loginAttemptLimiter);
         // insert는 DB가 만든 id를 채워 준다
         willAnswer(invocation -> {
             invocation.<Member>getArgument(0).setId(1L);
@@ -137,7 +145,7 @@ class MemberServiceTest {
         @Test
         @DisplayName("should return member when password matches")
         void returnsMemberWhenPasswordMatches() {
-            MemberResponse result = memberService.login(new LoginRequest(EMAIL, PASSWORD));
+            MemberResponse result = memberService.login(new LoginRequest(EMAIL, PASSWORD), IP);
 
             assertThat(result).isEqualTo(new MemberResponse(1L, EMAIL, "시청자1", Role.MEMBER));
         }
@@ -146,7 +154,7 @@ class MemberServiceTest {
         @Test
         @DisplayName("should find member by lower-cased email when email contains upper case letters")
         void findsMemberByLowerCasedEmail() {
-            MemberResponse result = memberService.login(new LoginRequest("Viewer@Example.COM", PASSWORD));
+            MemberResponse result = memberService.login(new LoginRequest("Viewer@Example.COM", PASSWORD), IP);
 
             assertThat(result.id()).isEqualTo(1L);
         }
@@ -154,7 +162,7 @@ class MemberServiceTest {
         @Test
         @DisplayName("should throw MEMBER_LOGIN_FAILED when password does not match")
         void rejectsWrongPassword() {
-            assertThatThrownBy(() -> memberService.login(new LoginRequest(EMAIL, "wrong1234")))
+            assertThatThrownBy(() -> memberService.login(new LoginRequest(EMAIL, "wrong1234"), IP))
                     .isInstanceOf(BusinessException.class)
                     .extracting("code")
                     .isEqualTo(ErrorCode.MEMBER_LOGIN_FAILED);
@@ -163,7 +171,7 @@ class MemberServiceTest {
         @Test
         @DisplayName("should throw MEMBER_LOGIN_FAILED when email does not exist")
         void rejectsUnknownEmail() {
-            assertThatThrownBy(() -> memberService.login(new LoginRequest("nobody@example.com", PASSWORD)))
+            assertThatThrownBy(() -> memberService.login(new LoginRequest("nobody@example.com", PASSWORD), IP))
                     .isInstanceOf(BusinessException.class)
                     .extracting("code")
                     .isEqualTo(ErrorCode.MEMBER_LOGIN_FAILED);
@@ -174,9 +182,9 @@ class MemberServiceTest {
         @DisplayName("should compare password against a dummy hash once when email does not exist")
         void comparesDummyHashOnceForUnknownEmail() {
             PasswordEncoder encoder = spy(new BCryptPasswordEncoder());
-            MemberService service = new MemberService(memberMapper, encoder);
+            MemberService service = new MemberService(memberMapper, encoder, loginAttemptLimiter);
 
-            catchThrowable(() -> service.login(new LoginRequest("nobody@example.com", PASSWORD)));
+            catchThrowable(() -> service.login(new LoginRequest("nobody@example.com", PASSWORD), IP));
 
             verify(encoder, times(1)).matches(eq(PASSWORD), anyString());
         }
@@ -186,13 +194,49 @@ class MemberServiceTest {
         @DisplayName("should compare against a bcrypt hash when email does not exist")
         void comparesAgainstBcryptHashForUnknownEmail() {
             PasswordEncoder encoder = spy(new BCryptPasswordEncoder());
-            MemberService service = new MemberService(memberMapper, encoder);
+            MemberService service = new MemberService(memberMapper, encoder, loginAttemptLimiter);
             ArgumentCaptor<String> hash = ArgumentCaptor.forClass(String.class);
 
-            catchThrowable(() -> service.login(new LoginRequest("nobody@example.com", PASSWORD)));
+            catchThrowable(() -> service.login(new LoginRequest("nobody@example.com", PASSWORD), IP));
 
             verify(encoder).matches(eq(PASSWORD), hash.capture());
             assertThat(hash.getValue()).matches("\\$2[aby]?\\$\\d{2}\\$[./0-9A-Za-z]{53}");
+        }
+
+        // 비교 전에 세야 동시에 들어온 요청도 상한까지만 비교한다 (PRD member M3)
+        @Test
+        @DisplayName("should count the attempt before comparing password")
+        void countsBeforeComparing() {
+            PasswordEncoder encoder = spy(new BCryptPasswordEncoder());
+            given(memberMapper.findByEmail(EMAIL)).willReturn(Optional.of(storedMember()));
+            MemberService service = new MemberService(memberMapper, encoder, loginAttemptLimiter);
+
+            service.login(new LoginRequest(EMAIL, PASSWORD), IP);
+
+            InOrder order = inOrder(loginAttemptLimiter, encoder);
+            order.verify(loginAttemptLimiter).acquire(EMAIL, IP);
+            order.verify(encoder).matches(eq(PASSWORD), anyString());
+        }
+
+        @Test
+        @DisplayName("should report success to the limiter when password matches")
+        void reportsSuccess() {
+            memberService.login(new LoginRequest(EMAIL, PASSWORD), IP);
+
+            verify(loginAttemptLimiter).succeeded(EMAIL, IP);
+        }
+
+        @Test
+        @DisplayName("should not compare password when attempts are blocked")
+        void skipsComparisonWhenBlocked() {
+            PasswordEncoder encoder = spy(new BCryptPasswordEncoder());
+            MemberService service = new MemberService(memberMapper, encoder, loginAttemptLimiter);
+            willThrow(new RetryLaterException(ErrorCode.MEMBER_LOGIN_BLOCKED, 600))
+                    .given(loginAttemptLimiter).acquire(EMAIL, IP);
+
+            catchThrowable(() -> service.login(new LoginRequest(EMAIL, PASSWORD), IP));
+
+            verify(encoder, never()).matches(anyString(), anyString());
         }
     }
 

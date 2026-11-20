@@ -9,6 +9,8 @@ public enum ErrorCode {
     UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다"),
     FORBIDDEN_ORIGIN(HttpStatus.FORBIDDEN, "허용되지 않은 출처의 요청입니다"),
     MEMBER_LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 맞지 않습니다"),
+    // %d는 남은 분. RetryLaterException으로만 던진다
+    MEMBER_LOGIN_BLOCKED(HttpStatus.TOO_MANY_REQUESTS, "로그인 시도가 너무 많습니다. %d분 후 다시 시도해 주세요"),
     MEMBER_EMAIL_DUPLICATED(HttpStatus.CONFLICT, "이미 가입된 이메일입니다"),
     MEMBER_NICKNAME_DUPLICATED(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다"),
     CHANNEL_APPLICATION_PENDING(HttpStatus.CONFLICT, "이미 대기 중인 스트리머 신청이 있습니다"),
