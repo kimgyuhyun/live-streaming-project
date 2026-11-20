@@ -7,6 +7,8 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.session.FindByIndexNameSessionRepository;
+import org.springframework.session.Session;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -15,14 +17,17 @@ public class MemberService {
     private final MemberMapper memberMapper;
     private final PasswordEncoder passwordEncoder;
     private final LoginAttemptLimiter loginAttemptLimiter;
+    private final FindByIndexNameSessionRepository<? extends Session> sessionRepository;
     // 없는 이메일로 로그인할 때 비교할 해시. 어떤 비밀번호와도 맞지 않는다
     private final String dummyHash;
 
     public MemberService(MemberMapper memberMapper, PasswordEncoder passwordEncoder,
-                         LoginAttemptLimiter loginAttemptLimiter) {
+                         LoginAttemptLimiter loginAttemptLimiter,
+                         FindByIndexNameSessionRepository<? extends Session> sessionRepository) {
         this.memberMapper = memberMapper;
         this.passwordEncoder = passwordEncoder;
         this.loginAttemptLimiter = loginAttemptLimiter;
+        this.sessionRepository = sessionRepository;
         this.dummyHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
@@ -64,6 +69,14 @@ public class MemberService {
 
     public MemberResponse findMe(long memberId) {
         return toResponse(memberMapper.findById(memberId).orElseThrow());
+    }
+
+    public MemberResponse changeNickname(long memberId, ChangeNicknameRequest request) {
+        throw new UnsupportedOperationException("not implemented");
+    }
+
+    public void changePassword(long memberId, ChangePasswordRequest request, String currentSessionId) {
+        throw new UnsupportedOperationException("not implemented");
     }
 
     private static MemberResponse toResponse(Member member) {

@@ -29,6 +29,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.session.FindByIndexNameSessionRepository;
+import org.springframework.session.Session;
 import org.springframework.test.web.servlet.MockMvc;
 
 // 진짜 Oracle·Redis 컨테이너 위에서 저장·동시성·보안 필터 연결을 본다.
@@ -55,6 +57,9 @@ class MemberSignUpIntegrationTest {
 
     @Autowired
     private LoginAttemptLimiter loginAttemptLimiter;
+
+    @Autowired
+    private FindByIndexNameSessionRepository<? extends Session> sessionRepository;
 
     private static String unique() {
         return String.valueOf(ThreadLocalRandom.current().nextInt(100_000, 1_000_000));
@@ -88,8 +93,18 @@ class MemberSignUpIntegrationTest {
             public Optional<Member> findById(long id) {
                 return memberMapper.findById(id);
             }
+
+            @Override
+            public void updateNickname(long id, String nickname) {
+                memberMapper.updateNickname(id, nickname);
+            }
+
+            @Override
+            public void updatePasswordHash(long id, String passwordHash) {
+                memberMapper.updatePasswordHash(id, passwordHash);
+            }
         };
-        return new MemberService(skipping, passwordEncoder, loginAttemptLimiter);
+        return new MemberService(skipping, passwordEncoder, loginAttemptLimiter, sessionRepository);
     }
 
     @Nested

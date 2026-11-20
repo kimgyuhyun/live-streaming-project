@@ -1,11 +1,13 @@
 package com.livestream.member;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -28,5 +30,18 @@ class MemberController {
     @GetMapping("/me")
     MemberResponse me(@AuthenticationPrincipal LoginMember loginMember) {
         return memberService.findMe(loginMember.id());
+    }
+
+    @PutMapping("/me/nickname")
+    MemberResponse changeNickname(@AuthenticationPrincipal LoginMember loginMember,
+                                  @Valid @RequestBody ChangeNicknameRequest request) {
+        throw new UnsupportedOperationException("not implemented");
+    }
+
+    @PutMapping("/me/password")
+    ResponseEntity<Void> changePassword(@AuthenticationPrincipal LoginMember loginMember,
+                                        @Valid @RequestBody ChangePasswordRequest request,
+                                        HttpServletRequest httpRequest) {
+        throw new UnsupportedOperationException("not implemented");
     }
 }
