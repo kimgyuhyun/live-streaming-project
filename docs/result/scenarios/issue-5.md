@@ -80,26 +80,26 @@ HTTP 경로가 없어 새 에러 코드를 만들지 않는다.
 
 ### 정상
 
-- [ ] [정상] `run` — should save an OPERATOR account with the hashed password when both values are set and the email has no account
-- [ ] [정상] `run` — should not save anything when an account with the email already exists
-- [ ] [정상] `OperatorAccountIntegration` — should return role OPERATOR from my info when logging in with the operator password after the initializer runs
-- [ ] [정상] `OperatorAccountIntegration` — should still log in with the old password when the initializer runs again with a different password
+- [x] [정상] `run` — should save an OPERATOR account with the hashed password when both values are set and the email has no account
+- [x] [정상] `run` — should not save anything when an account with the email already exists
+- [x] [정상] `OperatorAccountIntegration` — should return role OPERATOR from my info when logging in with the operator password after the initializer runs
+- [x] [정상] `OperatorAccountIntegration` — should still log in with the old password when the initializer runs again with a different password
 
 ### 경계
 
-- [ ] [경계] `run` — should check and save the email in lowercase when the email has uppercase letters
-- [ ] [경계] `run` — should not save anything when the password is empty
-- [ ] [경계] `run` — should not save anything when the email is empty
-- [ ] [경계] `run` — should not save anything when both values are empty
-- [ ] [경계] `OperatorAccountIntegration` — should keep role MEMBER when a member signed up with the operator email before the initializer runs
-- [ ] [경계] `OperatorAccountIntegration` — should leave one account and finish both without exception when two initializers run at once
-- [ ] [경계] `OperatorAccountIntegration` — should finish without exception and leave one account when the existence check passes but the account is already saved
-- [ ] [경계] `OperatorAccountIntegration` — should start the application with the initializer registered when operator values are not set
+- [x] [경계] `run` — should check and save the email in lowercase when the email has uppercase letters
+- [x] [경계] `run` — should not save anything when the password is empty
+- [x] [경계] `run` — should not save anything when the email is empty
+- [x] [경계] `run` — should not save anything when both values are empty
+- [x] [경계] `OperatorAccountIntegration` — should keep role MEMBER when a member signed up with the operator email before the initializer runs
+- [x] [경계] `OperatorAccountIntegration` — should leave one account and finish both without exception when two initializers run at once
+- [x] [경계] `OperatorAccountIntegration` — should finish without exception and leave one account when the existence check passes but the account is already saved
+- [x] [경계] `OperatorAccountIntegration` — should start the application with the initializer registered when operator values are not set
 
 ### 예외
 
-- [ ] [예외] `run` — should finish without exception when saving hits a duplicate and the email now has an account
-- [ ] [예외] `run` — should throw DuplicateKeyException when saving hits a duplicate and the email still has no account
+- [x] [예외] `run` — should finish without exception when saving hits a duplicate and the email now has an account
+- [x] [예외] `run` — should throw DuplicateKeyException when saving hits a duplicate and the email still has no account
 
 ---
 
@@ -119,3 +119,27 @@ HTTP 경로가 없어 새 에러 코드를 만들지 않는다.
 - `[예외] run — should throw DuplicateKeyException when ... the email still has no account` — 시그니처 판단(닉네임이 겹치면 앱이 뜨지 않는다)
 
 **커버리지:** AC 5개 / 시나리오 14개 / 미커버 0개 (AC 5는 테스트가 아닌 파일 확인)
+
+---
+
+## Green 기록
+
+**테스트:** 전체 96개 통과(이 이슈 14개: 단위 8 · 통합 6). 커버리지 명령(`coverage`)은 설정이 비어 있어 재지 않았다.
+
+**변이 확인** — 구현을 잠깐 망가뜨려 테스트가 잡는지 본 뒤 되돌렸다.
+
+| 망가뜨린 것 | 실패한 테스트 |
+| --- | --- |
+| 이메일 소문자 변환을 뺌 | `should check and save the email in lowercase ...` |
+| 빈 값 확인 `||`를 `&&`로 | `should not save anything when the password is empty`, `... when the email is empty` |
+| 중복 오류를 항상 삼킴 | `should throw DuplicateKeyException when ... the email still has no account` |
+| (Red~Green 중간) 중복 오류 처리 없음 | 동시 실행 통합 테스트 2개, 단위 1개 |
+| (Red~Green 중간) `@Component` 없음 | `should start the application with the initializer registered ...` |
+
+**수동 확인** — 환경변수 → 설정값 → 시작 때 실행으로 이어지는지. 공유 개발 DB를 건드리지 않게 Testcontainers DB로 띄웠다(임시 실행 클래스, 확인 후 지움).
+
+- `OPERATOR_EMAIL=Boss@Example.com`, `OPERATOR_PASSWORD=opPass1234`로 `bootTestRun`(포트 18085)
+- `POST /api/auth/login` (`boss@example.com` / 설정한 비밀번호) → 200, `GET /api/members/me` → `{"email":"boss@example.com","nickname":"운영자","role":"OPERATOR"}`
+- 틀린 비밀번호 → 401
+
+**AC 5** — `.env.example` 끝에 `OPERATOR_EMAIL=`·`OPERATOR_PASSWORD=`를 값 없이 추가했다. `compose.yml` 공통 api 블록에도 두 값을 넘긴다(비어 있으면 만들지 않는다).
