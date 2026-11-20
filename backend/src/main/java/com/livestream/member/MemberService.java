@@ -39,7 +39,7 @@ public class MemberService {
         } catch (DuplicateKeyException e) {
             throw new BusinessException(duplicateCodeOf(e));
         }
-        return new MemberResponse(member.getId(), member.getEmail(), member.getNickname(), member.getRole());
+        return toResponse(member);
     }
 
     // 이메일을 소문자로 바꿔 찾는다. 없는 이메일이면 가짜 해시와 한 번 비교한 뒤 MEMBER_LOGIN_FAILED
