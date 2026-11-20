@@ -35,13 +35,15 @@ class MemberController {
     @PutMapping("/me/nickname")
     MemberResponse changeNickname(@AuthenticationPrincipal LoginMember loginMember,
                                   @Valid @RequestBody ChangeNicknameRequest request) {
-        throw new UnsupportedOperationException("not implemented");
+        return memberService.changeNickname(loginMember.id(), request);
     }
 
+    // 지금 세션 ID를 넘겨 이 기기만 로그인을 유지한다. 로그인한 요청이라 세션이 늘 있다
     @PutMapping("/me/password")
     ResponseEntity<Void> changePassword(@AuthenticationPrincipal LoginMember loginMember,
                                         @Valid @RequestBody ChangePasswordRequest request,
                                         HttpServletRequest httpRequest) {
-        throw new UnsupportedOperationException("not implemented");
+        memberService.changePassword(loginMember.id(), request, httpRequest.getSession(false).getId());
+        return ResponseEntity.noContent().build();
     }
 }

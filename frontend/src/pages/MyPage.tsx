@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { errorMessage } from '../api/client.ts'
-import { fetchMe, type Role } from '../api/members.ts'
+import { changeNickname, changePassword, fetchMe, type Role } from '../api/members.ts'
 import { applyForStreamer, fetchMyApplication, type ApplicationStatus } from '../api/streamerApplications.ts'
 
 const ROLE_LABEL: Record<Role, string> = { MEMBER: '회원', STREAMER: '스트리머', OPERATOR: '운영자' }
@@ -58,7 +59,82 @@ function MyPage() {
         </button>
       )}
       {mutation.isError && <p role="alert">{errorMessage(mutation.error)}</p>}
+      <NicknameForm />
+      <PasswordForm />
     </section>
+  )
+}
+
+// 성공하면 ['me']를 다시 불러 이 화면과 머리글의 닉네임이 함께 바뀐다
+function NicknameForm() {
+  const queryClient = useQueryClient()
+  const [nickname, setNickname] = useState('')
+  const mutation = useMutation({
+    mutationFn: changeNickname,
+    onSuccess: () => {
+      setNickname('')
+      return queryClient.invalidateQueries({ queryKey: ['me'] })
+    },
+  })
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    mutation.mutate(nickname)
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <h2>닉네임 변경</h2>
+      <label>
+        새 닉네임
+        <input value={nickname} onChange={(e) => setNickname(e.target.value)} required />
+      </label>
+      {mutation.isError && <p role="alert">{errorMessage(mutation.error)}</p>}
+      <button type="submit" disabled={mutation.isPending}>
+        닉네임 변경
+      </button>
+    </form>
+  )
+}
+
+function PasswordForm() {
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const mutation = useMutation({
+    mutationFn: changePassword,
+    onSuccess: () => {
+      setCurrentPassword('')
+      setNewPassword('')
+    },
+  })
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    mutation.mutate({ currentPassword, newPassword })
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <h2>비밀번호 변경</h2>
+      <label>
+        현재 비밀번호
+        <input
+          type="password"
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          required
+        />
+      </label>
+      <label>
+        새 비밀번호
+        <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+      </label>
+      {mutation.isError && <p role="alert">{errorMessage(mutation.error)}</p>}
+      {mutation.isSuccess && <p role="status">비밀번호를 바꿨습니다. 다른 기기에서는 로그아웃됩니다</p>}
+      <button type="submit" disabled={mutation.isPending}>
+        비밀번호 변경
+      </button>
+    </form>
   )
 }
 

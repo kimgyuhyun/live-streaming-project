@@ -26,4 +26,12 @@
         FROM member
         WHERE id = #{id}
     </select>
+
+    <update id="updateNickname">
+        UPDATE member SET nickname = #{nickname} WHERE id = #{id}
+    </update>
+
+    <update id="updatePasswordHash">
+        UPDATE member SET password_hash = #{passwordHash} WHERE id = #{id}
+    </update>
 </mapper>
