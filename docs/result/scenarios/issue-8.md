@@ -113,41 +113,41 @@ public enum ErrorCode {
 
 ### 정상
 
-- [ ] [정상] `ChannelService.find` — should return name, description and offline status when the channel exists
-- [ ] [정상] `ChannelService.findMine` — should return the channel of the member when the member owns one
-- [ ] [정상] `ChannelService.update` — should save the new name and description and return them when the owner updates
-- [ ] [정상] `GET /api/channels/{channelId}` — should return 200 with name, description and live false when service finds the channel
-- [ ] [정상] `GET /api/studio/channel` — should return 200 with the channel of the logged-in streamer
-- [ ] [정상] `PUT /api/channels/{channelId}` — should return 200 with the updated channel when the owner sends a valid name and description
-- [ ] [정상] `ChannelIntegration` — should show name, description and offline status to a visitor without login
-- [ ] [정상] `ChannelIntegration` — should save a 20-character name and a 200-character description and show them on the channel page when the owner updates
-- [ ] [정상] `ChannelIntegration` — should return the channel of the logged-in streamer from the studio
+- [x] [정상] `ChannelService.find` — should return name, description and offline status when the channel exists
+- [x] [정상] `ChannelService.findMine` — should return the channel of the member when the member owns one
+- [x] [정상] `ChannelService.update` — should save the new name and description and return them when the owner updates
+- [x] [정상] `GET /api/channels/{channelId}` — should return 200 with name, description and live false when service finds the channel
+- [x] [정상] `GET /api/studio/channel` — should return 200 with the channel of the logged-in streamer
+- [x] [정상] `PUT /api/channels/{channelId}` — should return 200 with the updated channel when the owner sends a valid name and description
+- [x] [정상] `ChannelIntegration` — should show name, description and offline status to a visitor without login
+- [x] [정상] `ChannelIntegration` — should save a 20-character name and a 200-character description and show them on the channel page when the owner updates
+- [x] [정상] `ChannelIntegration` — should return the channel of the logged-in streamer from the studio
 
 ### 경계
 
-- [ ] [경계] `ChannelService.find` — should return an empty description when the stored description is null
-- [ ] [경계] `PUT /api/channels/{channelId}` — should accept a name of 2 characters
-- [ ] [경계] `PUT /api/channels/{channelId}` — should accept a name of 20 characters
-- [ ] [경계] `PUT /api/channels/{channelId}` — should accept an empty description
-- [ ] [경계] `PUT /api/channels/{channelId}` — should accept a description of 200 characters
-- [ ] [경계] `PUT /api/channels/{channelId}` — should return 400 with code INVALID_INPUT when the name has 1 character
-- [ ] [경계] `PUT /api/channels/{channelId}` — should return 400 with code INVALID_INPUT when the name has 21 characters
-- [ ] [경계] `PUT /api/channels/{channelId}` — should return 400 with code INVALID_INPUT when the description has 201 characters
-- [ ] [경계] `ChannelIntegration` — should save a 2-character name and an empty description and show the description as empty on the channel page
+- [x] [경계] `ChannelService.find` — should return an empty description when the stored description is null
+- [x] [경계] `PUT /api/channels/{channelId}` — should accept a name of 2 characters
+- [x] [경계] `PUT /api/channels/{channelId}` — should accept a name of 20 characters
+- [x] [경계] `PUT /api/channels/{channelId}` — should accept an empty description
+- [x] [경계] `PUT /api/channels/{channelId}` — should accept a description of 200 characters
+- [x] [경계] `PUT /api/channels/{channelId}` — should return 400 with code INVALID_INPUT when the name has 1 character
+- [x] [경계] `PUT /api/channels/{channelId}` — should return 400 with code INVALID_INPUT when the name has 21 characters
+- [x] [경계] `PUT /api/channels/{channelId}` — should return 400 with code INVALID_INPUT when the description has 201 characters
+- [x] [경계] `ChannelIntegration` — should save a 2-character name and an empty description and show the description as empty on the channel page
 
 ### 예외
 
-- [ ] [예외] `ChannelService.find` — should throw CHANNEL_NOT_FOUND when the channel does not exist
-- [ ] [예외] `ChannelService.findMine` — should throw CHANNEL_NOT_FOUND when the member has no channel
-- [ ] [예외] `ChannelService.update` — should throw CHANNEL_NOT_OWNER without saving when another member updates the channel
-- [ ] [예외] `ChannelService.update` — should throw CHANNEL_NOT_FOUND when the channel does not exist
-- [ ] [예외] `GET /api/channels/{channelId}` — should return 404 with code CHANNEL_NOT_FOUND and its message when service reports the channel does not exist
-- [ ] [예외] `PUT /api/channels/{channelId}` — should return 400 with code INVALID_INPUT when the name is blank
-- [ ] [예외] `PUT /api/channels/{channelId}` — should return 400 with code INVALID_INPUT when the description is missing
-- [ ] [예외] `PUT /api/channels/{channelId}` — should return 403 with code CHANNEL_NOT_OWNER and its message when service rejects a member who does not own the channel
-- [ ] [예외] `ChannelIntegration` — should return 404 with code CHANNEL_NOT_FOUND when a visitor requests a channel id that does not exist
-- [ ] [예외] `ChannelIntegration` — should return 403 with code CHANNEL_NOT_OWNER and keep the channel unchanged when another streamer updates it
-- [ ] [예외] `ChannelIntegration` — should return 403 with code FORBIDDEN when a member who is not a streamer opens the studio channel
+- [x] [예외] `ChannelService.find` — should throw CHANNEL_NOT_FOUND when the channel does not exist
+- [x] [예외] `ChannelService.findMine` — should throw CHANNEL_NOT_FOUND when the member has no channel
+- [x] [예외] `ChannelService.update` — should throw CHANNEL_NOT_OWNER without saving when another member updates the channel
+- [x] [예외] `ChannelService.update` — should throw CHANNEL_NOT_FOUND when the channel does not exist
+- [x] [예외] `GET /api/channels/{channelId}` — should return 404 with code CHANNEL_NOT_FOUND and its message when service reports the channel does not exist
+- [x] [예외] `PUT /api/channels/{channelId}` — should return 400 with code INVALID_INPUT when the name is blank
+- [x] [예외] `PUT /api/channels/{channelId}` — should return 400 with code INVALID_INPUT when the description is missing
+- [x] [예외] `PUT /api/channels/{channelId}` — should return 403 with code CHANNEL_NOT_OWNER and its message when service rejects a member who does not own the channel
+- [x] [예외] `ChannelIntegration` — should return 404 with code CHANNEL_NOT_FOUND when a visitor requests a channel id that does not exist
+- [x] [예외] `ChannelIntegration` — should return 403 with code CHANNEL_NOT_OWNER and keep the channel unchanged when another streamer updates it
+- [x] [예외] `ChannelIntegration` — should return 403 with code FORBIDDEN when a member who is not a streamer opens the studio channel
 
 ### 수동 확인 (테스트 도구가 없는 화면 — 시나리오 수에 넣지 않는다)
 
@@ -158,6 +158,19 @@ public enum ErrorCode {
 - 스트리머로 로그인하면 머리글에 "스튜디오" 링크가 있고, `/studio`에 지금 이름·소개가 채워져 있다
 - 이름·소개를 바꿔 저장하면 "저장했습니다"가 나오고, 채널 페이지에 바뀐 값이 보인다
 - 이름을 1자로 저장하면 서버 메시지 "채널 이름은 2~20자입니다"가 보인다
+
+**확인 결과 (2026-11-21, Green):** 로컬 개발 DB(compose Oracle)로 `backend`(:8080)·`frontend`(:5173) 미리보기를 띄웠다. 이번 이슈는 새 마이그레이션이 없다(V3은 #7로 main에 들어감). 운영자 계정이 `.env`에 없어서 테스트 계정 둘(`st820640@`·`op820640@example.com`)을 API로 가입시키고, 둘째의 역할만 SQL로 `OPERATOR`로 바꿨다. 신청 → 운영자 승인은 curl(ASCII 데이터)로 했다.
+
+- (#7 경로 덤) 대기 목록에 신청 1건, 승인 200 `APPROVED`, 승인 뒤 신청자의 기존 쿠키로 `/api/members/me` 401 ✅
+- 스트리머로 다시 로그인 → 머리글 "st820640 스튜디오 로그아웃" ✅
+- `/studio`: 이름 입력란에 `st820640`(닉네임), 소개 빈칸, "내 채널 페이지" 링크 `/channels/1` ✅
+- 이름 `A`로 저장 → "채널 이름은 2~20자입니다" ✅
+- 이름 `Night Talk`, 소개 `late night chat channel`로 저장 → "저장했습니다" ✅
+- `/channels/1`: "Night Talk / 오프라인 / late night chat channel" ✅. 로그아웃 뒤(머리글 "로그인 가입")에도 같게 보인다 ✅
+- `/channels/99999` → "채널을 찾을 수 없습니다" ✅
+- 로그아웃 상태로 `/studio` → "로그인이 필요합니다" ✅. 스트리머가 아닌 회원의 "스트리머만 쓸 수 있습니다" 문구는 브라우저로 보지 않았다(API 403은 통합 테스트가 본다)
+- 콘솔 오류는 네트워크 응답(백엔드 기동 전 502, 의도한 400·401·404)뿐, 스크립트 오류 없음
+- 덤으로 본 것: 대기 목록의 `appliedAt`이 `2026-11-20T15:37:27.72948`로 나왔다. DB 컨테이너 시각(UTC)이 시간대 없이 그대로 나간다. 운영자 화면이 없어 이번 범위에서는 고치지 않았다(아래 보안 점검이 아니라 사용자 결정 목록에 올린다)
 
 ---
 

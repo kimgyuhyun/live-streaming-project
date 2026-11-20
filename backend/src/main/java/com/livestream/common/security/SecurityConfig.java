@@ -52,6 +52,9 @@ class SecurityConfig {
                         .requestMatchers("/api/actuator/health").permitAll()
                         // 로그인할 때 ROLE_{역할} 권한을 싣는다(AuthController)
                         .requestMatchers("/api/operator/**").hasRole("OPERATOR")
+                        // 채널 페이지는 비로그인 시청자도 본다. 고치기(PUT)는 로그인 + 주인 확인(ChannelService)
+                        .requestMatchers(HttpMethod.GET, "/api/channels/*").permitAll()
+                        .requestMatchers("/api/studio/**").hasRole("STREAMER")
                         .anyRequest().authenticated());
         return http.build();
     }
