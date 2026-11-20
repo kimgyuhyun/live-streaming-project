@@ -1,6 +1,7 @@
 package com.livestream.member;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -8,8 +9,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livestream.TestcontainersConfiguration;
 import com.livestream.common.error.BusinessException;
+import com.livestream.common.error.ErrorCode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -25,6 +28,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
 // 진짜 Oracle·Redis 컨테이너 위에서 저장·동시성·보안 필터 연결을 본다.
@@ -46,8 +50,38 @@ class MemberSignUpIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     private static String unique() {
         return String.valueOf(ThreadLocalRandom.current().nextInt(100_000, 1_000_000));
+    }
+
+    // 미리 조회하는 단계만 늘 "없음"으로 답하고 나머지는 진짜 매퍼에 맡긴다.
+    // 동시 가입에서 조회를 함께 통과한 상황을 매번 만들어, 진짜 Oracle의 UNIQUE 위반 경로를 탄다
+    private MemberService serviceSkippingPreCheck() {
+        MemberMapper skipping = new MemberMapper() {
+            @Override
+            public void insert(Member member) {
+                memberMapper.insert(member);
+            }
+
+            @Override
+            public boolean existsByEmail(String email) {
+                return false;
+            }
+
+            @Override
+            public boolean existsByNickname(String nickname) {
+                return false;
+            }
+
+            @Override
+            public Optional<Member> findByEmail(String email) {
+                return memberMapper.findByEmail(email);
+            }
+        };
+        return new MemberService(skipping, passwordEncoder);
     }
 
     @Nested
@@ -107,6 +141,47 @@ class MemberSignUpIntegrationTest {
                             .content(body))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("FORBIDDEN_ORIGIN"));
+        }
+
+        @Test
+        @DisplayName("should return 201 and persist role MEMBER when sign up request comes from allowed origin")
+        void createsMemberThroughSecurityChain() throws Exception {
+            String email = "a" + unique() + "@example.com";
+            String body = objectMapper.writeValueAsString(new SignUpRequest(email, "abcd1234", "허용" + unique()));
+
+            mockMvc.perform(post("/api/members")
+                            .header("Origin", "http://localhost:8080")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isCreated());
+
+            assertThat(memberMapper.findByEmail(email).orElseThrow().getRole()).isEqualTo(Role.MEMBER);
+        }
+
+        @Test
+        @DisplayName("should return MEMBER_NICKNAME_DUPLICATED when pre-check passes but database rejects duplicate nickname")
+        void mapsRealNicknameConstraintViolation() {
+            String nickname = "제약" + unique();
+            memberService.signUp(new SignUpRequest("n1" + unique() + "@example.com", "abcd1234", nickname));
+
+            assertThatThrownBy(() -> serviceSkippingPreCheck()
+                    .signUp(new SignUpRequest("n2" + unique() + "@example.com", "abcd1234", nickname)))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("code")
+                    .isEqualTo(ErrorCode.MEMBER_NICKNAME_DUPLICATED);
+        }
+
+        @Test
+        @DisplayName("should return MEMBER_EMAIL_DUPLICATED when pre-check passes but database rejects duplicate email")
+        void mapsRealEmailConstraintViolation() {
+            String email = "e" + unique() + "@example.com";
+            memberService.signUp(new SignUpRequest(email, "abcd1234", "이메일" + unique()));
+
+            assertThatThrownBy(() -> serviceSkippingPreCheck()
+                    .signUp(new SignUpRequest(email, "abcd1234", "다른" + unique())))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("code")
+                    .isEqualTo(ErrorCode.MEMBER_EMAIL_DUPLICATED);
         }
     }
 }
