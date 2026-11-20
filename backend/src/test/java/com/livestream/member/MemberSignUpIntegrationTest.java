@@ -103,6 +103,11 @@ class MemberSignUpIntegrationTest {
             public void updatePasswordHash(long id, String passwordHash) {
                 memberMapper.updatePasswordHash(id, passwordHash);
             }
+
+            @Override
+            public void updateRole(long id, Role role) {
+                memberMapper.updateRole(id, role);
+            }
         };
         return new MemberService(skipping, passwordEncoder, loginAttemptLimiter, sessionRepository);
     }

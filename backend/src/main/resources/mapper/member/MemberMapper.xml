@@ -34,4 +34,8 @@
     <update id="updatePasswordHash">
         UPDATE member SET password_hash = #{passwordHash} WHERE id = #{id}
     </update>
+
+    <update id="updateRole">
+        UPDATE member SET role = #{role} WHERE id = #{id}
+    </update>
 </mapper>

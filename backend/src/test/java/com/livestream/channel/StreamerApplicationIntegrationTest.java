@@ -112,6 +112,21 @@ class StreamerApplicationIntegrationTest {
             public Optional<ApplicationStatus> findLatestStatusByMemberId(long memberId) {
                 return streamerApplicationMapper.findLatestStatusByMemberId(memberId);
             }
+
+            @Override
+            public Optional<StreamerApplication> findById(long id) {
+                return streamerApplicationMapper.findById(id);
+            }
+
+            @Override
+            public int updateStatusIfPending(long id, ApplicationStatus status) {
+                return streamerApplicationMapper.updateStatusIfPending(id, status);
+            }
+
+            @Override
+            public List<PendingApplicationResponse> findPending() {
+                return streamerApplicationMapper.findPending();
+            }
         };
         return new StreamerApplicationService(skipping);
     }

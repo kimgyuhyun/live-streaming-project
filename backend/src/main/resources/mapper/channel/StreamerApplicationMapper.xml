@@ -20,4 +20,24 @@
         ORDER BY id DESC
         FETCH FIRST 1 ROW ONLY
     </select>
+
+    <select id="findById" resultType="com.livestream.channel.StreamerApplication">
+        SELECT id, member_id, status
+        FROM streamer_application
+        WHERE id = #{id}
+    </select>
+
+    <!-- 대기일 때만 바꾼다. 동시에 두 번 와도 한쪽만 1행을 바꾼다(PRD channel "신청 동시 처리") -->
+    <update id="updateStatusIfPending">
+        UPDATE streamer_application SET status = #{status}
+        WHERE id = #{id} AND status = 'PENDING'
+    </update>
+
+    <select id="findPending" resultType="com.livestream.channel.PendingApplicationResponse">
+        SELECT a.id, m.nickname, m.email, a.created_at AS applied_at
+        FROM streamer_application a
+        JOIN member m ON m.id = a.member_id
+        WHERE a.status = 'PENDING'
+        ORDER BY a.created_at, a.id
+    </select>
 </mapper>
