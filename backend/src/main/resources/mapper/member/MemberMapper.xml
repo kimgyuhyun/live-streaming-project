@@ -20,4 +20,10 @@
         FROM member
         WHERE email = #{email}
     </select>
+
+    <select id="findById" resultType="com.livestream.member.Member">
+        SELECT id, email, password_hash, nickname, role
+        FROM member
+        WHERE id = #{id}
+    </select>
 </mapper>

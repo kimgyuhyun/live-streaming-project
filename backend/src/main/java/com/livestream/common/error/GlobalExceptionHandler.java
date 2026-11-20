@@ -1,6 +1,7 @@
 package com.livestream.common.error;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -12,8 +13,7 @@ class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     ResponseEntity<ErrorResponse> handleBusiness(BusinessException e) {
         ErrorCode code = e.getCode();
-        return ResponseEntity.status(code.getStatus())
-                .body(new ErrorResponse(code.name(), code.getMessage()));
+        return ResponseEntity.status(code.getStatus()).body(ErrorResponse.of(code));
     }
 
     // 메시지는 처음 걸린 필드의 메시지를 그대로 보낸다. 화면이 이 문장을 보여 준다
@@ -25,5 +25,11 @@ class GlobalExceptionHandler {
                 .orElse(ErrorCode.INVALID_INPUT.getMessage());
         return ResponseEntity.status(ErrorCode.INVALID_INPUT.getStatus())
                 .body(new ErrorResponse(ErrorCode.INVALID_INPUT.name(), message));
+    }
+
+    // 깨진 JSON. 파싱 오류 내용은 내부 구조를 드러내므로 기본 메시지만 보낸다
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    ResponseEntity<ErrorResponse> handleUnreadable(HttpMessageNotReadableException e) {
+        return ResponseEntity.status(ErrorCode.INVALID_INPUT.getStatus()).body(ErrorResponse.of(ErrorCode.INVALID_INPUT));
     }
 }

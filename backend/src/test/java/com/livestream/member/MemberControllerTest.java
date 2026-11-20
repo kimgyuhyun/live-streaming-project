@@ -2,6 +2,7 @@ package com.livestream.member;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -9,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livestream.common.error.BusinessException;
 import com.livestream.common.error.ErrorCode;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -17,6 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.test.context.TestSecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -215,6 +219,36 @@ class MemberControllerTest {
             signUp(EMAIL, PASSWORD, NICKNAME)
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.code").value("MEMBER_NICKNAME_DUPLICATED"));
+        }
+
+        @Test
+        @DisplayName("should return 400 with code INVALID_INPUT when request body is malformed json")
+        void rejectsMalformedJson() throws Exception {
+            mockMvc.perform(post("/api/members")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"email\":"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/members/me")
+    class Me {
+
+        @Test
+        @DisplayName("should return 200 with email, nickname and role of logged-in member")
+        void returnsLoggedInMember() throws Exception {
+            given(memberService.findMe(1L)).willReturn(new MemberResponse(1L, EMAIL, NICKNAME, Role.MEMBER));
+            // 필터를 껐으므로 SecurityContextHolder에 직접 올린다. 테스트가 끝나면 spring-security-test가 비운다
+            TestSecurityContextHolder.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
+                    new LoginMember(1L, Role.MEMBER), null, List.of()));
+
+            mockMvc.perform(get("/api/members/me"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.email").value(EMAIL))
+                    .andExpect(jsonPath("$.nickname").value(NICKNAME))
+                    .andExpect(jsonPath("$.role").value("MEMBER"));
         }
     }
 }

@@ -18,3 +18,8 @@ export interface MemberResponse {
 export function signUp(req: SignUpRequest): Promise<MemberResponse> {
   return api<MemberResponse>('/members', { method: 'POST', body: JSON.stringify(req) })
 }
+
+// 로그인하지 않았으면 401(ApiError)
+export function fetchMe(): Promise<MemberResponse> {
+  return api<MemberResponse>('/members/me')
+}

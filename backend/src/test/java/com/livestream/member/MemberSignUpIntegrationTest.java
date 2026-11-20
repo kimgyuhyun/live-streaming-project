@@ -80,6 +80,11 @@ class MemberSignUpIntegrationTest {
             public Optional<Member> findByEmail(String email) {
                 return memberMapper.findByEmail(email);
             }
+
+            @Override
+            public Optional<Member> findById(long id) {
+                return memberMapper.findById(id);
+            }
         };
         return new MemberService(skipping, passwordEncoder);
     }
