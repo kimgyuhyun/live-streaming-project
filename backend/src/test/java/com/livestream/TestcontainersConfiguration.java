@@ -1,5 +1,6 @@
 package com.livestream;
 
+import java.time.Duration;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
@@ -14,7 +15,9 @@ public class TestcontainersConfiguration {
     @Bean
     @ServiceConnection
     OracleContainer oracleContainer() {
-        return new OracleContainer(DockerImageName.parse("gvenzl/oracle-free:23.26.4-slim-faststart"));
+        // 기본 대기 시간은 60초다. 다른 컨테이너와 함께 돌면 이 PC에서 준비까지 80초를 넘겨 테스트가 통째로 실패한다
+        return new OracleContainer(DockerImageName.parse("gvenzl/oracle-free:23.26.4-slim-faststart"))
+                .withStartupTimeout(Duration.ofMinutes(3));
     }
 
     @Bean
