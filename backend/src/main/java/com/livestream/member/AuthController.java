@@ -31,7 +31,7 @@ class AuthController {
     @PostMapping("/login")
     MemberResponse login(@Valid @RequestBody LoginRequest request,
                          HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
-        MemberResponse member = memberService.login(request);
+        MemberResponse member = memberService.login(request, null);
         if (httpRequest.getSession(false) != null) {
             httpRequest.changeSessionId();
         }

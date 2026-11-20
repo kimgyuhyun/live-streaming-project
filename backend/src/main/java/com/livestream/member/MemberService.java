@@ -14,12 +14,15 @@ public class MemberService {
 
     private final MemberMapper memberMapper;
     private final PasswordEncoder passwordEncoder;
+    private final LoginAttemptLimiter loginAttemptLimiter;
     // 없는 이메일로 로그인할 때 비교할 해시. 어떤 비밀번호와도 맞지 않는다
     private final String dummyHash;
 
-    public MemberService(MemberMapper memberMapper, PasswordEncoder passwordEncoder) {
+    public MemberService(MemberMapper memberMapper, PasswordEncoder passwordEncoder,
+                         LoginAttemptLimiter loginAttemptLimiter) {
         this.memberMapper = memberMapper;
         this.passwordEncoder = passwordEncoder;
+        this.loginAttemptLimiter = loginAttemptLimiter;
         this.dummyHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
@@ -44,7 +47,7 @@ public class MemberService {
 
     // 이메일을 소문자로 바꿔 찾는다. 없는 이메일이면 가짜 해시와 한 번 비교한 뒤 MEMBER_LOGIN_FAILED
     // 비교를 건너뛰면 응답이 빨라져 "이 이메일은 없다"가 응답 시간으로 드러나므로, 없을 때도 같은 비용을 낸다
-    public MemberResponse login(LoginRequest request) {
+    public MemberResponse login(LoginRequest request, String clientIp) {
         Optional<Member> member = memberMapper.findByEmail(request.email().toLowerCase(Locale.ROOT));
         String hash = member.map(Member::getPasswordHash).orElse(dummyHash);
         boolean matches = passwordEncoder.matches(request.password(), hash);

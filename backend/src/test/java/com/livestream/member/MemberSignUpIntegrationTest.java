@@ -53,6 +53,9 @@ class MemberSignUpIntegrationTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private LoginAttemptLimiter loginAttemptLimiter;
+
     private static String unique() {
         return String.valueOf(ThreadLocalRandom.current().nextInt(100_000, 1_000_000));
     }
@@ -86,7 +89,7 @@ class MemberSignUpIntegrationTest {
                 return memberMapper.findById(id);
             }
         };
-        return new MemberService(skipping, passwordEncoder);
+        return new MemberService(skipping, passwordEncoder, loginAttemptLimiter);
     }
 
     @Nested
