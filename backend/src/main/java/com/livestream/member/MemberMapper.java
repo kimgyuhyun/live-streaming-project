@@ -2,6 +2,7 @@ package com.livestream.member;
 
 import java.util.Optional;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 // SQL은 resources/mapper/member/MemberMapper.xml
 @Mapper
@@ -18,4 +19,8 @@ public interface MemberMapper {
     Optional<Member> findByEmail(String email);
 
     Optional<Member> findById(long id);
+
+    void updateNickname(@Param("id") long id, @Param("nickname") String nickname);
+
+    void updatePasswordHash(@Param("id") long id, @Param("passwordHash") String passwordHash);
 }

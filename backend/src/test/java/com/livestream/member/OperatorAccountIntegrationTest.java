@@ -126,6 +126,16 @@ class OperatorAccountIntegrationTest {
             public Optional<Member> findById(long id) {
                 return memberMapper.findById(id);
             }
+
+            @Override
+            public void updateNickname(long id, String nickname) {
+                memberMapper.updateNickname(id, nickname);
+            }
+
+            @Override
+            public void updatePasswordHash(long id, String passwordHash) {
+                memberMapper.updatePasswordHash(id, passwordHash);
+            }
         };
     }
 

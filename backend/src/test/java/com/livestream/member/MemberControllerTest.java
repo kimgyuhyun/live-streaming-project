@@ -1,9 +1,13 @@
 package com.livestream.member;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -19,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.test.context.TestSecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -249,6 +254,184 @@ class MemberControllerTest {
                     .andExpect(jsonPath("$.email").value(EMAIL))
                     .andExpect(jsonPath("$.nickname").value(NICKNAME))
                     .andExpect(jsonPath("$.role").value("MEMBER"));
+        }
+    }
+
+    // 필터를 껐으므로 SecurityContextHolder에 직접 올린다
+    private static void loggedInAs(long memberId) {
+        TestSecurityContextHolder.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
+                new LoginMember(memberId, Role.MEMBER), null, List.of()));
+    }
+
+    @Nested
+    @DisplayName("PUT /api/members/me/nickname")
+    class ChangeNickname {
+
+        private ResultActions changeNickname(String nickname) throws Exception {
+            loggedInAs(1L);
+            return mockMvc.perform(put("/api/members/me/nickname")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(new ChangeNicknameRequest(nickname))));
+        }
+
+        @Test
+        @DisplayName("should return 200 with the changed nickname")
+        void returnsChangedNickname() throws Exception {
+            given(memberService.changeNickname(eq(1L), any(ChangeNicknameRequest.class)))
+                    .willReturn(new MemberResponse(1L, EMAIL, "새닉네임", Role.MEMBER));
+
+            changeNickname("새닉네임")
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.nickname").value("새닉네임"));
+        }
+
+        @Test
+        @DisplayName("should return 400 when nickname is 1 character")
+        void rejectsNicknameOf1() throws Exception {
+            changeNickname("가")
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+        }
+
+        @Test
+        @DisplayName("should return 400 when nickname is 13 characters")
+        void rejectsNicknameOf13() throws Exception {
+            changeNickname("가나다라마바사아자차카타파")
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+        }
+
+        @Test
+        @DisplayName("should return 200 when nickname is exactly 2 characters")
+        void acceptsNicknameOf2() throws Exception {
+            changeNickname("가나").andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("should return 200 when nickname is exactly 12 characters")
+        void acceptsNicknameOf12() throws Exception {
+            changeNickname("가나다라마바사아자차카타").andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("should return 400 when nickname contains a space")
+        void rejectsNicknameWithSpace() throws Exception {
+            changeNickname("시청 자")
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+        }
+
+        @Test
+        @DisplayName("should return 400 when nickname contains a special character")
+        void rejectsNicknameWithSpecialCharacter() throws Exception {
+            changeNickname("시청자!")
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+        }
+
+        @Test
+        @DisplayName("should return 409 with code MEMBER_NICKNAME_DUPLICATED when service rejects the nickname")
+        void returnsConflict() throws Exception {
+            given(memberService.changeNickname(eq(1L), any(ChangeNicknameRequest.class)))
+                    .willThrow(new BusinessException(ErrorCode.MEMBER_NICKNAME_DUPLICATED));
+
+            changeNickname("남의닉네임")
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("MEMBER_NICKNAME_DUPLICATED"));
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /api/members/me/password")
+    class ChangePassword {
+
+        private static final String SESSION_ID = "session-a";
+
+        private ResultActions changePassword(String currentPassword, String newPassword) throws Exception {
+            loggedInAs(1L);
+            return mockMvc.perform(put("/api/members/me/password")
+                    .session(new MockHttpSession(null, SESSION_ID))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(new ChangePasswordRequest(currentPassword, newPassword))));
+        }
+
+        @Test
+        @DisplayName("should return 204 and pass the current session id to the service")
+        void passesCurrentSessionId() throws Exception {
+            changePassword(PASSWORD, "newpass99").andExpect(status().isNoContent());
+
+            verify(memberService).changePassword(eq(1L), any(ChangePasswordRequest.class), eq(SESSION_ID), any());
+        }
+
+        @Test
+        @DisplayName("should pass the client ip to the service")
+        void passesClientIp() throws Exception {
+            loggedInAs(1L);
+            mockMvc.perform(put("/api/members/me/password")
+                    .with(request -> {
+                        request.setRemoteAddr("203.0.113.7");
+                        return request;
+                    })
+                    .session(new MockHttpSession(null, SESSION_ID))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(new ChangePasswordRequest(PASSWORD, "newpass99"))));
+
+            verify(memberService).changePassword(eq(1L), any(ChangePasswordRequest.class), any(), eq("203.0.113.7"));
+        }
+
+        @Test
+        @DisplayName("should return 400 when new password is 7 characters")
+        void rejectsNewPasswordOf7() throws Exception {
+            changePassword(PASSWORD, "abcd123")
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+        }
+
+        @Test
+        @DisplayName("should return 400 when new password has no digit")
+        void rejectsNewPasswordWithoutDigit() throws Exception {
+            changePassword(PASSWORD, "abcdefgh")
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+        }
+
+        @Test
+        @DisplayName("should return 204 when new password is exactly 8 characters")
+        void acceptsNewPasswordOf8() throws Exception {
+            changePassword(PASSWORD, "abcd1234").andExpect(status().isNoContent());
+        }
+
+        @Test
+        @DisplayName("should return 204 when new password is exactly 64 characters")
+        void acceptsNewPasswordOf64() throws Exception {
+            changePassword(PASSWORD, "a".repeat(32) + "1".repeat(32)).andExpect(status().isNoContent());
+        }
+
+        @Test
+        @DisplayName("should return 400 when new password is 65 characters")
+        void rejectsNewPasswordOf65() throws Exception {
+            changePassword(PASSWORD, "a".repeat(32) + "1".repeat(33))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+        }
+
+        @Test
+        @DisplayName("should return 400 when new password has no letter")
+        void rejectsNewPasswordWithoutLetter() throws Exception {
+            changePassword(PASSWORD, "12345678")
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+        }
+
+        @Test
+        @DisplayName("should return 400 with code MEMBER_PASSWORD_MISMATCH when service rejects current password")
+        void returnsMismatch() throws Exception {
+            willThrow(new BusinessException(ErrorCode.MEMBER_PASSWORD_MISMATCH))
+                    .given(memberService).changePassword(eq(1L), any(ChangePasswordRequest.class), any(), any());
+
+            changePassword("wrong1234", "newpass99")
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("MEMBER_PASSWORD_MISMATCH"));
         }
     }
 }

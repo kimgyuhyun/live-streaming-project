@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -19,6 +20,7 @@ import static org.mockito.Mockito.verify;
 import com.livestream.common.error.BusinessException;
 import com.livestream.common.error.ErrorCode;
 import com.livestream.common.error.RetryLaterException;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -29,6 +31,8 @@ import org.mockito.InOrder;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.session.FindByIndexNameSessionRepository;
+import org.springframework.session.Session;
 
 class MemberServiceTest {
 
@@ -37,12 +41,14 @@ class MemberServiceTest {
 
     private static final String IP = "203.0.113.10";
     private LoginAttemptLimiter loginAttemptLimiter;
+    private FindByIndexNameSessionRepository<Session> sessionRepository;
 
     @BeforeEach
     void setUp() {
         memberMapper = mock(MemberMapper.class);
         loginAttemptLimiter = mock(LoginAttemptLimiter.class);
-        memberService = new MemberService(memberMapper, new BCryptPasswordEncoder(), loginAttemptLimiter);
+        sessionRepository = mockSessionRepository();
+        memberService = new MemberService(memberMapper, new BCryptPasswordEncoder(), loginAttemptLimiter, sessionRepository);
         // insert는 DB가 만든 id를 채워 준다
         willAnswer(invocation -> {
             invocation.<Member>getArgument(0).setId(1L);
@@ -182,7 +188,7 @@ class MemberServiceTest {
         @DisplayName("should compare password against a dummy hash once when email does not exist")
         void comparesDummyHashOnceForUnknownEmail() {
             PasswordEncoder encoder = spy(new BCryptPasswordEncoder());
-            MemberService service = new MemberService(memberMapper, encoder, loginAttemptLimiter);
+            MemberService service = new MemberService(memberMapper, encoder, loginAttemptLimiter, sessionRepository);
 
             catchThrowable(() -> service.login(new LoginRequest("nobody@example.com", PASSWORD), IP));
 
@@ -194,7 +200,7 @@ class MemberServiceTest {
         @DisplayName("should compare against a bcrypt hash when email does not exist")
         void comparesAgainstBcryptHashForUnknownEmail() {
             PasswordEncoder encoder = spy(new BCryptPasswordEncoder());
-            MemberService service = new MemberService(memberMapper, encoder, loginAttemptLimiter);
+            MemberService service = new MemberService(memberMapper, encoder, loginAttemptLimiter, sessionRepository);
             ArgumentCaptor<String> hash = ArgumentCaptor.forClass(String.class);
 
             catchThrowable(() -> service.login(new LoginRequest("nobody@example.com", PASSWORD), IP));
@@ -209,7 +215,7 @@ class MemberServiceTest {
         void countsBeforeComparing() {
             PasswordEncoder encoder = spy(new BCryptPasswordEncoder());
             given(memberMapper.findByEmail(EMAIL)).willReturn(Optional.of(storedMember()));
-            MemberService service = new MemberService(memberMapper, encoder, loginAttemptLimiter);
+            MemberService service = new MemberService(memberMapper, encoder, loginAttemptLimiter, sessionRepository);
 
             service.login(new LoginRequest(EMAIL, PASSWORD), IP);
 
@@ -230,7 +236,7 @@ class MemberServiceTest {
         @DisplayName("should not compare password when attempts are blocked")
         void skipsComparisonWhenBlocked() {
             PasswordEncoder encoder = spy(new BCryptPasswordEncoder());
-            MemberService service = new MemberService(memberMapper, encoder, loginAttemptLimiter);
+            MemberService service = new MemberService(memberMapper, encoder, loginAttemptLimiter, sessionRepository);
             willThrow(new RetryLaterException(ErrorCode.MEMBER_LOGIN_BLOCKED, 600))
                     .given(loginAttemptLimiter).acquire(EMAIL, IP);
 
@@ -254,6 +260,180 @@ class MemberServiceTest {
             MemberResponse result = memberService.findMe(7L);
 
             assertThat(result).isEqualTo(new MemberResponse(7L, "viewer@example.com", "시청자1", Role.STREAMER));
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static FindByIndexNameSessionRepository<Session> mockSessionRepository() {
+        return mock(FindByIndexNameSessionRepository.class);
+    }
+
+    // 계정 정보 변경에서 쓰는 저장된 회원. 비밀번호는 CURRENT_PASSWORD의 BCrypt 해시
+    private static final long MEMBER_ID = 1L;
+    private static final String CURRENT_PASSWORD = "abcd1234";
+    private static final String NEW_PASSWORD = "newpass99";
+
+    private Member savedMember() {
+        Member member = new Member("viewer@example.com", new BCryptPasswordEncoder().encode(CURRENT_PASSWORD),
+                "시청자1", Role.MEMBER);
+        member.setId(MEMBER_ID);
+        return member;
+    }
+
+    @Nested
+    @DisplayName("changeNickname")
+    class ChangeNickname {
+
+        @BeforeEach
+        void setUp() {
+            given(memberMapper.findById(MEMBER_ID)).willReturn(Optional.of(savedMember()));
+        }
+
+        @Test
+        @DisplayName("should save and return the new nickname when no other member uses it")
+        void savesNewNickname() {
+            MemberResponse result = memberService.changeNickname(MEMBER_ID, new ChangeNicknameRequest("새닉네임"));
+
+            verify(memberMapper).updateNickname(MEMBER_ID, "새닉네임");
+            assertThat(result.nickname()).isEqualTo("새닉네임");
+        }
+
+        @Test
+        @DisplayName("should return the member unchanged when the new nickname is the current one")
+        void keepsCurrentNickname() {
+            given(memberMapper.existsByNickname("시청자1")).willReturn(true);
+
+            MemberResponse result = memberService.changeNickname(MEMBER_ID, new ChangeNicknameRequest("시청자1"));
+
+            assertThat(result.nickname()).isEqualTo("시청자1");
+        }
+
+        // 다른 회원과 동시에 바꿔 미리 조회를 함께 통과한 경우. DB UNIQUE 제약이 막는다
+        @Test
+        @DisplayName("should throw MEMBER_NICKNAME_DUPLICATED when the unique constraint rejects the update")
+        void mapsUniqueViolation() {
+            willThrow(new DuplicateKeyException("ORA-00001: unique constraint (APP.UK_MEMBER_NICKNAME) violated"))
+                    .given(memberMapper).updateNickname(MEMBER_ID, "새닉네임");
+
+            assertThatThrownBy(() -> memberService.changeNickname(MEMBER_ID, new ChangeNicknameRequest("새닉네임")))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("code")
+                    .isEqualTo(ErrorCode.MEMBER_NICKNAME_DUPLICATED);
+        }
+
+        @Test
+        @DisplayName("should throw MEMBER_NICKNAME_DUPLICATED when another member uses the nickname")
+        void rejectsTakenNickname() {
+            given(memberMapper.existsByNickname("남의닉네임")).willReturn(true);
+
+            assertThatThrownBy(() -> memberService.changeNickname(MEMBER_ID, new ChangeNicknameRequest("남의닉네임")))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("code")
+                    .isEqualTo(ErrorCode.MEMBER_NICKNAME_DUPLICATED);
+        }
+    }
+
+    @Nested
+    @DisplayName("changePassword")
+    class ChangePassword {
+
+        private static final String CURRENT_SESSION = "current-session";
+
+        @BeforeEach
+        void setUp() {
+            given(memberMapper.findById(MEMBER_ID)).willReturn(Optional.of(savedMember()));
+            given(sessionRepository.findByPrincipalName(String.valueOf(MEMBER_ID))).willReturn(Map.of(
+                    CURRENT_SESSION, mock(Session.class),
+                    "other-1", mock(Session.class),
+                    "other-2", mock(Session.class)));
+        }
+
+        @Test
+        @DisplayName("should save a bcrypt hash of the new password when current password matches")
+        void savesNewPasswordHash() {
+            memberService.changePassword(MEMBER_ID, new ChangePasswordRequest(CURRENT_PASSWORD, NEW_PASSWORD),
+                    CURRENT_SESSION, IP);
+
+            ArgumentCaptor<String> hash = ArgumentCaptor.forClass(String.class);
+            verify(memberMapper).updatePasswordHash(eq(MEMBER_ID), hash.capture());
+            assertThat(new BCryptPasswordEncoder().matches(NEW_PASSWORD, hash.getValue())).isTrue();
+        }
+
+        @Test
+        @DisplayName("should delete the member's other sessions and keep the current one")
+        void deletesOtherSessions() {
+            memberService.changePassword(MEMBER_ID, new ChangePasswordRequest(CURRENT_PASSWORD, NEW_PASSWORD),
+                    CURRENT_SESSION, IP);
+
+            ArgumentCaptor<String> deleted = ArgumentCaptor.forClass(String.class);
+            verify(sessionRepository, times(2)).deleteById(deleted.capture());
+            assertThat(deleted.getAllValues()).containsExactlyInAnyOrder("other-1", "other-2");
+        }
+
+        @Test
+        @DisplayName("should throw MEMBER_PASSWORD_MISMATCH when current password is wrong")
+        void rejectsWrongCurrentPassword() {
+            assertThatThrownBy(() -> memberService.changePassword(MEMBER_ID,
+                    new ChangePasswordRequest("wrong1234", NEW_PASSWORD), CURRENT_SESSION, IP))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("code")
+                    .isEqualTo(ErrorCode.MEMBER_PASSWORD_MISMATCH);
+        }
+
+        @Test
+        @DisplayName("should not delete any session when current password is wrong")
+        void keepsSessionsWhenRejected() {
+            catchThrowable(() -> memberService.changePassword(MEMBER_ID,
+                    new ChangePasswordRequest("wrong1234", NEW_PASSWORD), CURRENT_SESSION, IP));
+
+            verify(sessionRepository, never()).deleteById(anyString());
+        }
+
+        @Test
+        @DisplayName("should not save a new password hash when current password is wrong")
+        void keepsHashWhenRejected() {
+            catchThrowable(() -> memberService.changePassword(MEMBER_ID,
+                    new ChangePasswordRequest("wrong1234", NEW_PASSWORD), CURRENT_SESSION, IP));
+
+            verify(memberMapper, never()).updatePasswordHash(anyLong(), anyString());
+        }
+
+        // 로그인과 같은 시도 제한을 건다. 비교 전에 세야 대입을 막는다 (PRD member M3)
+        @Test
+        @DisplayName("should count the attempt before comparing current password")
+        void countsBeforeComparing() {
+            PasswordEncoder encoder = spy(new BCryptPasswordEncoder());
+            MemberService service = new MemberService(memberMapper, encoder, loginAttemptLimiter, sessionRepository);
+
+            service.changePassword(MEMBER_ID, new ChangePasswordRequest(CURRENT_PASSWORD, NEW_PASSWORD),
+                    CURRENT_SESSION, IP);
+
+            InOrder order = inOrder(loginAttemptLimiter, encoder);
+            order.verify(loginAttemptLimiter).acquire("viewer@example.com", IP);
+            order.verify(encoder).matches(eq(CURRENT_PASSWORD), anyString());
+        }
+
+        @Test
+        @DisplayName("should report success to the limiter when current password matches")
+        void reportsSuccess() {
+            memberService.changePassword(MEMBER_ID, new ChangePasswordRequest(CURRENT_PASSWORD, NEW_PASSWORD),
+                    CURRENT_SESSION, IP);
+
+            verify(loginAttemptLimiter).succeeded("viewer@example.com", IP);
+        }
+
+        @Test
+        @DisplayName("should not compare current password when attempts are blocked")
+        void skipsComparisonWhenBlocked() {
+            PasswordEncoder encoder = spy(new BCryptPasswordEncoder());
+            MemberService service = new MemberService(memberMapper, encoder, loginAttemptLimiter, sessionRepository);
+            willThrow(new RetryLaterException(ErrorCode.MEMBER_LOGIN_BLOCKED, 600))
+                    .given(loginAttemptLimiter).acquire("viewer@example.com", IP);
+
+            catchThrowable(() -> service.changePassword(MEMBER_ID,
+                    new ChangePasswordRequest(CURRENT_PASSWORD, NEW_PASSWORD), CURRENT_SESSION, IP));
+
+            verify(encoder, never()).matches(anyString(), anyString());
         }
     }
 }

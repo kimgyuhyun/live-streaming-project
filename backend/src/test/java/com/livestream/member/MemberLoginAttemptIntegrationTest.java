@@ -27,6 +27,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.session.FindByIndexNameSessionRepository;
+import org.springframework.session.Session;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
@@ -56,6 +58,9 @@ class MemberLoginAttemptIntegrationTest {
 
     @Autowired
     private LoginAttemptLimiter loginAttemptLimiter;
+
+    @Autowired
+    private FindByIndexNameSessionRepository<? extends Session> sessionRepository;
 
     private static String unique() {
         return String.valueOf(ThreadLocalRandom.current().nextInt(100_000, 1_000_000));
@@ -123,7 +128,7 @@ class MemberLoginAttemptIntegrationTest {
                     return super.matches(rawPassword, encodedPassword);
                 }
             };
-            MemberService service = new MemberService(memberMapper, countingEncoder, loginAttemptLimiter);
+            MemberService service = new MemberService(memberMapper, countingEncoder, loginAttemptLimiter, sessionRepository);
             CountDownLatch start = new CountDownLatch(1);
             ExecutorService pool = Executors.newFixedThreadPool(20);
             List<Future<?>> results = new ArrayList<>();
