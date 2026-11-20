@@ -111,45 +111,45 @@ class OriginValidationFilter extends OncePerRequestFilter {
 
 ### 정상
 
-- [ ] [정상] `MemberService.signUp` — should create member with role MEMBER when email and nickname are new
-- [ ] [정상] `MemberService.signUp` — should save lower-cased email when email contains upper case letters
-- [ ] [정상] `POST /api/members` — should return 201 with id, email, nickname and role when request is valid
-- [ ] [정상] `OriginValidationFilter` — should pass when origin is in allowed list
-- [ ] [정상] `OriginValidationFilter` — should pass when origin is missing and referer is in allowed list
-- [ ] [정상] `OriginValidationFilter` — should pass when method is GET without origin and referer
-- [ ] [정상] `MemberSignUpIntegration` — should store bcrypt hash and not raw password when member signs up
+- [x] [정상] `MemberService.signUp` — should create member with role MEMBER when email and nickname are new
+- [x] [정상] `MemberService.signUp` — should save lower-cased email when email contains upper case letters
+- [x] [정상] `POST /api/members` — should return 201 with id, email, nickname and role when request is valid
+- [x] [정상] `OriginValidationFilter` — should pass when origin is in allowed list
+- [x] [정상] `OriginValidationFilter` — should pass when origin is missing and referer is in allowed list
+- [x] [정상] `OriginValidationFilter` — should pass when method is GET without origin and referer
+- [x] [정상] `MemberSignUpIntegration` — should store bcrypt hash and not raw password when member signs up
 
 ### 경계
 
-- [ ] [경계] `POST /api/members` — should return 201 when password is 8 characters with letters and digits
-- [ ] [경계] `POST /api/members` — should return 201 when password is 64 characters with letters and digits
-- [ ] [경계] `POST /api/members` — should return 400 when password is 7 characters
-- [ ] [경계] `POST /api/members` — should return 400 when password is 65 characters
-- [ ] [경계] `POST /api/members` — should return 201 when nickname is 2 characters
-- [ ] [경계] `POST /api/members` — should return 201 when nickname is 12 characters
-- [ ] [경계] `POST /api/members` — should return 400 when nickname is 1 character
-- [ ] [경계] `POST /api/members` — should return 400 when nickname is 13 characters
-- [ ] [경계] `POST /api/members` — should return 400 when email is longer than 254 characters
-- [ ] [경계] `MemberSignUpIntegration` — should create one member and reject the other with MEMBER_NICKNAME_DUPLICATED when two sign ups with same nickname arrive at once
+- [x] [경계] `POST /api/members` — should return 201 when password is 8 characters with letters and digits
+- [x] [경계] `POST /api/members` — should return 201 when password is 64 characters with letters and digits
+- [x] [경계] `POST /api/members` — should return 400 when password is 7 characters
+- [x] [경계] `POST /api/members` — should return 400 when password is 65 characters
+- [x] [경계] `POST /api/members` — should return 201 when nickname is 2 characters
+- [x] [경계] `POST /api/members` — should return 201 when nickname is 12 characters
+- [x] [경계] `POST /api/members` — should return 400 when nickname is 1 character
+- [x] [경계] `POST /api/members` — should return 400 when nickname is 13 characters
+- [x] [경계] `POST /api/members` — should return 400 when email is longer than 254 characters
+- [x] [경계] `MemberSignUpIntegration` — should create one member and reject the other with MEMBER_NICKNAME_DUPLICATED when two sign ups with same nickname arrive at once
 
 ### 예외
 
-- [ ] [예외] `POST /api/members` — should return 400 when password has letters only
-- [ ] [예외] `POST /api/members` — should return 400 when password has digits only
-- [ ] [예외] `POST /api/members` — should return 400 when nickname contains characters other than korean, english letters and digits
-- [ ] [예외] `POST /api/members` — should return 400 when nickname contains a standalone korean consonant
-- [ ] [예외] `POST /api/members` — should return 400 when email format is invalid
-- [ ] [예외] `POST /api/members` — should return error body with code INVALID_INPUT and field message when validation fails
-- [ ] [예외] `POST /api/members` — should return 409 with code MEMBER_EMAIL_DUPLICATED when email is taken
-- [ ] [예외] `POST /api/members` — should return 409 with code MEMBER_NICKNAME_DUPLICATED when nickname is taken
-- [ ] [예외] `MemberService.signUp` — should throw MEMBER_EMAIL_DUPLICATED when lower-cased email already exists
-- [ ] [예외] `MemberService.signUp` — should throw MEMBER_NICKNAME_DUPLICATED when nickname already exists
-- [ ] [예외] `MemberService.signUp` — should throw MEMBER_EMAIL_DUPLICATED when database rejects duplicate email
-- [ ] [예외] `MemberService.signUp` — should throw MEMBER_NICKNAME_DUPLICATED when database rejects duplicate nickname
-- [ ] [예외] `OriginValidationFilter` — should return 403 with code FORBIDDEN_ORIGIN when origin is not allowed
-- [ ] [예외] `OriginValidationFilter` — should return 403 when post request has neither origin nor referer
-- [ ] [예외] `OriginValidationFilter` — should return 403 when referer is not in allowed list
-- [ ] [예외] `MemberSignUpIntegration` — should return 403 when sign up request comes from another origin
+- [x] [예외] `POST /api/members` — should return 400 when password has letters only
+- [x] [예외] `POST /api/members` — should return 400 when password has digits only
+- [x] [예외] `POST /api/members` — should return 400 when nickname contains characters other than korean, english letters and digits
+- [x] [예외] `POST /api/members` — should return 400 when nickname contains a standalone korean consonant
+- [x] [예외] `POST /api/members` — should return 400 when email format is invalid
+- [x] [예외] `POST /api/members` — should return error body with code INVALID_INPUT and field message when validation fails
+- [x] [예외] `POST /api/members` — should return 409 with code MEMBER_EMAIL_DUPLICATED when email is taken
+- [x] [예외] `POST /api/members` — should return 409 with code MEMBER_NICKNAME_DUPLICATED when nickname is taken
+- [x] [예외] `MemberService.signUp` — should throw MEMBER_EMAIL_DUPLICATED when lower-cased email already exists
+- [x] [예외] `MemberService.signUp` — should throw MEMBER_NICKNAME_DUPLICATED when nickname already exists
+- [x] [예외] `MemberService.signUp` — should throw MEMBER_EMAIL_DUPLICATED when database rejects duplicate email
+- [x] [예외] `MemberService.signUp` — should throw MEMBER_NICKNAME_DUPLICATED when database rejects duplicate nickname
+- [x] [예외] `OriginValidationFilter` — should return 403 with code FORBIDDEN_ORIGIN when origin is not allowed
+- [x] [예외] `OriginValidationFilter` — should return 403 when post request has neither origin nor referer
+- [x] [예외] `OriginValidationFilter` — should return 403 when referer is not in allowed list
+- [x] [예외] `MemberSignUpIntegration` — should return 403 when sign up request comes from another origin
 
 ### 수동 확인 (테스트 도구가 없는 화면 — 시나리오 수에 넣지 않는다)
 
@@ -157,6 +157,11 @@ class OriginValidationFilter extends OncePerRequestFilter {
 
 - 가입에 성공하면 `/login`으로 이동한다
 - 이미 가입된 이메일로 가입하면 서버 메시지("이미 가입된 이메일입니다")가 화면에 보인다
+
+**확인 결과 (2026-11-20, Green):** 로컬에서 Oracle·Redis 컨테이너 + `bootRun` + Vite 개발 서버(출처 `http://localhost:5173`)로 브라우저에서 확인했다.
+
+- 가입 성공: `manual1@example.com` / `수동확인1` 제출 → `POST /api/members` 201 → `/login`으로 이동 ✅
+- 실패 메시지: `MANUAL1@example.com`(대문자, 같은 이메일) / `수동확인2` 제출 → 화면에 "이미 가입된 이메일입니다" 표시, `/signup`에 머묾 ✅
 
 ---
 

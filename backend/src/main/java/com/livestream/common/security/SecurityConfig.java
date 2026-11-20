@@ -1,14 +1,36 @@
 package com.livestream.common.security;
 
+import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.header.HeaderWriterFilter;
 
-// SecurityFilterChain(가입 경로 허용, 출처 검증 필터 등록)은 Green에서 만든다.
-// PasswordEncoder 빈은 MemberService 생성자가 요구해서 앱이 뜨려면 지금 있어야 한다.
 @Configuration
 class SecurityConfig {
+
+    // 위조 요청은 CSRF 토큰 대신 출처 검사(OriginValidationFilter)로 막는다 — PRD member "위조 요청 방어"
+    @Bean
+    SecurityFilterChain filterChain(HttpSecurity http,
+                                    @Value("${app.allowed-origins}") List<String> allowedOrigins) throws Exception {
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .logout(AbstractHttpConfigurer::disable)
+                .addFilterAfter(new OriginValidationFilter(allowedOrigins), HeaderWriterFilter.class)
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.POST, "/api/members").permitAll()
+                        .requestMatchers("/api/actuator/health").permitAll()
+                        .anyRequest().authenticated());
+        return http.build();
+    }
 
     @Bean
     PasswordEncoder passwordEncoder() {

@@ -1,5 +1,9 @@
 package com.livestream.member;
 
+import com.livestream.common.error.BusinessException;
+import com.livestream.common.error.ErrorCode;
+import java.util.Locale;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -14,8 +18,34 @@ public class MemberService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // 이메일을 소문자로 맞추고 저장한다. 중복이면 BusinessException
+    // 미리 조회해서 중복을 막고, 동시에 들어와 조회를 함께 통과한 경우는 DB UNIQUE 제약이 막는다
     public MemberResponse signUp(SignUpRequest request) {
-        throw new UnsupportedOperationException("not implemented");
+        String email = request.email().toLowerCase(Locale.ROOT);
+        if (memberMapper.existsByEmail(email)) {
+            throw new BusinessException(ErrorCode.MEMBER_EMAIL_DUPLICATED);
+        }
+        if (memberMapper.existsByNickname(request.nickname())) {
+            throw new BusinessException(ErrorCode.MEMBER_NICKNAME_DUPLICATED);
+        }
+
+        Member member = new Member(email, passwordEncoder.encode(request.password()), request.nickname(), Role.MEMBER);
+        try {
+            memberMapper.insert(member);
+        } catch (DuplicateKeyException e) {
+            throw new BusinessException(duplicateCodeOf(e));
+        }
+        return new MemberResponse(member.getId(), member.getEmail(), member.getNickname(), member.getRole());
+    }
+
+    // 제약 이름은 V1__create_member.sql 에서 정한다
+    private static ErrorCode duplicateCodeOf(DuplicateKeyException e) {
+        String message = String.valueOf(e.getMessage()).toUpperCase(Locale.ROOT);
+        if (message.contains("UK_MEMBER_EMAIL")) {
+            return ErrorCode.MEMBER_EMAIL_DUPLICATED;
+        }
+        if (message.contains("UK_MEMBER_NICKNAME")) {
+            return ErrorCode.MEMBER_NICKNAME_DUPLICATED;
+        }
+        throw e;
     }
 }
