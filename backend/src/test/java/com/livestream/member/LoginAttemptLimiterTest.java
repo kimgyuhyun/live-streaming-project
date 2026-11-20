@@ -67,6 +67,16 @@ class LoginAttemptLimiterTest {
         redis.expire(key, Duration.ofSeconds(seconds));
     }
 
+    // 만료 시각을 1ms 뒤로 당기고 지나가길 기다린다. 15분을 기다리지 않고 "만료된 뒤"를 만든다
+    private void expireNow(String key) throws InterruptedException {
+        redis.expire(key, Duration.ofMillis(1));
+        Thread.sleep(10);
+    }
+
+    private String countOf(String key) {
+        return redis.opsForValue().get(key);
+    }
+
     @Nested
     @DisplayName("LoginAttemptLimiter")
     class Acquire {
@@ -178,6 +188,69 @@ class LoginAttemptLimiterTest {
             }
 
             assertThatCode(() -> limiter.acquire(newEmail(), ip)).doesNotThrowAnyException();
+        }
+
+        // Redis TTL은 남은 시간을 반올림해 0.5초 미만이면 0을 준다. 400ms 남은 차단도 막혀야 한다
+        @Test
+        @DisplayName("should block when the email block has less than a second left")
+        void blocksInLastSecond() {
+            String email = newEmail();
+            fail(email, newIp(), 5);
+            redis.expire(emailKey(email), Duration.ofMillis(400));
+
+            assertThatThrownBy(() -> limiter.acquire(email, newIp()))
+                    .isInstanceOfSatisfying(RetryLaterException.class,
+                            e -> assertThat(e.getRetryAfterSeconds()).isEqualTo(1L));
+        }
+
+        @Test
+        @DisplayName("should allow the attempt and start a new count after the email block expires")
+        void startsNewCountAfterBlockExpires() throws InterruptedException {
+            String email = newEmail();
+            fail(email, newIp(), 5);
+            expireNow(emailKey(email));
+
+            limiter.acquire(email, newIp());
+
+            assertThat(countOf(emailKey(email))).isEqualTo("1");
+        }
+
+        @Test
+        @DisplayName("should report about 15 minutes remaining when an ip is blocked right after its 20th failure")
+        void reportsFifteenMinutesForIpBlock() {
+            String ip = newIp();
+            for (int i = 0; i < LoginAttemptLimiter.IP_LIMIT; i++) {
+                fail(newEmail(), ip, 1);
+            }
+
+            assertThatThrownBy(() -> limiter.acquire(newEmail(), ip))
+                    .isInstanceOfSatisfying(RetryLaterException.class,
+                            e -> assertThat(e.getRetryAfterSeconds()).isGreaterThan(WINDOW_SECONDS - 10));
+        }
+
+        @Test
+        @DisplayName("should not create an ip counter when a success arrives after the ip counter expired")
+        void doesNotCreateIpCounterAfterExpiry() throws InterruptedException {
+            String email = newEmail();
+            String ip = newIp();
+            limiter.acquire(email, ip);
+            expireNow(ipKey(ip));
+
+            limiter.succeeded(email, ip);
+
+            assertThat(redis.hasKey(ipKey(ip))).isFalse();
+        }
+
+        @Test
+        @DisplayName("should not count a blocked attempt toward the ip counter")
+        void doesNotCountBlockedAttemptTowardIp() {
+            String email = newEmail();
+            String ip = newIp();
+            fail(email, ip, 5);
+
+            catchThrowable(() -> limiter.acquire(email, ip));
+
+            assertThat(countOf(ipKey(ip))).isEqualTo("5");
         }
     }
 }
