@@ -53,6 +53,7 @@ OBS로 송출한 방송을 웹에서 실시간으로 보고 채팅하는 1인 �
 | 프론트 | `cd frontend && npm run dev` / `npm run lint` / `npm run build` |
 
 - `./gradlew`는 **JDK 21**이 필요하다. 이 PC는 `JAVA_HOME`·PATH를 일부러 잡아 두지 않았고, JDK는 IntelliJ가 받아 둔 `~/.jdks/liberica-21.0.7`이다. 명령 앞에 `JAVA_HOME="$HOME/.jdks/liberica-21.0.7"`을 붙여 실행한다. `harness.json`의 Gradle 명령은 `JAVA_HOME`이 없으면 이 경로를 쓴다. "JDK가 없다"고 결론 내거나 환경변수를 설정하라고 하지 않는다.
+- `.claude/launch.json`(앱의 브라우저 미리보기로 `backend`·`frontend` 서버를 띄우는 설정)에는 **이 PC 전용 절대 경로가 두 개** 있다. `backend`의 `runtimeExecutable`(`C:/live-streaming-project/backend/gradlew.bat`)과 `env.JAVA_HOME`(`C:/Users/USER/.jdks/liberica-21.0.7`)이다. 다른 PC에서는 저장소 위치와 JDK 21 경로에 맞게 이 둘을 고친다. JSON이라 파일 안에 주석을 달 수 없어 여기 적는다.
 - 컨테이너만 내릴 때는 `docker compose down`. **`-v`(볼륨 삭제)를 쓰지 않는다** — Oracle 데이터가 지워진다. 훅과 deny 규칙이 막는다.
 
 ## 백엔드 컨벤션
