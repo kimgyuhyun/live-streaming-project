@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -386,6 +387,15 @@ class MemberServiceTest {
                     new ChangePasswordRequest("wrong1234", NEW_PASSWORD), CURRENT_SESSION));
 
             verify(sessionRepository, never()).deleteById(anyString());
+        }
+
+        @Test
+        @DisplayName("should not save a new password hash when current password is wrong")
+        void keepsHashWhenRejected() {
+            catchThrowable(() -> memberService.changePassword(MEMBER_ID,
+                    new ChangePasswordRequest("wrong1234", NEW_PASSWORD), CURRENT_SESSION));
+
+            verify(memberMapper, never()).updatePasswordHash(anyLong(), anyString());
         }
     }
 }

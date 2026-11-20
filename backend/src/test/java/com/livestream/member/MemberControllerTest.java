@@ -302,6 +302,26 @@ class MemberControllerTest {
         }
 
         @Test
+        @DisplayName("should return 200 when nickname is exactly 2 characters")
+        void acceptsNicknameOf2() throws Exception {
+            changeNickname("가나").andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("should return 200 when nickname is exactly 12 characters")
+        void acceptsNicknameOf12() throws Exception {
+            changeNickname("가나다라마바사아자차카타").andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("should return 400 when nickname contains a space or special character")
+        void rejectsNicknameWithSpace() throws Exception {
+            changeNickname("시청 자")
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+        }
+
+        @Test
         @DisplayName("should return 409 with code MEMBER_NICKNAME_DUPLICATED when service rejects the nickname")
         void returnsConflict() throws Exception {
             given(memberService.changeNickname(eq(1L), any(ChangeNicknameRequest.class)))
@@ -347,6 +367,34 @@ class MemberControllerTest {
         @DisplayName("should return 400 when new password has no digit")
         void rejectsNewPasswordWithoutDigit() throws Exception {
             changePassword(PASSWORD, "abcdefgh")
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+        }
+
+        @Test
+        @DisplayName("should return 204 when new password is exactly 8 characters")
+        void acceptsNewPasswordOf8() throws Exception {
+            changePassword(PASSWORD, "abcd1234").andExpect(status().isNoContent());
+        }
+
+        @Test
+        @DisplayName("should return 204 when new password is exactly 64 characters")
+        void acceptsNewPasswordOf64() throws Exception {
+            changePassword(PASSWORD, "a".repeat(32) + "1".repeat(32)).andExpect(status().isNoContent());
+        }
+
+        @Test
+        @DisplayName("should return 400 when new password is 65 characters")
+        void rejectsNewPasswordOf65() throws Exception {
+            changePassword(PASSWORD, "a".repeat(32) + "1".repeat(33))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+        }
+
+        @Test
+        @DisplayName("should return 400 when new password has no letter")
+        void rejectsNewPasswordWithoutLetter() throws Exception {
+            changePassword(PASSWORD, "12345678")
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
         }

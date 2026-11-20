@@ -206,7 +206,9 @@ class MemberAccountIntegrationTest {
         @DisplayName("should keep the old password when the change is rejected for a wrong current password")
         void keepsOldPasswordWhenRejected() throws Exception {
             String email = newEmail();
-            changePassword(device(email), "wrong1234", NEW_PASSWORD);
+            changePassword(device(email), "wrong1234", NEW_PASSWORD)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("MEMBER_PASSWORD_MISMATCH"));
 
             login(email, PASSWORD).andExpect(status().isOk());
         }
