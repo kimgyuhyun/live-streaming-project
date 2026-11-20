@@ -301,3 +301,38 @@ AC 3 보강(선택, 판정과는 무관):
 - **AC 1 제안은 받는다.** 시나리오로 옮겨 `## 테스트 시나리오`에 더했다(사용자 결정: 갭 메우기).
 - **AC 3 보강 제안은 받지 않는다.** 공용 테스트 컨텍스트에서 운영자 값이 비어 있다고 단언하면, 루트 `.env`에 운영자 값을 실제로 채운 PC에서 그 테스트가 깨진다. 정상적인 사용이 테스트 실패가 된다. 그 전제가 깨져도 `should start the application with the initializer registered ...`는 여전히 "이 빈이 있는 채로 앱이 뜬다"를 보여 주고, 빈 값 경로는 단위 테스트 셋이 지킨다.
 - **약한 단언 1번은 받는다.** 로그인 응답이 200인지 먼저 단언한다.
+
+---
+
+## 리팩터
+
+대상: `backend/src/main/java/com/livestream/member/OperatorAccountInitializer.java` 하나(`application.yml`·`compose.yml`·`.env.example`은 설정 파일이라 대상 밖).
+
+**고칠 것 없음.** 시작 기준선은 전체 97개 통과(`c6ef141`).
+
+- 중복: 이메일 소문자 변환은 `MemberService`와 두 곳이다. 세 번째가 나오면 뽑는다.
+- 복잡도: 조기 반환 둘과 try/catch 하나, 53줄. 매직 값은 닉네임 상수 하나로 이름이 붙어 있다.
+- 컨벤션: "미리 확인 → 저장 → 중복 오류면 다시 판단"이 `MemberService.signUp`과 같은 모양이다.
+
+---
+
+## 보안 점검
+
+**결과:** 🔴 0 · 🟡 0 · ⚪ 4
+
+| 실행 | 결과 |
+| --- | --- |
+| `typecheck` (백엔드 `compileJava compileTestJava`, 프론트 `tsc -b`) | 통과 |
+| `audit` (`npm audit`) | 0건. 이번 이슈는 의존성을 바꾸지 않았다 |
+| 비밀값 패턴·알려진 접두사 grep (`backend/src/main`, `frontend/src`) | 0건 |
+| `.env` 커밋 여부 | `.env.example`만. 끝 두 줄이 `OPERATOR_EMAIL=`·`OPERATOR_PASSWORD=`로 값이 없다(`cat -A`로 확인) |
+| 바뀐 운영 코드의 로그 출력 | 없음. 이메일·비밀번호를 찍지 않는다 |
+
+확인한 것: 운영자 비밀번호는 기존 `PasswordEncoder`(BCrypt)를 거쳐 저장된다(`OperatorAccountInitializer.java:44`). Actuator는 `health`만 노출해 `/env`로 설정값이 보이지 않는다(기본값, `application.yml`에 노출 설정 없음).
+
+| ⚪ 항목 | 왜 넘기는가 |
+| --- | --- |
+| 테스트의 비밀번호 문자열(`operator1234`, `opPass1234`, `changed5678`) | Testcontainers DB와 mock에만 쓰는 더미 값 |
+| 운영자 비밀번호 규칙(8~64자 영문+숫자)을 검사하지 않음 | 시그니처의 "만들지 않는 것"으로 정했다. 값을 정하는 사람이 운영자 본인이고, 로그인 시도 제한(#3)이 대입을 늦춘다. 다시 볼 조건: 운영자를 여러 명 두게 되면(M4 다시 여는 조건) |
+| 운영자 비밀번호가 앱이 떠 있는 동안 필드(`password`)에 남음 | 시작 때 한 번 쓰고 끝나지만 빈이 살아 있어 메모리에 남는다. 같은 값이 이미 Spring `Environment`에도 있어 필드를 비워도 달라지지 않는다 |
+| `compose.yml`이 운영자 비밀번호를 컨테이너 환경변수로 넘김(`docker inspect`로 보임) | `DB_PASSWORD`와 같은 방식. 호스트 접근 권한이 있으면 `.env`도 읽을 수 있다 |
