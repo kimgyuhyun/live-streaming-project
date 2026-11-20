@@ -10,6 +10,9 @@ x-api: &api
     DB_USERNAME: ${DB_USERNAME:?.env에 DB_USERNAME이 필요합니다}
     DB_PASSWORD: ${DB_PASSWORD:?.env에 DB_PASSWORD가 필요합니다}
     REDIS_HOST: redis
+    # 비어 있으면 운영자 계정을 만들지 않는다
+    OPERATOR_EMAIL: ${OPERATOR_EMAIL:-}
+    OPERATOR_PASSWORD: ${OPERATOR_PASSWORD:-}
     JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=60
   depends_on:
     oracle:
