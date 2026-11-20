@@ -170,6 +170,15 @@ class MemberControllerTest {
                     .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
         }
 
+        // 한글 62자 + a1 = 64자. UTF-8로 188바이트라 BCrypt 한도(72바이트)를 넘는다
+        @Test
+        @DisplayName("should return 400 with ascii-only message when password contains non-ascii characters")
+        void rejectsNonAsciiPassword() throws Exception {
+            signUp(EMAIL, "가".repeat(62) + "a1", NICKNAME)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("비밀번호는 영문·숫자·특수문자만 쓸 수 있습니다"));
+        }
+
         @Test
         @DisplayName("should return 400 when email format is invalid")
         void rejectsInvalidEmail() throws Exception {
