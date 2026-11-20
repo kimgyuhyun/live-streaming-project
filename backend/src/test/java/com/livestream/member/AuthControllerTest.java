@@ -78,6 +78,14 @@ class AuthControllerTest {
         }
 
         @Test
+        @DisplayName("should return 400 when email is 255 characters")
+        void rejectsEmailOf255() throws Exception {
+            login("a".repeat(243) + "@example.com", PASSWORD)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+        }
+
+        @Test
         @DisplayName("should return 400 when password contains non-ascii characters")
         void rejectsNonAsciiPassword() throws Exception {
             login(EMAIL, "비밀번호abcd1234")
