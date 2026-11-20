@@ -314,9 +314,17 @@ class MemberControllerTest {
         }
 
         @Test
-        @DisplayName("should return 400 when nickname contains a space or special character")
+        @DisplayName("should return 400 when nickname contains a space")
         void rejectsNicknameWithSpace() throws Exception {
             changeNickname("시청 자")
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+        }
+
+        @Test
+        @DisplayName("should return 400 when nickname contains a special character")
+        void rejectsNicknameWithSpecialCharacter() throws Exception {
+            changeNickname("시청자!")
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
         }
