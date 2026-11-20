@@ -139,7 +139,9 @@ class OperatorAccountIntegrationTest {
             String email = newEmail();
             runInitializer(memberMapper, email, PASSWORD);
 
-            Cookie session = login(email, PASSWORD).andReturn().getResponse().getCookie("SESSION");
+            Cookie session = login(email, PASSWORD)
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getCookie("SESSION");
 
             mockMvc.perform(get("/api/members/me").cookie(session))
                     .andExpect(jsonPath("$.role").value("OPERATOR"));

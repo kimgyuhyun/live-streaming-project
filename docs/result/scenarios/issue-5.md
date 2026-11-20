@@ -84,7 +84,7 @@ HTTP 경로가 없어 새 에러 코드를 만들지 않는다.
 - [x] [정상] `run` — should not save anything when an account with the email already exists
 - [x] [정상] `OperatorAccountIntegration` — should return role OPERATOR from my info when logging in with the operator password after the initializer runs
 - [x] [정상] `OperatorAccountIntegration` — should still log in with the old password when the initializer runs again with a different password
-- [ ] [정상] `OperatorAccountInitializer` — should save an OPERATOR account at application startup when OPERATOR_EMAIL and OPERATOR_PASSWORD are set
+- [x] [정상] `OperatorAccountInitializer` — should save an OPERATOR account at application startup when OPERATOR_EMAIL and OPERATOR_PASSWORD are set
 
 ### 경계
 
@@ -136,6 +136,14 @@ HTTP 경로가 없어 새 에러 코드를 만들지 않는다.
 | 중복 오류를 항상 삼킴 | `should throw DuplicateKeyException when ... the email still has no account` |
 | (Red~Green 중간) 중복 오류 처리 없음 | 동시 실행 통합 테스트 2개, 단위 1개 |
 | (Red~Green 중간) `@Component` 없음 | `should start the application with the initializer registered ...` |
+
+**AC 검증 후 갭 메우기** — `OperatorAccountStartupTest`(이 클래스만 띄운 Spring 컨텍스트, DB 없음, 17초)를 더했다. 구현이 이미 있어 처음부터 통과하므로, 연결을 하나씩 끊어 실패하는 것을 Red 대신 확인했다. 전체 97개 통과(이 이슈 15개).
+
+| 끊은 연결 | 결과 |
+| --- | --- |
+| yml 키 `operator.email` → `operator.emial` | 실패 |
+| yml 자리표시자 `${OPERATOR_PASSWORD:}` → `${OPERATOR_PASSWRD:}` | 실패 |
+| `@Value("${app.operator.email:}")` → `app.operater.email` | 실패 |
 
 **수동 확인** — 환경변수 → 설정값 → 시작 때 실행으로 이어지는지. 공유 개발 DB를 건드리지 않게 Testcontainers DB로 띄웠다(임시 실행 클래스, 확인 후 지움).
 
