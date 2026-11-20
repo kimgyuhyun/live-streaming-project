@@ -360,7 +360,23 @@ class MemberControllerTest {
         void passesCurrentSessionId() throws Exception {
             changePassword(PASSWORD, "newpass99").andExpect(status().isNoContent());
 
-            verify(memberService).changePassword(eq(1L), any(ChangePasswordRequest.class), eq(SESSION_ID));
+            verify(memberService).changePassword(eq(1L), any(ChangePasswordRequest.class), eq(SESSION_ID), any());
+        }
+
+        @Test
+        @DisplayName("should pass the client ip to the service")
+        void passesClientIp() throws Exception {
+            loggedInAs(1L);
+            mockMvc.perform(put("/api/members/me/password")
+                    .with(request -> {
+                        request.setRemoteAddr("203.0.113.7");
+                        return request;
+                    })
+                    .session(new MockHttpSession(null, SESSION_ID))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(new ChangePasswordRequest(PASSWORD, "newpass99"))));
+
+            verify(memberService).changePassword(eq(1L), any(ChangePasswordRequest.class), any(), eq("203.0.113.7"));
         }
 
         @Test
@@ -411,7 +427,7 @@ class MemberControllerTest {
         @DisplayName("should return 400 with code MEMBER_PASSWORD_MISMATCH when service rejects current password")
         void returnsMismatch() throws Exception {
             willThrow(new BusinessException(ErrorCode.MEMBER_PASSWORD_MISMATCH))
-                    .given(memberService).changePassword(eq(1L), any(ChangePasswordRequest.class), any());
+                    .given(memberService).changePassword(eq(1L), any(ChangePasswordRequest.class), any(), any());
 
             changePassword("wrong1234", "newpass99")
                     .andExpect(status().isBadRequest())

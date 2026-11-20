@@ -43,7 +43,7 @@ class MemberController {
     ResponseEntity<Void> changePassword(@AuthenticationPrincipal LoginMember loginMember,
                                         @Valid @RequestBody ChangePasswordRequest request,
                                         HttpServletRequest httpRequest) {
-        memberService.changePassword(loginMember.id(), request, httpRequest.getSession(false).getId());
+        memberService.changePassword(loginMember.id(), request, httpRequest.getSession(false).getId(), null);
         return ResponseEntity.noContent().build();
     }
 }

@@ -116,8 +116,18 @@ class MemberAccountIntegrationTest {
         return mockMvc.perform(request);
     }
 
+    // 현재 비밀번호 확인도 IP별로 센다. 다른 테스트의 실패가 같은 IP에 쌓이지 않게 매번 새 IP로 보낸다
     private ResultActions changePassword(Cookie cookie, String currentPassword, String newPassword) throws Exception {
+        return changePassword(cookie, currentPassword, newPassword, newIp());
+    }
+
+    private ResultActions changePassword(Cookie cookie, String currentPassword, String newPassword, String ip)
+            throws Exception {
         return mockMvc.perform(put("/api/members/me/password")
+                .with(request -> {
+                    request.setRemoteAddr(ip);
+                    return request;
+                })
                 .header(HttpHeaders.ORIGIN, ALLOWED_ORIGIN)
                 .cookie(cookie)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -220,6 +230,21 @@ class MemberAccountIntegrationTest {
             changePassword(device(email), PASSWORD, NEW_PASSWORD).andExpect(status().isNoContent());
 
             login(email, PASSWORD).andExpect(status().isUnauthorized());
+        }
+
+        // 로그인 시도 제한(이메일 5번)을 비밀번호 변경의 현재 비밀번호 확인에도 건다. 6번째는 맞는 비밀번호여도 막힌다
+        @Test
+        @DisplayName("should return 429 on a password change after five wrong current passwords")
+        void blocksPasswordChangeAfterFiveWrongCurrentPasswords() throws Exception {
+            Cookie cookie = device(newEmail());
+            String ip = newIp();
+            for (int i = 0; i < LoginAttemptLimiter.EMAIL_LIMIT; i++) {
+                changePassword(cookie, "wrong1234", NEW_PASSWORD, ip).andExpect(status().isBadRequest());
+            }
+
+            changePassword(cookie, PASSWORD, NEW_PASSWORD, ip)
+                    .andExpect(status().isTooManyRequests())
+                    .andExpect(jsonPath("$.code").value("MEMBER_LOGIN_BLOCKED"));
         }
 
         @Test
