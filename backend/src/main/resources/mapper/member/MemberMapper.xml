@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.livestream.member.MemberMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO member (email, password_hash, nickname, role)
+        VALUES (#{email}, #{passwordHash}, #{nickname}, #{role})
+    </insert>
+
+    <select id="existsByEmail" resultType="boolean">
+        SELECT CASE WHEN EXISTS (SELECT 1 FROM member WHERE email = #{email}) THEN 1 ELSE 0 END FROM dual
+    </select>
+
+    <select id="existsByNickname" resultType="boolean">
+        SELECT CASE WHEN EXISTS (SELECT 1 FROM member WHERE nickname = #{nickname}) THEN 1 ELSE 0 END FROM dual
+    </select>
+
+    <select id="findByEmail" resultType="com.livestream.member.Member">
+        SELECT id, email, password_hash, nickname, role
+        FROM member
+        WHERE email = #{email}
+    </select>
+</mapper>
