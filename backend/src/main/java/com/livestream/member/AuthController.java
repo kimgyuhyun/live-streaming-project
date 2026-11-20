@@ -31,7 +31,8 @@ class AuthController {
     @PostMapping("/login")
     MemberResponse login(@Valid @RequestBody LoginRequest request,
                          HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
-        MemberResponse member = memberService.login(request);
+        // 실제 사용자 IP. nginx가 넘긴 X-Forwarded-For를 Tomcat이 옮겨 둔다(forward-headers-strategy: native)
+        MemberResponse member = memberService.login(request, httpRequest.getRemoteAddr());
         if (httpRequest.getSession(false) != null) {
             httpRequest.changeSessionId();
         }

@@ -21,6 +21,8 @@ spring:
     timeout: 7d   # 마지막 요청 후 7일
 
 server:
+  # nginx가 넘긴 X-Forwarded-For를 Tomcat이 실제 사용자 IP로 쓴다. 내부 프록시 대역에서 온 것만 믿는다
+  forward-headers-strategy: native
   servlet:
     session:
       cookie:
