@@ -10,7 +10,9 @@ public enum ErrorCode {
     FORBIDDEN_ORIGIN(HttpStatus.FORBIDDEN, "허용되지 않은 출처의 요청입니다"),
     MEMBER_LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 맞지 않습니다"),
     MEMBER_EMAIL_DUPLICATED(HttpStatus.CONFLICT, "이미 가입된 이메일입니다"),
-    MEMBER_NICKNAME_DUPLICATED(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다");
+    MEMBER_NICKNAME_DUPLICATED(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다"),
+    CHANNEL_APPLICATION_PENDING(HttpStatus.CONFLICT, "이미 대기 중인 스트리머 신청이 있습니다"),
+    CHANNEL_APPLICATION_NOT_MEMBER(HttpStatus.CONFLICT, "회원만 스트리머 신청을 할 수 있습니다");
 
     private final HttpStatus status;
     private final String message;
