@@ -55,8 +55,8 @@ class StreamerApplicationServiceTest {
         @Test
         @DisplayName("should save a new pending application when member has no pending application after a rejection")
         void savesNewPendingApplicationAfterRejection() {
+            // 거절된 신청은 대기가 아니므로 대기 확인이 "없음"을 낸다. 실제 DB로는 통합 테스트가 본다
             given(mapper.existsPendingByMemberId(MEMBER_ID)).willReturn(false);
-            given(mapper.findLatestStatusByMemberId(MEMBER_ID)).willReturn(Optional.of(ApplicationStatus.REJECTED));
 
             service.apply(MEMBER_ID, Role.MEMBER);
 

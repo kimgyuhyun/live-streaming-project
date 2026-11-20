@@ -127,7 +127,8 @@ class StreamerApplicationIntegrationTest {
             signUp(email);
             Cookie session = loggedIn(email);
 
-            mockMvc.perform(post("/api/streamer-applications").header(HttpHeaders.ORIGIN, ALLOWED_ORIGIN).cookie(session));
+            mockMvc.perform(post("/api/streamer-applications").header(HttpHeaders.ORIGIN, ALLOWED_ORIGIN).cookie(session))
+                    .andExpect(status().isCreated());
 
             mockMvc.perform(get("/api/streamer-applications/me").cookie(session))
                     .andExpect(jsonPath("$.status").value("PENDING"));
@@ -153,12 +154,36 @@ class StreamerApplicationIntegrationTest {
                 results.add(pool.submit(task));
             }
             start.countDown();
+            List<String> outcomes = new ArrayList<>();
             for (Future<String> result : results) {
-                result.get();
+                outcomes.add(result.get());
             }
             pool.shutdown();
 
             assertThat(pendingCountOf(memberId)).isEqualTo(1);
+            assertThat(outcomes).containsExactlyInAnyOrder("OK", "CHANNEL_APPLICATION_PENDING");
+        }
+
+        @Test
+        @DisplayName("should report a pending application from the pending check when one is saved")
+        void pendingCheckFindsSavedPendingApplication() {
+            long memberId = signUp(newEmail());
+            streamerApplicationMapper.insert(new StreamerApplication(memberId, ApplicationStatus.PENDING));
+
+            assertThat(streamerApplicationMapper.existsPendingByMemberId(memberId)).isTrue();
+        }
+
+        @Test
+        @DisplayName("should return 409 with code CHANNEL_APPLICATION_PENDING when member with a saved pending application applies again with session cookie")
+        void rejectsSecondApplicationOverHttp() throws Exception {
+            String email = newEmail();
+            long memberId = signUp(email);
+            streamerApplicationMapper.insert(new StreamerApplication(memberId, ApplicationStatus.PENDING));
+            Cookie session = loggedIn(email);
+
+            mockMvc.perform(post("/api/streamer-applications").header(HttpHeaders.ORIGIN, ALLOWED_ORIGIN).cookie(session))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("CHANNEL_APPLICATION_PENDING"));
         }
 
         @Test
