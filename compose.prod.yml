@@ -1,0 +1,31 @@
+# 서버용 덮어쓰기: docker compose -f compose.yml -f compose.prod.yml up -d
+# 이미지는 CI가 ghcr에 올린 것을 쓰고, 호스트 포트는 RTMP 1935만 연다.
+# HTTPS와 80/443은 server-infra의 edge-caddy가 맡고, nginx만 edge 망에 붙는다.
+# 배포 워크플로와 함께 인프라 검증 단계에서 서버에서 확인한다.
+
+# !reset은 YAML 앵커로 넘기면 적용되지 않아서 api-1·api-2에 각각 적는다.
+services:
+  oracle:
+    ports: !reset []
+  redis:
+    ports: !reset []
+  api-1:
+    image: ghcr.io/kimgyuhyun/live-streaming-api:${IMAGE_TAG:?IMAGE_TAG가 필요합니다}
+    build: !reset null
+  api-2:
+    image: ghcr.io/kimgyuhyun/live-streaming-api:${IMAGE_TAG:?IMAGE_TAG가 필요합니다}
+    build: !reset null
+  mediamtx:
+    ports: !override
+      - "1935:1935"
+  nginx:
+    image: ghcr.io/kimgyuhyun/live-streaming-nginx:${IMAGE_TAG:?IMAGE_TAG가 필요합니다}
+    build: !reset null
+    ports: !reset []
+    networks:
+      - default
+      - edge
+
+networks:
+  edge:
+    external: true
