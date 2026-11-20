@@ -262,3 +262,27 @@ AC 2 (⚠️):
 - **약한 곳 2** — 서비스 테스트의 쓰이지 않는 `findLatestStatusByMemberId` 스텁을 뺀다. 이 테스트는 서비스 수준에서 "대기 신청 없음이면 저장"만 보고, "거절 후 재신청"의 실제 의미는 통합 테스트(`should save a new pending application and report PENDING when member applies again after rejection`)가 진짜 DB로 본다.
 - **갭 테스트 변이 확인** — 추가한 테스트는 이미 있는 구현을 검사하므로 처음부터 통과한다. 대기 확인 SQL을 `AND 1 = 0`(늘 없음)으로 망가뜨리자 `should report a pending application from the pending check when one is saved`만 실패했다(통합 8개 중 1개). HTTP 409 테스트는 DB 제약이 같은 409를 내서 통과한다 — AC 2의 동작을 보는 테스트이므로 의도대로다. 되돌린 뒤 전체 82개 통과.
 - **약한 곳 4** — 그대로 둔다. 컨트롤러 테스트의 `$.status`는 직렬화 확인이고, 같은 값을 통합 테스트가 진짜 경로로 본다.
+
+---
+
+## 리팩터
+
+고칠 대상 없음(2026-11-20). 서비스·컨트롤러는 분기 2개·저장 1번·위임 1줄이고, 반복(`new StreamerApplicationResponse(PENDING)`)은 두 곳뿐이라 공통화하지 않았다. 모양은 `member` 패키지와 같다. 프론트 4개 파일은 테스트 도구가 없어 손대지 않았다(#12에서 Vitest).
+
+---
+
+## 보안 점검
+
+> `/harness:security-review 6` (2026-11-20, HEAD e91bdd9). 대장(`securityExceptions`)은 설정에 없다.
+
+**수집 결과:** 타입 검사(`compileJava compileTestJava`, `tsc -b`) 오류 없음 · `npm audit` 취약점 0 · 비밀값 패턴·알려진 키 접두사 없음 · `.env` 커밋·스테이지 없음 · 프론트 `console.log`·백엔드 channel 로그 없음 · `VITE_` 접두사 없음 · `dangerouslySetInnerHTML` 없음
+
+| 분류 | 파일·줄 | 내용 | 판단 |
+| --- | --- | --- | --- |
+| 🔴 | — | 없음 | |
+| 🟡 | — | 없음 | |
+| ⚪ | `StreamerApplicationController.java` (`loginMember.role()`) | 역할을 DB가 아니라 세션에서 읽는다. 세션이 낡으면(승인 뒤에도 `MEMBER`로 남은 세션) 스트리머가 신청할 수 있다 | 시그니처 판단 1에서 정한 것. 승인 때 그 회원의 세션을 지우는 것이 #7 AC 3이다. #7에서 그 AC가 빠지면 다시 본다 |
+| ⚪ | `StreamerApplicationService.java` (insert) | 대기 신청 중복 외의 DB 오류(예: 회원 행이 사라져 외래 키 위반)는 처리하지 않아 500이 된다 | 회원 삭제 기능이 없어 생기지 않는 경로. 500 본문은 Spring Boot 기본값(`include-stacktrace`·`include-message` 기본 never, `application.yml`에 덮어쓰기 없음)이라 스택·SQL이 나가지 않는다 |
+| ⚪ | `/api/streamer-applications` (POST·GET) | 입력 검증 | 요청 본문·파라미터가 없다. 회원 id는 세션에서만 읽으므로 남의 신청을 보거나 만들 경로(IDOR)가 없다. 출처 검증(403)·로그인 필요(401)는 통합 테스트와 변이 확인으로 확인 |
+
+즉시 수정할 항목이 없어 코드를 고치지 않았다. 재스캔 대상 변경도 없다.
