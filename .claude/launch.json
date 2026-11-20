@@ -1,0 +1,20 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "backend",
+      "runtimeExecutable": "C:/live-streaming-project/backend/gradlew.bat",
+      "runtimeArgs": ["bootRun"],
+      "cwd": "backend",
+      "env": { "JAVA_HOME": "C:/Users/USER/.jdks/liberica-21.0.7" },
+      "port": 8080
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "frontend",
+      "port": 5173
+    }
+  ]
+}
