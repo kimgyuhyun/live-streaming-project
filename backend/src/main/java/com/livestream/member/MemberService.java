@@ -94,12 +94,15 @@ public class MemberService {
 
     // 현재 비밀번호 확인 → 새 해시 저장 → 이 회원의 다른 세션 삭제 (PRD member M2). 지금 세션은 남긴다.
     // DB와 Redis는 한 트랜잭션으로 묶을 수 없다. 세션 삭제가 실패해도 비밀번호는 이미 바뀌었고, 다시 바꾸면 그때 지워진다
+    // 현재 비밀번호 확인에도 로그인과 같은 시도 제한을 건다. 안 걸면 로그인된 세션으로 비밀번호를 대입할 수 있다
     public void changePassword(long memberId, ChangePasswordRequest request, String currentSessionId,
                                String clientIp) {
         Member member = memberMapper.findById(memberId).orElseThrow();
+        loginAttemptLimiter.acquire(member.getEmail(), clientIp);
         if (!passwordEncoder.matches(request.currentPassword(), member.getPasswordHash())) {
             throw new BusinessException(ErrorCode.MEMBER_PASSWORD_MISMATCH);
         }
+        loginAttemptLimiter.succeeded(member.getEmail(), clientIp);
 
         memberMapper.updatePasswordHash(memberId, passwordEncoder.encode(request.newPassword()));
         sessionRepository.findByPrincipalName(String.valueOf(memberId)).keySet().stream()
