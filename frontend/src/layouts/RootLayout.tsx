@@ -19,7 +19,7 @@ function RootLayout() {
         <Link to="/">Live Streaming</Link>{' '}
         {me.data ? (
           <>
-            <span>{me.data.nickname}</span>{' '}
+            <Link to="/me">{me.data.nickname}</Link>{' '}
             <button type="button" onClick={() => logoutMutation.mutate()} disabled={logoutMutation.isPending}>
               로그아웃
             </button>

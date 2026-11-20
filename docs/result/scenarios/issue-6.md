@@ -118,29 +118,29 @@ public enum ErrorCode {
 
 ### 정상
 
-- [ ] [정상] `StreamerApplicationService.apply` — should save a pending application and return PENDING when member has never applied
-- [ ] [정상] `StreamerApplicationService.apply` — should save a new pending application when member has no pending application after a rejection
-- [ ] [정상] `StreamerApplicationService.findMine` — should return the status of the latest application when member has applied
-- [ ] [정상] `POST /api/streamer-applications` — should return 201 with status PENDING when service accepts application
-- [ ] [정상] `GET /api/streamer-applications/me` — should return 200 with the application status of the logged-in member
-- [ ] [정상] `StreamerApplicationIntegration` — should return PENDING from my application after member applies with session cookie
+- [x] [정상] `StreamerApplicationService.apply` — should save a pending application and return PENDING when member has never applied
+- [x] [정상] `StreamerApplicationService.apply` — should save a new pending application when member has no pending application after a rejection
+- [x] [정상] `StreamerApplicationService.findMine` — should return the status of the latest application when member has applied
+- [x] [정상] `POST /api/streamer-applications` — should return 201 with status PENDING when service accepts application
+- [x] [정상] `GET /api/streamer-applications/me` — should return 200 with the application status of the logged-in member
+- [x] [정상] `StreamerApplicationIntegration` — should return PENDING from my application after member applies with session cookie
 
 ### 경계
 
-- [ ] [경계] `StreamerApplicationService.findMine` — should return NONE when member has never applied
-- [ ] [경계] `StreamerApplicationIntegration` — should keep one pending application when two applications from the same member arrive at once
-- [ ] [경계] `StreamerApplicationIntegration` — should throw CHANNEL_APPLICATION_PENDING when pending check passes but a pending application is already saved
-- [ ] [경계] `StreamerApplicationIntegration` — should save a new pending application and report PENDING when member applies again after rejection
+- [x] [경계] `StreamerApplicationService.findMine` — should return NONE when member has never applied
+- [x] [경계] `StreamerApplicationIntegration` — should keep one pending application when two applications from the same member arrive at once
+- [x] [경계] `StreamerApplicationIntegration` — should throw CHANNEL_APPLICATION_PENDING when pending check passes but a pending application is already saved
+- [x] [경계] `StreamerApplicationIntegration` — should save a new pending application and report PENDING when member applies again after rejection
 
 ### 예외
 
-- [ ] [예외] `StreamerApplicationService.apply` — should throw CHANNEL_APPLICATION_PENDING when member has a pending application
-- [ ] [예외] `StreamerApplicationService.apply` — should throw CHANNEL_APPLICATION_NOT_MEMBER when role is STREAMER
-- [ ] [예외] `StreamerApplicationService.apply` — should throw CHANNEL_APPLICATION_NOT_MEMBER when role is OPERATOR
-- [ ] [예외] `POST /api/streamer-applications` — should return 409 with code CHANNEL_APPLICATION_PENDING and its message when service rejects duplicate
-- [ ] [예외] `POST /api/streamer-applications` — should return 409 with code CHANNEL_APPLICATION_NOT_MEMBER and its message when service rejects non-member
-- [ ] [예외] `StreamerApplicationIntegration` — should return 401 with code UNAUTHENTICATED when application is requested without login
-- [ ] [예외] `StreamerApplicationIntegration` — should return 403 when application request comes from another origin
+- [x] [예외] `StreamerApplicationService.apply` — should throw CHANNEL_APPLICATION_PENDING when member has a pending application
+- [x] [예외] `StreamerApplicationService.apply` — should throw CHANNEL_APPLICATION_NOT_MEMBER when role is STREAMER
+- [x] [예외] `StreamerApplicationService.apply` — should throw CHANNEL_APPLICATION_NOT_MEMBER when role is OPERATOR
+- [x] [예외] `POST /api/streamer-applications` — should return 409 with code CHANNEL_APPLICATION_PENDING and its message when service rejects duplicate
+- [x] [예외] `POST /api/streamer-applications` — should return 409 with code CHANNEL_APPLICATION_NOT_MEMBER and its message when service rejects non-member
+- [x] [예외] `StreamerApplicationIntegration` — should return 401 with code UNAUTHENTICATED when application is requested without login
+- [x] [예외] `StreamerApplicationIntegration` — should return 403 when application request comes from another origin
 
 ### 수동 확인 (테스트 도구가 없는 화면 — 시나리오 수에 넣지 않는다)
 
@@ -150,6 +150,16 @@ public enum ErrorCode {
 - 버튼을 누르면 상태가 "대기"로 바뀌고 버튼이 사라진다
 - 새로고침해도 "대기"가 남아 있다
 - 로그인하지 않고 `/me`를 열면 로그인 링크가 보인다
+
+**확인 결과 (2026-11-20, Green):** 공유 개발 DB에 V2를 적용하지 않으려고 Testcontainers DB로 앱을 띄웠다(임시 `TestLiveStreamingApplication` + `bootTestRun`, 확인 후 삭제). Vite 개발 서버(출처 `http://localhost:5173`)에서 `apply6@example.com` / `신청확인6`으로 새로 가입해 확인했다.
+
+- 로그인 전 `/me`: `GET /api/members/me` 401 → "로그인이 필요합니다"와 로그인 링크 ✅
+- 로그인 후 머리글 닉네임 `신청확인6`이 `/me` 링크 → 이메일·닉네임·역할 "회원"·신청 상태 "없음"·"스트리머 신청" 버튼 ✅
+- 버튼: `POST /api/streamer-applications` 201 → `GET .../me` 200 → 상태 "대기", 버튼 사라짐 ✅
+- 새로고침: 상태 "대기" 유지 ✅
+- 콘솔 오류는 네트워크 응답(백엔드 기동 전 502, 비로그인 401)뿐, 스크립트 오류 없음
+
+**401·403 테스트 변이 확인 (Green):** 이 두 테스트는 기존 보안 설정이 이미 막고 있어 Red에서 구현 없이 통과했다. `SecurityConfig`에서 이 경로를 `permitAll`로 열고 출처 검증 필터를 빼자 두 테스트만 실패했다(401 → NPE, 403 → 상태 단언 실패). 나머지 4개는 통과. 확인 후 `SecurityConfig`를 되돌렸다.
 
 ---
 

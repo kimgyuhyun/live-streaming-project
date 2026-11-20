@@ -1,6 +1,7 @@
 package com.livestream.channel;
 
 import com.livestream.member.LoginMember;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,11 +21,12 @@ class StreamerApplicationController {
 
     @PostMapping
     ResponseEntity<StreamerApplicationResponse> apply(@AuthenticationPrincipal LoginMember loginMember) {
-        throw new UnsupportedOperationException("not implemented");
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(streamerApplicationService.apply(loginMember.id(), loginMember.role()));
     }
 
     @GetMapping("/me")
     StreamerApplicationResponse mine(@AuthenticationPrincipal LoginMember loginMember) {
-        throw new UnsupportedOperationException("not implemented");
+        return streamerApplicationService.findMine(loginMember.id());
     }
 }
