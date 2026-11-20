@@ -19,12 +19,14 @@ class LoginAttemptLimiter {
 
     // 막혔으면 남은 초(둘 다면 더 긴 쪽)를 돌려주고 아무것도 세지 않는다.
     // 막히지 않았으면 0을 돌려주고 센다. 이메일은 마지막 실패 기준(매번 만료를 다시), IP는 첫 실패 기준(처음에만 만료)
+    // 남은 시간은 PTTL(밀리초)을 초로 올림한다. TTL은 0.5초 미만을 0으로 반올림해 차단 마지막 순간에 요청이 통과한다
     private static final RedisScript<Long> ACQUIRE = RedisScript.of("""
+            local function remaining(key) return math.ceil(redis.call('PTTL', key) / 1000) end
             local emailCount = tonumber(redis.call('GET', KEYS[1]) or '0')
             local ipCount = tonumber(redis.call('GET', KEYS[2]) or '0')
             local wait = 0
-            if emailCount >= tonumber(ARGV[1]) then wait = math.max(wait, redis.call('TTL', KEYS[1])) end
-            if ipCount >= tonumber(ARGV[2]) then wait = math.max(wait, redis.call('TTL', KEYS[2])) end
+            if emailCount >= tonumber(ARGV[1]) then wait = math.max(wait, remaining(KEYS[1])) end
+            if ipCount >= tonumber(ARGV[2]) then wait = math.max(wait, remaining(KEYS[2])) end
             if wait > 0 then return wait end
             redis.call('INCR', KEYS[1])
             redis.call('EXPIRE', KEYS[1], ARGV[3])
