@@ -10,6 +10,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.header.HeaderWriterFilter;
 
 @Configuration
@@ -30,6 +32,12 @@ class SecurityConfig {
                         .requestMatchers("/api/actuator/health").permitAll()
                         .anyRequest().authenticated());
         return http.build();
+    }
+
+    // 로그인한 사람을 세션에 저장한다. AuthController가 로그인할 때 같은 인스턴스를 쓴다
+    @Bean
+    SecurityContextRepository securityContextRepository() {
+        return new HttpSessionSecurityContextRepository();
     }
 
     @Bean

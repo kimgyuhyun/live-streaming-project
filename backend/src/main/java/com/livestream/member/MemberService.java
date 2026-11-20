@@ -37,6 +37,15 @@ public class MemberService {
         return new MemberResponse(member.getId(), member.getEmail(), member.getNickname(), member.getRole());
     }
 
+    // 이메일을 소문자로 바꿔 찾는다. 없는 이메일이면 가짜 해시와 한 번 비교한 뒤 MEMBER_LOGIN_FAILED
+    public MemberResponse login(LoginRequest request) {
+        throw new UnsupportedOperationException("not implemented");
+    }
+
+    public MemberResponse findMe(long memberId) {
+        throw new UnsupportedOperationException("not implemented");
+    }
+
     // 제약 이름은 V1__create_member.sql 에서 정한다
     private static ErrorCode duplicateCodeOf(DuplicateKeyException e) {
         String message = String.valueOf(e.getMessage()).toUpperCase(Locale.ROOT);
