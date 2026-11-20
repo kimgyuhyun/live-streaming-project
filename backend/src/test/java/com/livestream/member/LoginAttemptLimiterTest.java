@@ -225,7 +225,7 @@ class LoginAttemptLimiterTest {
 
             assertThatThrownBy(() -> limiter.acquire(newEmail(), ip))
                     .isInstanceOfSatisfying(RetryLaterException.class,
-                            e -> assertThat(e.getRetryAfterSeconds()).isGreaterThan(WINDOW_SECONDS - 10));
+                            e -> assertThat(e.getRetryAfterSeconds()).isBetween(WINDOW_SECONDS - 9, WINDOW_SECONDS));
         }
 
         @Test
