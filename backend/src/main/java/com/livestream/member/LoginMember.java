@@ -8,6 +8,6 @@ public record LoginMember(long id, Role role) implements AuthenticatedPrincipal,
 
     @Override
     public String getName() {
-        throw new UnsupportedOperationException("not implemented");
+        return String.valueOf(id);
     }
 }

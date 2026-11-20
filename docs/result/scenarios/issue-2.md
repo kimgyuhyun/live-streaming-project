@@ -132,36 +132,36 @@ class SecurityConfig {
 
 ### 정상
 
-- [ ] [정상] `MemberService.login` — should return member when password matches
-- [ ] [정상] `MemberService.login` — should find member by lower-cased email when email contains upper case letters
-- [ ] [정상] `MemberService.findMe` — should return email, nickname and role when member exists
-- [ ] [정상] `POST /api/auth/login` — should return 200 with email, nickname and role when service accepts login
-- [ ] [정상] `GET /api/members/me` — should return 200 with email, nickname and role of logged-in member
-- [ ] [정상] `MemberLoginIntegration` — should set HttpOnly and SameSite=Lax session cookie when login succeeds
-- [ ] [정상] `MemberLoginIntegration` — should return email, nickname and role from me with the session cookie after login
-- [ ] [정상] `MemberLoginIntegration` — should log in with a@B.COM when member signed up with A@b.com
-- [ ] [정상] `MemberLoginIntegration` — should store session in redis with 7 days max inactive interval when login succeeds
-- [ ] [정상] `MemberLoginIntegration` — should find the session by member id in session index when login succeeds
-- [ ] [정상] `MemberLoginIntegration` — should return 401 from me with the same cookie when member logs out
+- [x] [정상] `MemberService.login` — should return member when password matches
+- [x] [정상] `MemberService.login` — should find member by lower-cased email when email contains upper case letters
+- [x] [정상] `MemberService.findMe` — should return email, nickname and role when member exists
+- [x] [정상] `POST /api/auth/login` — should return 200 with email, nickname and role when service accepts login
+- [x] [정상] `GET /api/members/me` — should return 200 with email, nickname and role of logged-in member
+- [x] [정상] `MemberLoginIntegration` — should set HttpOnly and SameSite=Lax session cookie when login succeeds
+- [x] [정상] `MemberLoginIntegration` — should return email, nickname and role from me with the session cookie after login
+- [x] [정상] `MemberLoginIntegration` — should log in with a@B.COM when member signed up with A@b.com
+- [x] [정상] `MemberLoginIntegration` — should store session in redis with 7 days max inactive interval when login succeeds
+- [x] [정상] `MemberLoginIntegration` — should find the session by member id in session index when login succeeds
+- [x] [정상] `MemberLoginIntegration` — should return 401 from me with the same cookie when member logs out
 
 ### 경계
 
-- [ ] [경계] `MemberLoginIntegration` — should issue a session id different from the one sent before login when login succeeds
-- [ ] [경계] `MemberLoginIntegration` — should return 204 when logout is requested without a session
-- [ ] [경계] `POST /api/auth/login` — should return 400 when password is 65 characters
-- [ ] [경계] `POST /api/auth/login` — should return 400 when password contains non-ascii characters
+- [x] [경계] `MemberLoginIntegration` — should issue a session id different from the one sent before login when login succeeds
+- [x] [경계] `MemberLoginIntegration` — should return 204 when logout is requested without a session
+- [x] [경계] `POST /api/auth/login` — should return 400 when password is 65 characters
+- [x] [경계] `POST /api/auth/login` — should return 400 when password contains non-ascii characters
 
 ### 예외
 
-- [ ] [예외] `MemberService.login` — should throw MEMBER_LOGIN_FAILED when password does not match
-- [ ] [예외] `MemberService.login` — should throw MEMBER_LOGIN_FAILED when email does not exist
-- [ ] [예외] `MemberService.login` — should compare password against a dummy hash once when email does not exist
-- [ ] [예외] `POST /api/auth/login` — should return 401 with code MEMBER_LOGIN_FAILED and its message when service rejects login
-- [ ] [예외] `POST /api/auth/login` — should return 400 with code INVALID_INPUT when email is blank
-- [ ] [예외] `POST /api/members` — should return 400 with code INVALID_INPUT when request body is malformed json
-- [ ] [예외] `MemberLoginIntegration` — should return the same 401 code and message for wrong password and unknown email
-- [ ] [예외] `MemberLoginIntegration` — should return 401 with code UNAUTHENTICATED when me is requested without login
-- [ ] [예외] `MemberLoginIntegration` — should return 403 when login request comes from another origin
+- [x] [예외] `MemberService.login` — should throw MEMBER_LOGIN_FAILED when password does not match
+- [x] [예외] `MemberService.login` — should throw MEMBER_LOGIN_FAILED when email does not exist
+- [x] [예외] `MemberService.login` — should compare password against a dummy hash once when email does not exist
+- [x] [예외] `POST /api/auth/login` — should return 401 with code MEMBER_LOGIN_FAILED and its message when service rejects login
+- [x] [예외] `POST /api/auth/login` — should return 400 with code INVALID_INPUT when email is blank
+- [x] [예외] `POST /api/members` — should return 400 with code INVALID_INPUT when request body is malformed json
+- [x] [예외] `MemberLoginIntegration` — should return the same 401 code and message for wrong password and unknown email
+- [x] [예외] `MemberLoginIntegration` — should return 401 with code UNAUTHENTICATED when me is requested without login
+- [x] [예외] `MemberLoginIntegration` — should return 403 when login request comes from another origin
 
 ### 수동 확인 (테스트 도구가 없는 화면 — 시나리오 수에 넣지 않는다)
 
@@ -171,6 +171,13 @@ class SecurityConfig {
 - 새로고침해도 머리글에 닉네임이 남아 있다
 - 틀린 비밀번호로 로그인하면 "이메일 또는 비밀번호가 맞지 않습니다"가 화면에 보인다
 - 로그아웃하면 머리글이 로그인·가입 링크로 바뀐다
+
+**확인 결과 (2026-11-20, Green):** 로컬에서 Oracle·Redis 컨테이너 + `bootRun` + Vite 개발 서버(출처 `http://localhost:5173`)로 브라우저에서 확인했다. `Login2Check@Example.com`으로 새로 가입한 계정을 소문자 이메일로 로그인했다.
+
+- 틀린 비밀번호: `POST /api/auth/login` 401 → 화면에 "이메일 또는 비밀번호가 맞지 않습니다" 표시, `/login`에 머묾 ✅
+- 로그인 성공: 200 → `/`로 이동, 머리글에 닉네임 `수동확인2`와 로그아웃 버튼 ✅
+- 새로고침: `GET /api/members/me` 200, 머리글에 닉네임 유지 ✅
+- 로그아웃: `POST /api/auth/logout` 204 → `GET /api/members/me` 401 → 머리글이 로그인·가입 링크로 바뀜 ✅
 
 ---
 

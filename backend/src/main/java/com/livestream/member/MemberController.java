@@ -27,6 +27,6 @@ class MemberController {
 
     @GetMapping("/me")
     MemberResponse me(@AuthenticationPrincipal LoginMember loginMember) {
-        throw new UnsupportedOperationException("not implemented");
+        return memberService.findMe(loginMember.id());
     }
 }

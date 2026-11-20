@@ -4,6 +4,6 @@ package com.livestream.common.error;
 public record ErrorResponse(String code, String message) {
 
     public static ErrorResponse of(ErrorCode code) {
-        throw new UnsupportedOperationException("not implemented");
+        return new ErrorResponse(code.name(), code.getMessage());
     }
 }

@@ -14,6 +14,18 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: 6379
+  # 세션은 Redis에. 회원별 색인을 함께 저장해 비밀번호 변경 때 그 회원의 세션을 찾는다(PRD member M2)
+  session:
+    redis:
+      repository-type: indexed
+    timeout: 7d   # 마지막 요청 후 7일
+
+server:
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
 
 mybatis:
   mapper-locations: classpath:mapper/**/*.xml

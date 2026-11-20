@@ -1,16 +1,15 @@
 package com.livestream.common.security;
 
 import com.livestream.common.error.ErrorCode;
+import com.livestream.common.error.ErrorResponseWriter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Set;
-import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 // 상태를 바꾸는 요청은 Origin(없으면 Referer)이 허용 목록에 있을 때만 통과시킨다.
@@ -33,11 +32,7 @@ class OriginValidationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
-        ErrorCode code = ErrorCode.FORBIDDEN_ORIGIN;
-        response.setStatus(code.getStatus().value());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        response.getWriter().write("{\"code\":\"" + code.name() + "\",\"message\":\"" + code.getMessage() + "\"}");
+        ErrorResponseWriter.write(response, ErrorCode.FORBIDDEN_ORIGIN);
     }
 
     // Origin이 있으면 그대로, 없으면 Referer에서 "scheme://host[:port]"만 떼어 낸다
