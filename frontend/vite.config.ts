@@ -11,6 +11,13 @@ export default defineConfig({
       '/hls': {
         target: 'http://localhost:8888',
         rewrite: (path) => path.replace(/^\/hls/, ''),
+        // MediaMTX는 첫 요청을 /live/...?cookieCheck=1 로 리다이렉트한다. nginx의 proxy_redirect와 같이 /hls를 붙인다.
+        configure: (proxy) => {
+          proxy.on('proxyRes', (res) => {
+            const location = res.headers.location
+            if (location?.startsWith('/')) res.headers.location = `/hls${location}`
+          })
+        },
       },
     },
   },
