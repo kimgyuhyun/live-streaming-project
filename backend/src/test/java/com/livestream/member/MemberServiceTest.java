@@ -180,6 +180,20 @@ class MemberServiceTest {
 
             verify(encoder, times(1)).matches(eq(PASSWORD), anyString());
         }
+
+        // 빈 문자열이나 형식이 틀린 해시면 BCrypt가 계산 없이 바로 false를 돌려줘 응답 시간 차이가 다시 생긴다
+        @Test
+        @DisplayName("should compare against a bcrypt hash when email does not exist")
+        void comparesAgainstBcryptHashForUnknownEmail() {
+            PasswordEncoder encoder = spy(new BCryptPasswordEncoder());
+            MemberService service = new MemberService(memberMapper, encoder);
+            ArgumentCaptor<String> hash = ArgumentCaptor.forClass(String.class);
+
+            catchThrowable(() -> service.login(new LoginRequest("nobody@example.com", PASSWORD)));
+
+            verify(encoder).matches(eq(PASSWORD), hash.capture());
+            assertThat(hash.getValue()).matches("\\$2[aby]?\\$\\d{2}\\$[./0-9A-Za-z]{53}");
+        }
     }
 
     @Nested
