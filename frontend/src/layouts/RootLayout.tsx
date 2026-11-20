@@ -20,6 +20,11 @@ function RootLayout() {
         {me.data ? (
           <>
             <Link to="/me">{me.data.nickname}</Link>{' '}
+            {me.data.role === 'STREAMER' && (
+              <>
+                <Link to="/studio">스튜디오</Link>{' '}
+              </>
+            )}
             <button type="button" onClick={() => logoutMutation.mutate()} disabled={logoutMutation.isPending}>
               로그아웃
             </button>

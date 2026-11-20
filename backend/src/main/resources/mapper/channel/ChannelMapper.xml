@@ -2,8 +2,26 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.livestream.channel.ChannelMapper">
 
+    <!-- 빈 소개("")는 Oracle이 NULL로 저장한다 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
         INSERT INTO channel (member_id, name, description)
         VALUES (#{memberId}, #{name}, #{description,jdbcType=VARCHAR})
     </insert>
+
+    <select id="findById" resultType="com.livestream.channel.Channel">
+        SELECT id, member_id, name, description
+        FROM channel
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByMemberId" resultType="com.livestream.channel.Channel">
+        SELECT id, member_id, name, description
+        FROM channel
+        WHERE member_id = #{memberId}
+    </select>
+
+    <update id="update">
+        UPDATE channel SET name = #{name}, description = #{description,jdbcType=VARCHAR}
+        WHERE id = #{id}
+    </update>
 </mapper>
