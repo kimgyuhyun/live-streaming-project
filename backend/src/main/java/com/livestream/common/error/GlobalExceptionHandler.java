@@ -1,5 +1,6 @@
 package com.livestream.common.error;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
@@ -14,6 +15,15 @@ class GlobalExceptionHandler {
     ResponseEntity<ErrorResponse> handleBusiness(BusinessException e) {
         ErrorCode code = e.getCode();
         return ResponseEntity.status(code.getStatus()).body(ErrorResponse.of(code));
+    }
+
+    // 남은 시간은 표준 Retry-After 헤더(초)로, 메시지에는 분으로 채운 문구를 보낸다
+    @ExceptionHandler(RetryLaterException.class)
+    ResponseEntity<ErrorResponse> handleRetryLater(RetryLaterException e) {
+        ErrorCode code = e.getCode();
+        return ResponseEntity.status(code.getStatus())
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(e.getRetryAfterSeconds()))
+                .body(new ErrorResponse(code.name(), e.getMessage()));
     }
 
     // 메시지는 처음 걸린 필드의 메시지를 그대로 보낸다. 화면이 이 문장을 보여 준다

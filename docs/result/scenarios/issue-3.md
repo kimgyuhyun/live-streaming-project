@@ -100,31 +100,31 @@ class GlobalExceptionHandler {
 
 ### 정상
 
-- [ ] [정상] `MemberService.login` — should count the attempt before comparing password
-- [ ] [정상] `MemberService.login` — should report success to the limiter when password matches
-- [ ] [정상] `LoginAttemptLimiter` — should reset email counter expiry to 15 minutes on every failure
-- [ ] [정상] `LoginAttemptLimiter` — should keep ip counter expiry from the first failure
-- [ ] [정상] `LoginAttemptLimiter` — should count attempts from different ips separately
-- [ ] [정상] `POST /api/auth/login` — should pass the client ip to the service
-- [ ] [정상] `MemberLoginAttemptIntegration` — should log in after four failures and block only after five more failures
+- [x] [정상] `MemberService.login` — should count the attempt before comparing password
+- [x] [정상] `MemberService.login` — should report success to the limiter when password matches
+- [x] [정상] `LoginAttemptLimiter` — should reset email counter expiry to 15 minutes on every failure
+- [x] [정상] `LoginAttemptLimiter` — should keep ip counter expiry from the first failure
+- [x] [정상] `LoginAttemptLimiter` — should count attempts from different ips separately
+- [x] [정상] `POST /api/auth/login` — should pass the client ip to the service
+- [x] [정상] `MemberLoginAttemptIntegration` — should log in after four failures and block only after five more failures
 
 ### 경계
 
-- [ ] [경계] `LoginAttemptLimiter` — should allow the fifth attempt when email has four failures
-- [ ] [경계] `LoginAttemptLimiter` — should block with remaining seconds when email has five failures
-- [ ] [경계] `LoginAttemptLimiter` — should report remaining time from the fifth failure when blocked
-- [ ] [경계] `LoginAttemptLimiter` — should not extend the block when a blocked attempt arrives
-- [ ] [경계] `LoginAttemptLimiter` — should block the 21st attempt from an ip with 20 failures across different emails
-- [ ] [경계] `LoginAttemptLimiter` — should not count successful logins toward the ip limit
-- [ ] [경계] `POST /api/auth/login` — should round remaining time up to whole minutes in the message
-- [ ] [경계] `MemberLoginAttemptIntegration` — should compare password at most five times when 20 wrong-password logins for one email arrive at once
+- [x] [경계] `LoginAttemptLimiter` — should allow the fifth attempt when email has four failures
+- [x] [경계] `LoginAttemptLimiter` — should block with remaining seconds when email has five failures
+- [x] [경계] `LoginAttemptLimiter` — should report remaining time from the fifth failure when blocked
+- [x] [경계] `LoginAttemptLimiter` — should not extend the block when a blocked attempt arrives
+- [x] [경계] `LoginAttemptLimiter` — should block the 21st attempt from an ip with 20 failures across different emails
+- [x] [경계] `LoginAttemptLimiter` — should not count successful logins toward the ip limit
+- [x] [경계] `POST /api/auth/login` — should round remaining time up to whole minutes in the message
+- [x] [경계] `MemberLoginAttemptIntegration` — should compare password at most five times when 20 wrong-password logins for one email arrive at once
 
 ### 예외
 
-- [ ] [예외] `MemberService.login` — should not compare password when attempts are blocked
-- [ ] [예외] `POST /api/auth/login` — should return 429 with Retry-After header when attempts are blocked
-- [ ] [예외] `MemberLoginAttemptIntegration` — should return 429 with Retry-After when correct password is sent after five failures
-- [ ] [예외] `MemberLoginAttemptIntegration` — should return code MEMBER_LOGIN_BLOCKED with minutes message when blocked
+- [x] [예외] `MemberService.login` — should not compare password when attempts are blocked
+- [x] [예외] `POST /api/auth/login` — should return 429 with Retry-After header when attempts are blocked
+- [x] [예외] `MemberLoginAttemptIntegration` — should return 429 with Retry-After when correct password is sent after five failures
+- [x] [예외] `MemberLoginAttemptIntegration` — should return code MEMBER_LOGIN_BLOCKED with minutes message when blocked
 
 ### 수동 확인 (테스트 도구가 없거나 MockMvc로 볼 수 없는 것 — 시나리오 수에 넣지 않는다)
 
@@ -132,6 +132,11 @@ Green 단계에서 확인하고 결과를 이 문서와 PR에 남긴다.
 
 - 로그인 화면에서 같은 이메일로 5번 틀린 뒤 6번째를 보내면 "로그인 시도가 너무 많습니다. 15분 후 다시 시도해 주세요"가 보인다 (AC 8)
 - `bootRun`에 `X-Forwarded-For: A`로 서로 다른 이메일 20번 실패 → 21번째 429, 이어서 `X-Forwarded-For: B`로 보내면 401 (AC 6의 "nginx가 넘긴 실제 IP")
+
+**확인 결과 (2026-11-20, Green):** 로컬에서 Oracle·Redis 컨테이너 + `bootRun` + Vite 개발 서버로 확인했다.
+
+- 화면 문구: `/login`에서 #2 수동 확인 때 가입한 계정으로 틀린 비밀번호 5번 → 모두 401과 "이메일 또는 비밀번호가 맞지 않습니다", 6번째 → 429와 "로그인 시도가 너무 많습니다. 15분 후 다시 시도해 주세요" 표시 ✅
+- 실제 IP: `bootRun`(127.0.0.1, Tomcat이 믿는 내부 프록시)에 curl로 `X-Forwarded-For: 203.0.113.50`, 서로 다른 이메일 20번 → 모두 401, 21번째 429(`Retry-After: 897`, `MEMBER_LOGIN_BLOCKED`, "15분 후"). 이어서 `X-Forwarded-For: 203.0.113.51` → 401 ✅. 헤더가 무시됐다면 모두 127.0.0.1로 세어 두 번째 IP도 429였다
 
 ---
 

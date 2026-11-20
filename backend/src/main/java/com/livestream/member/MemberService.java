@@ -47,13 +47,18 @@ public class MemberService {
 
     // 이메일을 소문자로 바꿔 찾는다. 없는 이메일이면 가짜 해시와 한 번 비교한 뒤 MEMBER_LOGIN_FAILED
     // 비교를 건너뛰면 응답이 빨라져 "이 이메일은 없다"가 응답 시간으로 드러나므로, 없을 때도 같은 비용을 낸다
+    // 시도는 비교 전에 센다. 막혔으면 비교하지 않고 RetryLaterException이 그대로 나간다 (PRD member M3)
     public MemberResponse login(LoginRequest request, String clientIp) {
-        Optional<Member> member = memberMapper.findByEmail(request.email().toLowerCase(Locale.ROOT));
+        String email = request.email().toLowerCase(Locale.ROOT);
+        loginAttemptLimiter.acquire(email, clientIp);
+
+        Optional<Member> member = memberMapper.findByEmail(email);
         String hash = member.map(Member::getPasswordHash).orElse(dummyHash);
         boolean matches = passwordEncoder.matches(request.password(), hash);
         if (member.isEmpty() || !matches) {
             throw new BusinessException(ErrorCode.MEMBER_LOGIN_FAILED);
         }
+        loginAttemptLimiter.succeeded(email, clientIp);
         return toResponse(member.get());
     }
 
