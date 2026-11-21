@@ -184,3 +184,101 @@ Green 뒤, AC 검증 전에 `docker compose up --build -d`로 전체를 띄워 �
 | `[예외] ChannelIntegration — should return 403 with code FORBIDDEN when a member who is not a streamer sets a title` | 새 쓰기 엔드포인트가 `/api/studio/**` 규칙 안에 있는지 확인 |
 
 **커버리지:** AC 4개 / 시나리오 20개 / 미커버 0개 (AC 4의 화면 문구는 수동 확인)
+
+---
+
+## AC 검증
+
+> `harness:ac-verifier` (2026-11-21, HEAD fa6dadc). 변이 최대 3번·20분·스크래치 복사본·클래스 단위 테스트·docker compose 조작 금지로 띄웠다. 아래는 검증자 출력 원문이다(제목 수준만 두 단계 낮췄다). 구현자는 맨 아래 `### 구현자 이견`에만 쓴다.
+
+### 이슈 #13 AC 검증 결과 (HEAD fa6dadc, base origin/main)
+
+AC 4개는 모두 ✅ 충족입니다. 변이 3개를 넣었고 3개 모두 테스트가 잡았습니다. 가짜 테스트는 없습니다. 원본 저장소는 건드리지 않았습니다. `git -C C:/live-streaming-project status --short`의 출력은 비어 있었고, HEAD는 fa6dadc 그대로입니다.
+
+#### AC별 판정
+
+| AC | 판정 | 근거 테스트 (@DisplayName, 파일:줄) | 구현 (파일:줄) | 판단 이유 |
+|---|---|---|---|---|
+| 1. 제목 1자·50자는 저장, 0자(공백만)·51자는 400 | ✅ | 통합 테스트(실제 DB):<br>- `should save a 1-character title and show it on the channel page` (ChannelIntegrationTest.java:227)<br>- `should save a 50-character title and show it on the channel page` (:238)<br>- `should return 400 with code INVALID_INPUT and keep the previous title when the streamer sends a 51-character title` (:302)<br>- `...when the streamer sends a title of only spaces` (:316)<br>컨트롤러 테스트:<br>- `should accept a title of 1 character` / `of 50 characters` (ChannelControllerTest.java:270, :278)<br>- `should return 400 with code INVALID_INPUT when the title has 51 characters` / `is only spaces` / `is empty` / `is missing` (:287, :297, :307, :317)<br>서비스 테스트:<br>- `should save the title and return it when the streamer sets a title` (ChannelServiceTest.java:176) | - UpdateTitleRequest.java:9-10 (`@NotBlank`, `@Size(max = 50)`)<br>- ChannelController.java:39-42 (`@Valid`)<br>- ChannelService.java:40-45<br>- ChannelMapper.xml:37-38<br>- V6__add_title_to_channel.sql (`VARCHAR2(50 CHAR)`) | 1·50·51자 경계를 모두 봅니다. 저장되는지는 다시 조회한 채널 페이지의 `$.title`로 확인하고, 400일 때 이전 제목이 그대로 남는지도 봅니다. 50자 테스트는 한글 `"제".repeat(50)`이라 컬럼이 바이트가 아니라 글자 수 기준인지까지 검증합니다. 400의 코드와 메시지는 컨트롤러 테스트가 확인합니다. 변이 1·2·3이 모두 이 테스트들에 잡혔습니다. |
+| 2. 제목을 정한 적 없는 채널 `하늘`이면 제목이 `하늘의 방송` | ✅ | - `should show 하늘의 방송 as the title on the channel page when the channel 하늘 has never set a title` (ChannelIntegrationTest.java:251)<br>- `should return the channel name followed by 의 방송 as the title when no title has been set` (ChannelServiceTest.java:85)<br>- `should return the stored title when the channel has a title` (:75) | ChannelService.java:58 (`requireNonNullElse(title, name + "의 방송")`) | 통합 테스트가 실제로 채널 이름을 `하늘`로 바꾼 뒤 `GET /api/channels/{id}`에서 `"하늘의 방송"`을 단언합니다. 서비스 테스트는 다른 이름(`방송채널`)으로 기본값을 검증하므로 문자열을 하드코딩했다면 걸립니다. |
+| 3. 방송 중에 제목을 바꾸면 채널 페이지를 다시 조회할 때 새 제목 | ✅ | `should show the new title on the channel page when the streamer changes the title during a live broadcast` (ChannelIntegrationTest.java:261) | - ChannelService.java:40-45<br>- ChannelMapper.xml:14 (`c.title` 조회), :37-38 (UPDATE) | 순서: `before`로 저장 → `broadcastService.onAvailable`로 진행 중 방송 생성 → `live=true` 확인 → `after`로 변경 → 다시 조회해 `after`. 변이 2(UPDATE를 아무것도 안 바꾸게)에서 실패했으므로 응답 echo가 아니라 DB를 거친 값을 보고 있습니다. |
+| 4. 진행 중 방송이 있는/없는 채널 → 스튜디오 연결 상태 `송출 중`/`송출 없음` | ✅ (API는 자동 테스트, 화면 문구는 수동 확인) | - `should return live true from the studio channel when the channel has a live broadcast` (ChannelIntegrationTest.java:276)<br>- `should return live false from the studio channel when the channel has no live broadcast` (:288)<br>- 수동 확인: issue-13.md "확인 결과" 표 | - ChannelMapper.xml:14-17 (live CASE EXISTS)<br>- StudioPage.tsx:40 (`live ? '송출 중' : '송출 없음'`)<br>- StudioPage.tsx:13-19 (`refetchInterval: 5000`) | API: 실제 `GET /api/studio/channel`로 true/false를 단언합니다. false 쪽은 "방송했다가 끝낸 채널"이라 지난 방송 기록이 있어도 false인지까지 봅니다. live SQL은 구현자가 Green 뒤에 변이(늘 0 / 늘 1)로 확인했다고 issue-13.md에 적었고, 저는 다시 돌리지 않았습니다. 화면: 수동 기록에 `송출 없음` → `송출 중` → `송출 없음` 전환이 시각과 함께 있습니다. 기록 시점 HEAD는 beaafe9이고, 그 뒤 커밋(fa6dadc)은 issue-13.md만 바꿨습니다(`git diff --stat beaafe9 fa6dadc`로 확인). 그래서 기록이 지금 코드에도 해당합니다. |
+
+**요약: AC 4개 중 ✅ 4 / ⚠️ 0 / ❌ 0**
+
+#### 변이 결과 (3회, 스크래치 복사본에서만)
+
+| # | 변이 | 실행 | 결과 |
+|---|---|---|---|
+| 1 | UpdateTitleRequest의 `@NotBlank`를 `@NotEmpty`로 (공백만 있는 제목 허용) | `--tests "ChannelControllerTest"` | 잡힘. `should return 400 with code INVALID_INPUT when the title is only spaces` 실패 (21개 중 1개) |
+| 2 | ChannelMapper.xml의 updateTitle을 `SET title = title`로 (저장이 아무것도 안 바꿈) | `--tests "ChannelIntegrationTest"` | 잡힘. 16개 중 5개 실패: 1자 저장, 50자 저장, 51자 거절 뒤 이전 제목 유지, 공백 거절 뒤 이전 제목 유지, 방송 중 제목 변경 |
+| 3 | `@Size(max = 50)`을 `max = 51`로 | `--tests "ChannelControllerTest"` | 잡힘. `should return 400 with code INVALID_INPUT when the title has 51 characters` 실패 (21개 중 1개) |
+
+변이 3은 ChannelIntegrationTest로는 돌리지 않았습니다(횟수 제한). 같은 경계를 다루는 통합 테스트(:302)도 실패할 것으로 보지만 실행으로 확인하지는 않았습니다.
+
+#### 갭을 메울 시나리오 제안
+
+AC 기준으로 메워야 할 갭은 없습니다. 아래는 지금도 충족이지만 단언을 조이면 좋은 선택 사항입니다.
+
+- [ ] [정상] `ChannelIntegration` — should keep live true on the channel page after the streamer changes the title during a live broadcast
+  - 지금 AC 3 테스트는 제목을 바꾸기 전에만 `live`를 단언하고, 다시 조회할 때는 `title`만 봅니다.
+- [ ] [예외] `ChannelIntegration` — should return 400 with code INVALID_INPUT and keep the previous title when the streamer sends an empty title
+  - 빈 문자열 `""`은 지금 컨트롤러 테스트(WebMvcTest)에서만 봅니다.
+
+#### 가짜 테스트·약한 단언
+
+가짜 테스트는 없습니다. 인자 없는 예외 단언, 단언 없는 테스트, 비동기 누락은 보지 못했습니다. `ChannelServiceTest`(:172~)의 예외 단언은 `BusinessException`과 `CHANNEL_NOT_FOUND` 코드까지 확인합니다.
+
+약한 단언이 두 군데 있지만 판정은 바꾸지 않았습니다.
+
+- **ChannelControllerTest.java:270·:278 (1자·50자 수락)** — 서비스 목이 받은 제목을 그대로 돌려주므로(`serviceEchoesTitle`), 이 두 테스트는 "검증을 통과해 서비스까지 갔다"만 봅니다. 실제 저장은 ChannelIntegrationTest.java:227·:238이 검증하므로 갭은 아닙니다.
+- **ChannelIntegrationTest.java:302·:316 (51자·공백 거절)** — `$.code`만 보고 `$.message`는 보지 않습니다. 메시지는 컨트롤러 테스트(:287·:297)가 봅니다.
+
+#### 실행한 명령 목록
+
+1. `cat .claude/harness.json && gh issue view 13 && git diff origin/main...HEAD --stat` → 설정 확인, AC 4개, 변경 파일 16개
+2. `cat docs/result/scenarios/issue-13.md && git diff origin/main...HEAD -- backend/src/main frontend` → 시나리오 20개, AC 대조표, 수동 확인 기록, 구현 diff
+3. `git diff origin/main...HEAD -- backend/src/test` → 새 테스트 본문 확인
+4. `grep -n "제목" spec-fixed.md prd/channel.md` 및 `grep -rn "/api/studio" backend/src/main/java` → 사양 4절 "1~50자, 기본 {채널 이름}의 방송", PRD 작은 결정 "채널에 둔다", SecurityConfig.java:59 `/api/studio/**` STREAMER 확인
+5. 테스트·구현 줄 번호를 grep으로 수집 → 위 표의 줄 번호
+6. `git archive HEAD | tar -x -C .../scratchpad/ac13-mut` → 스크래치 복사본 생성
+7. sed로 변이 1 적용 후 `./gradlew test --tests "ChannelControllerTest"` → 21개 중 1개 실패 (공백만 테스트)
+8. 변이 1 되돌림(`git show HEAD:... >` 스크래치) → 변이 2 적용 → `./gradlew test --tests "ChannelIntegrationTest"` → 16개 중 5개 실패
+9. 변이 2 되돌림 → 변이 3 적용 → `./gradlew test --tests "ChannelControllerTest"` → 21개 중 1개 실패 (51자 테스트)
+10. `git -C C:/live-streaming-project status --short` → 출력 없음(깨끗함). `rev-parse` 결과 fa6dadc
+11. `git diff --stat beaafe9 fa6dadc` → issue-13.md 1개 파일만 변경 (수동 확인 기록이 지금 코드에도 해당함을 확인)
+
+#### 남아 있는 것
+
+스크래치 복사본 `C:/Users/USER/AppData/Local/Temp/claude/1cbb40fc7d76b7b0/e5a53947-02cd-44f6-934c-3e8edfbbefcf/scratchpad/ac13-mut`에는 변이 3(`@Size(max = 51)`)이 적용된 채로 남아 있습니다. 원본 저장소와는 관계없습니다.
+
+### 구현자 이견
+
+- 이견 없음. ⚠️·❌가 없어 갭 처리 대상이 없다.
+- 검증자의 선택 제안 2개(방송 중 제목 변경 뒤 `live` 유지, 통합 테스트의 빈 문자열)는 메우지 않았다. 검증자가 "AC 기준 갭 없음"으로 분류했고, 각각 기존 테스트가 이미 다룬다 — 제목 변경은 `live`를 읽는 SQL에 닿지 않고(`updateTitle`은 `title`만 바꾼다), 빈 문자열은 `@NotBlank` 하나가 공백만·빈 값을 같이 막아 통합 테스트의 공백만 사례와 같은 경로다. 체크박스로 남기면 `check-scenarios.mjs`가 테스트로 세므로 이 절에만 둔다.
+
+---
+
+## 리팩터
+
+없음. 이번 이슈의 소스 파일(`Channel`·`ChannelController`·`ChannelMapper`·`ChannelResponse`·`ChannelService`·`UpdateTitleRequest`, `ChannelMapper.xml`, 프론트 3개)에서 근거가 분명한 대상을 찾지 못했다.
+- `ChannelService`의 `findByMemberId(…).orElseThrow(CHANNEL_NOT_FOUND)`가 `findMine`·`updateTitle` 두 곳에 있다. 두 번째라 뽑지 않는다(세 번째부터).
+- `StudioPage.tsx`의 `TitleForm`과 `ChannelForm`이 저장 흐름(mutation → 두 쿼리 무효화 → 저장했습니다)이 비슷하다. 프론트 테스트가 아직 없어(#12에서 들어온다) 손대지 않는다.
+
+---
+
+## 보안 점검
+
+> `/harness:security-review 13` (2026-11-21). 사전 승인에 따라 🔴는 고치고, 🟡는 "사용자 결정 대기"로 남긴다.
+
+**수집:** `compileJava`·`compileTestJava`·`tsc -b` 성공, `npm audit` 0건, 비밀값 패턴·알려진 접두사 grep 0건, `console.log/info/debug` 0건, 브랜치가 커밋한 `.env` 없음, `ChannelMapper.xml`에 `${}` 치환 없음(제목도 `#{title}` 바인딩). 새 로그 없음. 전체 백엔드 테스트 336개 통과(Green과 같은 코드, 그 뒤로는 문서만 바뀜).
+
+| 분류 | 파일·줄 | 무엇 | 판단 | 처리 |
+| --- | --- | --- | --- | --- |
+| ⚪ | `UpdateTitleRequest` | 제목 입력 검증 | `@NotBlank` + `@Size(max = 50)`을 `@Valid`로 컨트롤러에서 검사하고, DB 컬럼도 `VARCHAR2(50 CHAR)`라 이중으로 막힌다. 테스트와 변이(검증자 변이 1·3)로 확인 | 그대로 |
+| ⚪ | `ChannelPage.tsx`·`StudioPage.tsx` | 스트리머가 정한 제목을 시청자 화면에 보인다(저장형 XSS 경로) | JSX 텍스트로만 넣는다(`dangerouslySetInnerHTML` 없음). 수동 확인에서 `<img src=x onerror=…>` 제목이 글자 그대로 보이고 `img` 0개, 스크립트가 돌지 않았다 | 그대로 |
+| ⚪ | `PUT /api/studio/title` | 새 쓰기 엔드포인트의 권한 | `/api/studio/**`(스트리머만) 안에 있고, 대상 채널을 요청이 아니라 세션의 회원으로 정해 남의 채널을 고칠 길이 없다(IDOR 없음). 출처 검사(#2)도 다른 PUT과 같이 걸린다. 비스트리머 403은 테스트 + 변이로 확인 | 그대로 |
+| ⚪ | `StudioPage.tsx` 5초 다시 조회 | 폴링 부하 | 스트리머 본인만(`/api/studio/channel`, 로그인 필수) 스튜디오를 열어 둔 동안 5초에 한 번, 채널 한 행 + 유니크 인덱스로 찾는 EXISTS 한 번이다. 비로그인 시청자의 폴링은 #12에서 따로 본다 | 그대로 |
+| ⚪ | `StudioPage.tsx` 5초 다시 조회 | 스튜디오를 열어 둔 동안 세션 만료(마지막 요청 후 7일)가 계속 늦춰진다 | 스튜디오를 쓰는 동안 다른 요청을 보내는 것과 같다. 탭을 닫으면 7일 뒤 만료된다 | 그대로 |
+
+**결과:** 🔴 0, 🟡 0. 재스캔은 위 수집과 같다.
