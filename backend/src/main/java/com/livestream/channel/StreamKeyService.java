@@ -21,10 +21,13 @@ public class StreamKeyService {
 
     private final ChannelMapper channelMapper;
     private final String obsServer;
+    private final PublisherDisconnector publisherDisconnector;
 
-    public StreamKeyService(ChannelMapper channelMapper, @Value("${app.obs-server}") String obsServer) {
+    public StreamKeyService(ChannelMapper channelMapper, @Value("${app.obs-server}") String obsServer,
+                            PublisherDisconnector publisherDisconnector) {
         this.channelMapper = channelMapper;
         this.obsServer = obsServer;
+        this.publisherDisconnector = publisherDisconnector;
     }
 
     // 키가 있든 없든 새 키로 덮어쓴다(발급·재발급). 이전 송출 끊기는 #10
@@ -38,6 +41,10 @@ public class StreamKeyService {
 
     public StreamKeyResponse find(long memberId) {
         return new StreamKeyResponse(findChannel(memberId).getStreamKeyPrefix(), obsServer);
+    }
+
+    public boolean matches(long channelId, String key) {
+        throw new UnsupportedOperationException("not implemented");
     }
 
     private Channel findChannel(long memberId) {

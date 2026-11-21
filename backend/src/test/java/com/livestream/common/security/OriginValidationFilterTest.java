@@ -91,6 +91,23 @@ class OriginValidationFilterTest {
             assertThat(response.getStatus()).isEqualTo(403);
         }
 
+        // MediaMTX의 키 확인 요청(POST)에는 Origin·Referer가 없다. nginx가 /internal/을 넘기지 않아 내부망에서만 온다
+        @Test
+        @DisplayName("should pass a POST without Origin or Referer when the path is under /internal/")
+        void passesInternalPathWithoutOrigin() throws Exception {
+            filter.doFilter(new MockHttpServletRequest("POST", "/internal/mediamtx/auth"), response, chain);
+
+            assertThat(passed()).isTrue();
+        }
+
+        @Test
+        @DisplayName("should reject a POST without Origin when the path only starts with /internal but is not under /internal/")
+        void rejectsInternalLookalikePath() throws Exception {
+            filter.doFilter(new MockHttpServletRequest("POST", "/internalx/mediamtx/auth"), response, chain);
+
+            assertThat(response.getStatus()).isEqualTo(403);
+        }
+
         @Test
         @DisplayName("should return 403 when referer is not in allowed list")
         void rejectsOtherReferer() throws Exception {
