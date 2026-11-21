@@ -128,6 +128,7 @@ export function PlayerArea(props: { view: BroadcastView; channelId: number }): J
 - [x] [경계] `pollInterval` — should poll every 5000 ms while the channel is live
 - [x] [경계] `ChannelPage` — should not ask for the channel again before 5 seconds pass while the channel is live
 - [x] [경계] `useBroadcastView` — should switch from ended to live when a later response says a new broadcast started
+- [x] [경계] `ChannelPage` — should ask for the channel again exactly when 5 seconds pass while the channel is live
 
 ### 예외
 
@@ -164,7 +165,7 @@ Green 뒤, AC 검증 전에 `docker compose up --build -d`로 전체를 띄워 �
 | --- | --- |
 | 1. 방송 중 채널을 비로그인 시청자가 열면 `/hls/live/{채널ID}/index.m3u8` 재생, 방송 제목 | `[정상] hlsUrl — should build /hls/live/{channelId}/index.m3u8 for the channel`<br>`[정상] HlsPlayer — should load the HLS address into hls.js and attach it to the video when hls.js is supported`<br>`[경계] HlsPlayer — should set the HLS address as the video source when the browser plays HLS without hls.js`<br>`[정상] PlayerArea — should show the player for /hls/live/7/index.m3u8 when the view is live`<br>`[정상] ChannelPage — should show the player and the broadcast title when a visitor opens a live channel`<br>`[정상] ChannelPage — should load /hls/live/7/index.m3u8 into the player when a visitor opens live channel 7` (갭 처리)<br>수동 확인(실제 재생, 비로그인) |
 | 2. 오프라인 채널 → 플레이어 대신 오프라인 표시 | `[정상] PlayerArea — should show the offline notice instead of the player when the view is offline`<br>`[경계] ChannelPage — should show the offline notice without a player when a visitor opens an offline channel`<br>`[예외] pollInterval — should not poll while the channel is offline`<br>수동 확인 |
-| 3. 시청 중 방송이 끝나면 플레이어 자리에 "방송이 종료되었습니다" | `[정상] PlayerArea — should show 방송이 종료되었습니다 instead of the player when the view is ended`<br>`[정상] ChannelPage — should replace the player with 방송이 종료되었습니다 when the next poll says the channel is no longer live`<br>`[정상] pollInterval — should poll every 5 seconds while the channel is live`<br>`[경계] HlsPlayer — should destroy the hls.js instance when the player is removed`<br>`[예외] ChannelPage — should keep the player when one poll fails while the channel is live`<br>`[경계] pollInterval — should poll every 5000 ms while the channel is live` (갭 처리)<br>`[경계] ChannelPage — should not ask for the channel again before 5 seconds pass while the channel is live` (갭 처리)<br>수동 확인(ffmpeg 끊기) |
+| 3. 시청 중 방송이 끝나면 플레이어 자리에 "방송이 종료되었습니다" | `[정상] PlayerArea — should show 방송이 종료되었습니다 instead of the player when the view is ended`<br>`[정상] ChannelPage — should replace the player with 방송이 종료되었습니다 when the next poll says the channel is no longer live`<br>`[정상] pollInterval — should poll every 5 seconds while the channel is live`<br>`[경계] HlsPlayer — should destroy the hls.js instance when the player is removed`<br>`[예외] ChannelPage — should keep the player when one poll fails while the channel is live`<br>`[경계] pollInterval — should poll every 5000 ms while the channel is live` (갭 처리)<br>`[경계] ChannelPage — should not ask for the channel again before 5 seconds pass while the channel is live` (갭 처리)<br>`[경계] ChannelPage — should ask for the channel again exactly when 5 seconds pass while the channel is live` (2차 갭 처리)<br>수동 확인(ffmpeg 끊기) |
 | 4. 상태 로직이 `방송 중`·`오프라인`·`종료됨`으로 바뀌면 맞는 화면(Vitest) | `[정상] nextBroadcastView` 3개, `[경계] nextBroadcastView` 3개<br>`[정상] useBroadcastView — should switch from live to ended when a later response says the channel is offline`<br>`[경계] useBroadcastView — should return null before the first channel response arrives`<br>`[경계] useBroadcastView — should stay offline when a channel that was offline from the start is fetched again`<br>`[경계] pollInterval — should not poll before the first channel response arrives`<br>`[경계] useBroadcastView — should switch from ended to live when a later response says a new broadcast started` (갭 처리) |
 
 **AC에 없는데 넣은 시나리오**
@@ -174,7 +175,7 @@ Green 뒤, AC 검증 전에 `docker compose up --build -d`로 전체를 띄워 �
 | `[예외] ChannelPage — should keep the player when one poll fails while the channel is live` | 폴링이 들어오면서 생기는 회귀. 지금 페이지는 오류면 에러 문구만 보여, 일시적 실패 한 번에 보던 영상이 사라진다(판단 4) |
 | `[경계] nextBroadcastView — should choose live when a new broadcast starts after the previous one ended` | 창 포커스 재조회로 새 방송이 잡혔을 때 `ended`에 갇히지 않게 |
 
-**커버리지:** AC 4개 / 시나리오 27개(AC 검증 갭 처리 4개 포함) / 미커버 0개 (AC 1~3의 실제 재생·종료는 수동 확인도 함께)
+**커버리지:** AC 4개 / 시나리오 28개(AC 검증 갭 처리 1차 4개·2차 1개 포함) / 미커버 0개 (AC 1~3의 실제 재생·종료는 수동 확인도 함께)
 
 ---
 
@@ -273,3 +274,89 @@ Green 뒤, AC 검증 전에 `docker compose up --build -d`로 전체를 띄워 �
 | `useBroadcastView`가 `ended`에서 벗어나지 않게(`view === 'ended' ? 'ended' : …`) | `useBroadcastView — should switch from ended to live when a later response says a new broadcast started` |
 
 `should not ask for the channel again before 5 seconds pass…`는 4999ms 대신 4500ms에서 호출 1회, 5000ms에서 2회를 본다. 테스트가 `vi.useFakeTimers({ shouldAdvanceTime: true })`라 실제로 흐른 몇 ms가 가짜 시계에 더해져 4999ms는 흔들릴 수 있다. 4000ms 변이는 잡는다(위 표).
+
+### 2차 검증 (AC 1·3)
+
+> `harness:ac-verifier` (2026-11-21, HEAD b8f22d4). 범위를 AC 1·3으로 좁히고 1차와 같은 제약으로 띄웠다. 아래는 출력 원문이다(제목 수준만 두 단계 낮췄다).
+
+#### 이슈 #12 2차 AC 검증 (AC 1·3, HEAD b8f22d4)
+
+**요약: 1차 갭은 메워졌습니다. AC 1은 ⚠️에서 ✅로 올라가고, AC 3은 ✅ 그대로입니다.** 1차에서 살아남은 변이 두 개(`channelId + 1`, 5000→60000)를 같은 방식으로 다시 넣었더니 이번에는 둘 다 테스트가 잡았습니다. 남은 것은 AC 밖의 약한 단언 하나입니다. 페이지 단계에서 "5초"가 4.5초에서 5초 사이로만 고정됩니다(변이 3이 살아남음).
+
+기준 상태에서 스크래치 복사본으로 `ChannelPage.test.tsx` 6개와 `broadcastView.test.ts` 15개를 돌렸고 모두 통과했습니다.
+
+##### AC별 판정
+
+| AC | 판정 | 근거 테스트 | 구현 | 판단 이유 |
+|---|---|---|---|---|
+| 1. 방송 중인 채널을 비로그인 시청자가 열면 `/hls/live/{채널ID}/index.m3u8`을 재생하고 방송 제목이 보인다 | ✅ 충족 | `ChannelPage — should load /hls/live/7/index.m3u8 into the player when a visitor opens live channel 7` (frontend/src/pages/ChannelPage.test.tsx:66), `ChannelPage — should show the player and the broadcast title when a visitor opens a live channel` (ChannelPage.test.tsx:57), `hlsUrl — should build /hls/live/{channelId}/index.m3u8 for the channel` (broadcastView.test.ts:89), `HlsPlayer — should load the HLS address into hls.js and attach it to the video…` (LivePlayer.test.tsx:33), `PlayerArea — should show the player for /hls/live/7/index.m3u8 when the view is live` (LivePlayer.test.tsx:58) | 라우트의 채널 ID ChannelPage.tsx:9, 제목 `<h2>` ChannelPage.tsx:31, 채널 ID를 플레이어로 넘김 ChannelPage.tsx:32, 재생 주소 `hlsUrl` broadcastView.ts:34-36, 재생 `HlsPlayer` LivePlayer.tsx:8-25, 화면 고르기 `PlayerArea` LivePlayer.tsx:28-34. 비로그인 조회: SecurityConfig.java:58 `GET /api/channels/*` permitAll | 1차 갭이 메워졌습니다. 새 테스트(:12-24, :71)는 가짜 hls.js 인스턴스를 모아 둡니다. 그리고 라우트 `/channels/7`에서 시작해 진짜 React Query, 진짜 훅, 진짜 PlayerArea·HlsPlayer를 거친 뒤 `loadSource`가 `'/hls/live/7/index.m3u8'`로 불렸는지 확인합니다. 이 단언은 목이 돌려준 값을 보는 것이 아니라 구현이 넘긴 인자를 봅니다. `instances[0]`이 없으면 `waitFor`가 실패하므로 가짜 테스트도 아닙니다. 변이 1에서 실제로 `/hls/live/8/index.m3u8`을 받아 실패했습니다. 제목은 :62에서 `findByText('오늘은 노래')`로 확인하고, 그 값은 `name`(`하늘`)과 다른 `title`입니다. 비로그인 실재생은 수동 확인 기록(issue-12.md:145-152, 로그아웃 상태에서 `/hls/live/21/index.m3u8` 요청, `currentTime` 증가)으로 보완됩니다. |
+| 3. 시청 중에 방송이 끝나면 플레이어 자리에 "방송이 종료되었습니다"가 보인다 | ✅ 충족 | `ChannelPage — should replace the player with 방송이 종료되었습니다 when the next poll says the channel is no longer live` (ChannelPage.test.tsx:96), `ChannelPage — should not ask for the channel again before 5 seconds pass while the channel is live` (ChannelPage.test.tsx:74), `pollInterval — should poll every 5000 ms while the channel is live` (broadcastView.test.ts:75), `useBroadcastView — should switch from live to ended…` (broadcastView.test.ts:32), `PlayerArea — should show 방송이 종료되었습니다 instead of the player when the view is ended` (LivePlayer.test.tsx:71), `ChannelPage — should keep the player when one poll fails while the channel is live` (ChannelPage.test.tsx:107) | 폴링 ChannelPage.tsx:16 + broadcastView.ts:27-31, 이전 화면을 기억해 종료됨을 고름 broadcastView.ts:8-11·:15-24, 문구 LivePlayer.tsx:37, 폴링이 한 번 실패해도 화면 유지 ChannelPage.tsx:22 | 페이지 테스트가 가짜 시계로 실제 폴링을 돌립니다. 문구가 나타나는지와 `video`가 사라지는지(`toBeNull`, :104)를 둘 다 봅니다. 1차 변이 3(5000→60000)이 이번에는 두 파일에서 모두 잡혔습니다(변이 2). :84의 `toEqual([1, 2])`는 4.5초까지는 다시 묻지 않고 5초에 다시 묻는다는 것을 한 번에 확인하므로 단언이 강합니다. 수동 확인에서도 ffmpeg 종료 뒤 약 3.4초에 문구가 떴고 `video`가 1개에서 0개로 줄었습니다(issue-12.md:153). |
+
+##### 변이 결과
+복사본은 C:/Users/USER/AppData/Local/Temp/claude/1cbb40fc7d76b7b0/e5a53947-02cd-44f6-934c-3e8edfbbefcf/scratchpad/ac12v2 입니다.
+
+| # | 변이 | 돌린 파일 | 결과 | 의미 |
+|---|---|---|---|---|
+| 1 | ChannelPage.tsx:32 `channelId={channelId}` → `{channelId + 1}` (1차 변이 1) | ChannelPage.test.tsx | **잡힘** (6개 중 1개 실패: `should load /hls/live/7/index.m3u8…`, 받은 값 `"/hls/live/8/index.m3u8"`) | AC 1의 1차 갭이 메워졌습니다. |
+| 2 | broadcastView.ts:27 `LIVE_POLL_INTERVAL_MS = 5000` → `60000` (1차 변이 3) | broadcastView.test.ts, ChannelPage.test.tsx | **잡힘** (`pollInterval — should poll every 5000 ms…` 15개 중 1개 실패, `ChannelPage — should not ask for the channel again before 5 seconds pass…` 6개 중 1개 실패) | 5초 폴링 숫자가 고정됐습니다. |
+| 3 | ChannelPage.tsx:16 `pollInterval(...)`을 거치지 않고 `query.state.data?.live ? 4800 : false`로 바꿈 | ChannelPage.test.tsx | **살아남음** (6개 모두 통과) | 페이지 단계의 폴링 간격은 4.5초 초과~5초 범위로만 고정됩니다. 구현자도 이 여유를 issue-12.md:275에 적어 두었습니다(`shouldAdvanceTime` 때문에 4999ms는 흔들릴 수 있음). AC 3 문구에는 숫자가 없어 판정에는 반영하지 않았습니다. `pollInterval` 단위 테스트가 5000을 고정하고 있어서, 이 변이는 페이지가 `pollInterval`을 거치지 않는 경우에만 생깁니다. |
+
+세 변이 모두 `git -C C:/live-streaming-project show HEAD:<파일> > <복사본 파일>`로 되돌렸고, 되돌린 줄을 grep으로 확인했습니다.
+
+##### 남은 갭
+AC 1·3에는 남은 갭이 없습니다. 아래는 AC 밖(사용자가 정한 "5초 폴링")을 조이고 싶을 때 쓸 수 있는 **선택** 제안입니다.
+
+- [ ] [경계] `ChannelPage` — should ask for the channel again exactly when 5 seconds pass while the channel is live
+  - 방법: `shouldAdvanceTime` 없이 가짜 시계를 쓰고, 첫 응답을 기다릴 때 `vi.advanceTimersByTimeAsync(0)`로 흘립니다. 그런 다음 4999ms에서 1회, 5000ms에서 2회를 확인합니다. 지금 테스트의 여유(4.5초)를 없애 변이 3을 잡게 됩니다.
+
+##### 가짜 테스트·약한 단언
+- 새 테스트 4개 중 가짜 테스트는 없습니다. 모두 `await waitFor` 또는 `await vi.advanceTimersByTimeAsync`를 쓰고, 단언이 있으며, 목이 돌려준 값이 아니라 구현이 넘긴 인자나 호출 횟수를 봅니다.
+- ChannelPage.test.tsx:80-84: 위에서 말한 4.5초 여유입니다(변이 3이 살아남음). 크기는 작습니다.
+- broadcastView.test.ts:71 (`should poll every 5 seconds…`)은 여전히 상수끼리 비교합니다. 다만 :75의 숫자 5000 테스트가 같은 것을 고정하므로 지금은 중복일 뿐 해롭지 않습니다.
+
+##### 실행한 명령
+1. `cat .claude/harness.json && gh issue view 12 && git log --oneline -6 && git diff --stat origin/main...HEAD` → scenariosDir=docs/result/scenarios, AC 4개, HEAD b8f22d4, 바뀐 파일 12개
+2. `cat -n docs/result/scenarios/issue-12.md`(출력이 커서 파일로 저장됨) + Grep `^## ` + Read :99-276 → 시나리오 27개, AC 대조표, 1차 검증 원문, 갭 처리 기록 확인
+3. `cat -n ChannelPage.tsx broadcastView.ts LivePlayer.tsx` → 구현 줄 번호 확인
+4. `cat -n ChannelPage.test.tsx broadcastView.test.ts LivePlayer.test.tsx` → 새 테스트 4개 본문 확인(ChannelPage :66·:74, broadcastView :48·:75)
+5. `mkdir …/scratchpad/ac12v2 && git archive HEAD | tar -x -C … && cp -r frontend/node_modules … && npx vitest run src/pages/ChannelPage.test.tsx` / `… broadcastView.test.ts` → 기준 상태 6개·15개 모두 통과
+6. 변이 1: `sed` ChannelPage.tsx:32 → `npx vitest run src/pages/ChannelPage.test.tsx` → 1개 실패(잡힘), `git show HEAD:…`로 되돌리고 grep으로 확인
+7. 변이 2: `sed` broadcastView.ts:27 5000→60000 → 두 파일에서 각각 1개 실패(잡힘), 되돌리고 grep으로 확인
+8. 변이 3: `sed` ChannelPage.tsx:16 → 4800 하드코딩 → 6개 모두 통과(살아남음), 되돌리고 grep으로 확인, 이어서 `git status --short`
+9. Grep `api/channels` (SecurityConfig.java) → :58 `GET /api/channels/*` permitAll
+10. `git -C C:/live-streaming-project status --short | wc -c; git rev-parse --short HEAD` → `0`, `b8f22d4`
+
+##### 원본 저장소 상태
+`git -C C:/live-streaming-project status --short` 출력이 **비어 있습니다**(0바이트). HEAD는 그대로 b8f22d4입니다. 원본 파일 수정, checkout, stash, commit은 하지 않았습니다. 백엔드 테스트와 docker compose도 건드리지 않았습니다. 변이는 3번 썼고, 걸린 시간은 20분 이내입니다.
+
+#### 2차 뒤 처리
+
+남은 선택 제안(`[경계] ChannelPage — should ask for the channel again exactly when 5 seconds pass while the channel is live`)은 1차 제안 "4999ms를 넘긴 뒤 1회, 5000ms에 2회"를 내가 4.5초로 좁게 옮겨서 생긴 갭이라, 사전 승인에 따라 한 번 더 메우고 3차는 띄우지 않았다(아래).
+
+`[경계] ChannelPage — should ask for the channel again exactly when 5 seconds pass while the channel is live`: 구현이 이미 맞아 바로 통과했다(커밋 e9b0e23, `ChannelPage.test.tsx` 7개를 5번 돌려 모두 통과). 이 테스트만 `shouldAdvanceTime` 없는 가짜 시계를 쓰고 첫 응답은 0ms씩 흘려 기다린다. 2차 검증의 변이 3(`refetchInterval`을 `pollInterval`을 거치지 않고 `live ? 4800 : false`로)을 저장소에 넣자 Vitest 28개 중 이 테스트 1개만 실패했다. `git checkout --`으로 되돌렸다. 3차 검증은 띄우지 않았다(사전 승인).
+
+---
+
+## 리팩터
+
+없음. 이번 이슈의 소스 파일(`broadcastView.ts`, `LivePlayer.tsx`, `ChannelPage.tsx`)에서 근거가 분명한 대상을 찾지 못했다.
+- 가짜 hls.js가 `LivePlayer.test.tsx`와 `ChannelPage.test.tsx`에 두 번 있지만 테스트 파일이라 리팩터 범위 밖이다(두 번째이기도 하다).
+- `broadcastView.test.ts`의 `should poll every 5 seconds…`(상수 비교)와 `should poll every 5000 ms…`(숫자 비교)가 겹치지만, 둘 다 승인된 시나리오라 지우지 않는다.
+
+---
+
+## 보안 점검
+
+> `/harness:security-review 12` (2026-11-21). 사전 승인에 따라 🔴는 고치고, 🟡는 "사용자 결정 대기"로 남긴다.
+
+**수집:** `tsc -b`·`npm run lint` 성공, `npm audit` 0건(새 의존성 `hls.js` 1.7.4, `vitest` 5.1.1, `@testing-library/react` 16.3.3, `jsdom` 31.0.1, 피어 `@testing-library/dom` 10.4.2), 비밀값 패턴·알려진 접두사 grep 0건, `console.log/info/debug`·`dangerouslySetInnerHTML`·`innerHTML` 0건, `VITE_` 환경변수 없음, 브랜치가 커밋한 `.env` 없음. 백엔드는 바뀌지 않았다.
+
+| 분류 | 파일·줄 | 무엇 | 판단 | 처리 |
+| --- | --- | --- | --- | --- |
+| 🟡 | `ChannelPage.tsx` `refetchInterval` | 비로그인 시청자의 폴링 부하. 방송 중 채널을 보는 시청자마다 5초에 한 번 `GET /api/channels/{id}`(Spring + Oracle 한 행 + 유니크 인덱스 EXISTS)를 보낸다. 시청자 N명이면 초당 N/5건 | 지금 규모(1인 플랫폼 + 데모 3~5개)에서는 문제없다. 오프라인 채널은 묻지 않고(판단 2), 익명 조회는 세션을 만들지 않는다(`curl -D -`로 `Set-Cookie` 없음 확인, `Cache-Control: no-cache…`). 같은 시청자가 이미 HLS 조각을 초당 약 5건(LL-HLS 200ms 조각) 받으므로 폴링은 시청자당 요청의 약 4%다. 다만 HLS는 nginx·MediaMTX로 가고 폴링은 Spring·DB로 간다. 시청자가 수백 명 넘게 몰리는 상황을 대비하려면 채널 조회에 짧은 캐시(예: 1~2초 `Cache-Control: max-age` + nginx 캐시, 또는 Redis)를 두는 선택지가 있다 | **사용자 결정 대기** |
+| ⚪ | `ChannelPage.tsx` 제목 | 스트리머가 정한 제목을 시청자 화면에 보인다 | JSX 텍스트로만 넣는다. #13 수동 확인에서 `<img onerror>` 제목이 글자 그대로 보이고 스크립트가 돌지 않았다 | 그대로 |
+| ⚪ | `LivePlayer.tsx` 재생 주소 | `hlsUrl(Number(useParams().channelId))` | 주소는 같은 출처의 `/hls/live/{숫자}/index.m3u8`뿐이다. 채널 API가 그 id로 채널을 돌려준 뒤에만 플레이어를 그린다. 시청은 원래 인증 대상이 아니다(PRD "키 확인 연동"). 재생 주소·응답에 키가 없다(키는 송출 query에만, #10) | 그대로 |
+| ⚪ | `frontend/package.json` | `hls.js`가 운영 번들에 들어간다(빌드가 500kB 청크 경고) | 보안 문제가 아니라 크기 경고다. `npm audit` 0건 | 그대로(PR에 적음) |
+| ⚪ | devDependencies 3개 | `vitest`·`@testing-library/react`·`jsdom` | 테스트 전용, 운영 번들에 들어가지 않는다 | 그대로 |
+
+**결과:** 🔴 0, 🟡 1(폴링 부하 — 사용자 결정 대기). 재스캔은 위 수집과 같다.
