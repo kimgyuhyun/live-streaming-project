@@ -21,6 +21,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -155,6 +156,23 @@ class BroadcastIntegrationTest {
             channelPage(channelId).andExpect(jsonPath("$.live").value(false));
         }
 
+        // 종료는 진행 중 방송에만 찍는다. 끝난 방송의 종료 시각까지 다시 찍으면 방송 기록이 틀어진다
+        @Test
+        @DisplayName("should keep the end time of an earlier broadcast when a later broadcast of the same channel ends")
+        void keepsEarlierEndTime() throws Exception {
+            long channelId = newChannel();
+            hook("available", "live/" + channelId).andExpect(status().isNoContent());
+            hook("unavailable", "live/" + channelId).andExpect(status().isNoContent());
+            String firstEnd = "SELECT TO_CHAR(ended_at, 'YYYY-MM-DD HH24:MI:SS.FF6') FROM broadcast"
+                    + " WHERE channel_id = ? ORDER BY id FETCH FIRST 1 ROW ONLY";
+            String endedBefore = jdbcTemplate.queryForObject(firstEnd, String.class, channelId);
+
+            hook("available", "live/" + channelId).andExpect(status().isNoContent());
+            hook("unavailable", "live/" + channelId).andExpect(status().isNoContent());
+
+            assertThat(jdbcTemplate.queryForObject(firstEnd, String.class, channelId)).isEqualTo(endedBefore);
+        }
+
         @Test
         @DisplayName("should not start a broadcast when the available notice is for 720 and the channel id")
         void ignoresAvailableOutsideLive() throws Exception {
@@ -232,6 +250,42 @@ class BroadcastIntegrationTest {
             pool.shutdown();
 
             assertThat(liveCount(channelId)).isEqualTo(1);
+        }
+
+        // 진 쪽이 예외를 내면 훅은 500, 대조는 그 회차가 중간에 멈춘다. 같은 골격으로 던진 예외 수를 센다
+        @Test
+        @DisplayName("should let no start call throw when two servers start the same channel at the same time")
+        void noStartCallThrowsUnderConcurrency() throws Exception {
+            long channelId = newChannel();
+            int threads = 8;
+            ExecutorService pool = Executors.newFixedThreadPool(threads);
+            CountDownLatch ready = new CountDownLatch(threads);
+            CountDownLatch start = new CountDownLatch(1);
+            CountDownLatch done = new CountDownLatch(threads);
+            AtomicInteger thrown = new AtomicInteger();
+            for (int i = 0; i < threads; i++) {
+                pool.submit(() -> {
+                    ready.countDown();
+                    try {
+                        start.await();
+                        broadcastService.onAvailable("live/" + channelId);
+                    } catch (Exception e) {
+                        thrown.incrementAndGet();
+                    } finally {
+                        done.countDown();
+                    }
+                });
+            }
+            if (!ready.await(10, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("준비되지 않은 스레드가 있다");
+            }
+            start.countDown();
+            if (!done.await(30, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("끝나지 않은 스레드가 있다");
+            }
+            pool.shutdown();
+
+            assertThat(thrown.get()).isZero();
         }
     }
 }
