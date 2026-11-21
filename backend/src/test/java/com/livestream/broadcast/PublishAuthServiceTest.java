@@ -85,6 +85,17 @@ class PublishAuthServiceTest {
             verify(streamKeyService, never()).matches(anyLong(), anyString());
         }
 
+        // live/007은 MediaMTX에서 live/7과 다른 경로다. 받아 주면 같은 채널로 두 번째 송출이 되고,
+        // 재발급 때 live/7만 끊으므로 이전 키로 하던 그 송출이 살아남는다(보안 점검)
+        @ParameterizedTest
+        @ValueSource(strings = {"live/07", "live/007", "live/0"})
+        @DisplayName("should deny when the channel id in the path starts with zero")
+        void deniesLeadingZero(String path) {
+            given(streamKeyService.matches(0L, KEY)).willReturn(true);
+
+            assertThat(service.canPublish(publish(path, "key=" + KEY))).isFalse();
+        }
+
         @Test
         @DisplayName("should deny when the key does not match")
         void deniesWrongKey() {
