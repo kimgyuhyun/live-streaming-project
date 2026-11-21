@@ -4,6 +4,7 @@
 // 실행(저장소 루트, 로컬 compose가 떠 있어야 한다):
 //   k6 run -e MODE=target -e CHANNELS=21,1,41,42,43 perf/channel-poll.js   합격 판정(목표 부하)
 //   k6 run -e MODE=steps  -e CHANNELS=21,1,41,42,43 perf/channel-poll.js   포화 지점(계단)
+//   k6 run -e MODE=steps  -e STEPS=1600,2400,3200,4800 ... 계단 바꾸기(1600 너머 포화 지점)
 // CHANNELS의 첫 번째가 인기 채널이다. BASE_URL 기본값은 nginx(http://localhost:8080). OUT은 요약 JSON 경로.
 import http from 'k6/http'
 import { check } from 'k6'
@@ -13,7 +14,8 @@ const MODE = __ENV.MODE || 'target'
 const CHANNELS = (__ENV.CHANNELS || '').split(',').filter(Boolean).map(Number)
 if (CHANNELS.length === 0) throw new Error('CHANNELS가 필요하다 (예: -e CHANNELS=21,1,41,42,43)')
 
-const STEPS = [50, 100, 200, 400, 800, 1600]
+// 기본은 이슈가 정한 계단. 포화 지점을 더 찾을 때만 -e STEPS=1600,2400,... 로 바꾼다
+const STEPS = (__ENV.STEPS || '50,100,200,400,800,1600').split(',').map(Number)
 const STEP_SECONDS = 30
 const WARMUP_SECONDS = 30
 
@@ -25,7 +27,8 @@ function constantRate(rate, seconds, startSeconds) {
     duration: `${seconds}s`,
     startTime: `${startSeconds}s`,
     // 응답이 1초까지 늘어도 목표 rate를 낼 만큼. 모자라면 dropped_iterations로 드러난다
-    preAllocatedVUs: Math.max(20, rate),
+    // 1,000개를 넘게 미리 만들면 k6 메모리만 든다. 모자라면 maxVUs까지 늘린다
+    preAllocatedVUs: Math.min(Math.max(20, rate), 1000),
     maxVUs: rate * 2,
   }
 }

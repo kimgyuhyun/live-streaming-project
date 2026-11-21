@@ -332,3 +332,42 @@ AC 6개를 확인했습니다. ✅ 3, ⚠️ 3, ❌ 0입니다. 구현(`infra/ng
 ### 갭 처리
 
 사용자 승인("승인, 진행") 범위에서 메움. 검증자 제안 5개 중 시나리오 4개를 문구 그대로 `## 테스트 시나리오`와 AC 대조표에 더하고 Red → Green으로 메웠다. `[수동]` 1개는 체크박스로 두면 `check-scenarios.mjs`가 테스트로 세므로 수동 확인 목록에 일반 항목으로 옮겼다.
+
+#### 갭 처리 결과
+
+- 테스트 4개(커밋 3a21a0a): 구현이 이미 맞아 바로 통과했다. 저장소에 변이를 하나씩 넣어 실패를 확인하고 `git checkout --`으로 되돌렸다.
+
+| 변이 | 실패한 테스트 |
+| --- | --- |
+| `proxy_cache_background_update on;` 추가(검증자 변이 1) | `should return a fresh answer from Spring when the same channel is requested after 1 second` |
+| `proxy_cache_valid 200 500 502 503 504 1s`(검증자 변이 3) | `should not cache a server error response for a channel` |
+| `proxy_cache_lock on;` 삭제 | `should ask Spring once when 20 viewers request the same uncached channel at the same time` |
+| `proxy_cache channel;` 삭제(캐시 끔) | `should still answer from cache when the same channel is requested 900ms later` 외 3개 |
+| 채널 location에 `limit_req`(초당 1건) | `should answer every concurrent viewer with 200 when the uncached channel is requested at the same time` 외 7개 |
+
+- **약한 단언 2를 고치다 숨은 거짓 통과를 찾았다.** `springCalls`를 "로그 줄 수가 300ms 동안 늘지 않을 때까지 기다림"으로 바꾸자 동시 요청 테스트가 `1`이 아니라 `2`로 실패했다. 가짜 Spring의 느린 응답(`limit_rate`)이 다음 초 경계까지 밀려 약 1.0초 걸렸고, 잠금을 기다리던 요청이 그사이 만료된 항목을 보고 한 번 더 물었다(입구 로그: 1.0초에 9건 HIT, 2.5초에 두 번째 업스트림). 고정 300ms 대기는 이 두 번째 줄이 넘어오기 전에 세어 통과했던 것이다. 실제 Spring은 수 ms에 답해 이 상황이 없지만, 테스트의 느린 응답은 캐시 수명보다 확실히 짧아야 해서 njs(이미지에 들어 있는 모듈)로 **정확히 300ms** 늦추게 바꿨다. 3번 다시 돌려 모두 통과했다.
+- **`[수동]` 1600 req/s 너머 포화 지점** (2026-11-21, 같은 compose·채널·스크립트, `-e STEPS=1600,2400,3200,4800,6400`): 캐시 뒤는 HEAD 3a21a0a의 nginx 설정, 기준선은 `origin/main`의 `nginx.conf`를 잠깐 올려(`docker compose build nginx && up -d --no-deps nginx`) 재고 되돌렸다. 원시 결과 `docs/perf/issue-29/{baseline,after}-extended/`. 처리량은 성공한 요청만 센 것(`reqs × (1 − 오류율) / 30초`)이다.
+
+| 요청 req/s | 기준선: 성공 req/s · p50 · p95 · 오류 · dropped | 캐시 뒤: 성공 req/s · p50 · p95 · 오류 · dropped |
+| --- | --- | --- |
+| 1600 | 1,479 · 1329ms · 3700ms · 0% · 3,625 | 1,600 · 0.5ms · 35ms · 0% · 0 |
+| 2400 | 1,415 · 775ms · 14.4s · 0.25% · 27,447 | 2,400 · 24ms · 84ms · 0% · 0 |
+| 3200 | 747 · 697ms · 16.4s · 3.1% · 68,391 | 3,200 · 66ms · 182ms · 0% · 0 |
+| 4800 | 1,387 · — · 5.4s · 66% · 22,368 | **4,022** · 375ms · 809ms · 0.94% · 18,510 |
+| 6400 | 548 · — · — · 85% · 80,784 | 3,438 · 248ms · 15.9s · 28.7% · 47,329 |
+
+| 단계(30초 평균 CPU) | 기준선 nginx / api-1 / api-2 / oracle | 캐시 뒤 nginx / api-1 / api-2 / oracle |
+| --- | --- | --- |
+| 1600 | 25 / **97** / **98** / 38% | 24 / 1 / 1 / 3% |
+| 2400 | 25 / 87 / 78 / 34% | 25 / 1 / 1 / 2% |
+| 3200 | 26 / 28 / 28 / 19% | 25 / 1 / 4 / 3% |
+| 4800 | 25 / 53 / 61 / 36% | 25 / 1 / 1 / 4% |
+
+**포화 지점 (PLATFORM 10절 정의: 부하를 올려도 처리량은 늘지 않고 지연만 늘어나는 지점)**
+
+- **기준선: 약 1,400~1,500 req/s(시청자 약 7,000명).** 1600 요청에서 이미 1,479만 냈고 그 위로는 늘지 않았다. 그때 **api 두 대가 CPU 한도(1.0)에 닿고**(97·98%) nginx도 한도(25%)였다. 계단을 50부터 올린 첫 기준선(1600에서 p50 60ms)보다 나쁜 것은, 이번에는 워밍업(50) 뒤 바로 1600으로 뛰어 요청이 쌓였기 때문으로 본다.
+- **캐시 뒤: 약 4,000 req/s(시청자 약 20,000명), 기준선의 약 2.7배.** 3200까지 요청한 만큼 냈고, 4800 요청에서 4,022로 멈췄다. 그때 api는 1%대, oracle 3~4%로 남아 있고 **nginx만 CPU 한도(25%)**에 붙어 있다. 4800 이상에서는 지연이 길어지며 k6 연결이 늘어 nginx 로그에 `1024 worker_connections are not enough`가 찍혔고, 오류(0.9% → 28.7%)는 여기서 나왔다.
+- **다음 천장은 nginx 하나다.** CPU 한도(`cpus: 0.25`)와 `worker_connections`(1024). 이 이슈에서는 바꾸지 않는다(한 번에 한 가지).
+- **부하 생성기:** k6가 같은 호스트(12코어)에서 돌았다. k6 프로세스 CPU는 직접 재지 못했다(Git Bash `time`이 네이티브 프로세스의 CPU를 세지 못한다). 포화 때 서버 쪽 컨테이너(기준선은 api 두 대, 캐시 뒤는 nginx)가 각자 CPU 한도에 붙어 있었으므로 병목은 생성기가 아니라 서버 쪽으로 본다.
+- `perf/channel-poll.js`에 `STEPS` 환경변수를 더했다(기본값은 이슈가 정한 계단 그대로). 높은 rate에서 k6가 VU를 수천 개 미리 만들지 않도록 `preAllocatedVUs`를 최대 1,000으로 묶었다(모자라면 `maxVUs`까지 늘린다). 기존 계단(최대 1600)의 측정에는 영향이 없다 — 그 구간의 필요 VU는 수십~수백 개다.
+- **캐시 적중률의 원시 근거:** 앞 측정의 229/13,502·529/96,004는 nginx 접근 로그를 센 값이다. 로그 원문은 커밋하지 않았다(요청마다 한 줄이라 수십 MB). 세는 방법은 위 "수동 확인·측정 결과"에 적었다.
