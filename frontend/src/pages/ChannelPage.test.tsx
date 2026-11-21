@@ -84,6 +84,23 @@ describe('ChannelPage', () => {
     expect([callsBefore, fetchChannelMock.mock.calls.length]).toEqual([1, 2])
   })
 
+  it('should ask for the channel again exactly when 5 seconds pass while the channel is live', async () => {
+    // 실제 시간이 시계에 더해지지 않게 순수 가짜 시계로 바꾼다. 대기는 0ms씩 흘려 처리한다
+    vi.useRealTimers()
+    vi.useFakeTimers()
+    fetchChannelMock.mockResolvedValue(channel(true))
+    const { container } = renderPage()
+    for (let i = 0; i < 10 && container.querySelector('video') === null; i++) {
+      await vi.advanceTimersByTimeAsync(0)
+    }
+
+    await vi.advanceTimersByTimeAsync(4999)
+    const callsBefore = fetchChannelMock.mock.calls.length
+    await vi.advanceTimersByTimeAsync(1)
+
+    expect([callsBefore, fetchChannelMock.mock.calls.length]).toEqual([1, 2])
+  })
+
   it('should show the offline notice without a player when a visitor opens an offline channel', async () => {
     fetchChannelMock.mockResolvedValue(channel(false))
 
