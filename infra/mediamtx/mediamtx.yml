@@ -14,6 +14,8 @@ hlsVariant: lowLatency
 rtsp: no
 webrtc: no
 srt: no
+# 1.21부터 MoQ 서버가 기본으로 켜진다(:8892 TCP·UDP, :8893 UDP). 쓰지 않는다(스파이크 1절 7번)
+moq: no
 metrics: no
 
 # 재발급 때 Spring이 송출 연결을 끊는 데 쓴다. compose에서 포트를 열지 않는다 —
