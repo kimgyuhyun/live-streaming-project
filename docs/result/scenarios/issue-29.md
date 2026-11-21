@@ -159,3 +159,55 @@ nginx 동작은 설정 문자열이 아니라 **실제 nginx로** 본다. `Nginx
 | 6. 캐시 전후 측정 기록, 캐시 뒤 목표 부하에서 합격 | 기준선(위) + 수동 확인·측정 |
 
 **커버리지:** AC 6개 / 시나리오 9개 / 미커버 0개 (AC 6은 측정 기록)
+
+---
+
+## 수동 확인·측정 결과 (2026-11-21, Green 뒤, HEAD 931dafe)
+
+`docker compose up --build -d nginx`로 새 설정을 담았다(api-1·2도 다시 떴다). 기준선과 같은 채널 5개·같은 스크립트·같은 자원 제한, 커밋만 다르다.
+
+**curl 확인**
+
+| 요청 | 결과 |
+| --- | --- |
+| `GET /api/channels/21` 연달아 두 번 | `200 MISS` → `200 HIT`. 둘 다 `Cache-Control: no-cache, no-store…`가 브라우저로 그대로 간다 ✅ |
+| 2.1초 뒤 같은 요청 | `EXPIRED`(Spring에 다시 물음) ✅ |
+| `GET /api/channels/21?x=랜덤` | `HIT`(query로 우회되지 않음) ✅ |
+| `GET /api/channels/999999` 두 번 | `404 MISS` → `404 MISS`(오류는 담지 않음) ✅ |
+| `GET /api/members/me` | `401`, `X-Cache-Status` 없음(캐시 location 밖) ✅ |
+
+**목표 부하(200 req/s = 시청자 1,000명):** 12,001건, p50 0.5ms · p95 1.5ms · p99 5.8ms · max 63.7ms, 오류 0%, 합격 ✅. 워밍업 포함 채널 조회 13,502건 중 **Spring까지 간 것 229건(1.7%)**(nginx 접근 로그의 `upstream=`이 `-`가 아닌 줄)
+
+**계단 (기준선 → 캐시 뒤)**
+
+| req/s(시청자) | p50 | p95 | p99 | max | 오류 | nginx CPU | api-1 / api-2 | oracle |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 50 (250) | 2.4 → 1.0 | 3.2 → 4.9 | 4.3 → 6.9 | 7.8 → 8.1 | 0% | 2 → 1% | 4/4 → 1/1% | 4 → 2% |
+| 100 (500) | 2.1 → 0.6 | 3.0 → 1.6 | 3.7 → 5.6 | 7.7 → 13.2 | 0% | 3 → 2% | 5/6 → 1/1% | 5 → 3% |
+| 200 (1,000) | 2.1 → 0.5 | 2.7 → 1.4 | 3.6 → 5.1 | 9.5 → 13.2 | 0% | 5 → 5% | 10/10 → 2/1% | 9 → 2% |
+| 400 (2,000) | 1.6 → 0.5 | 2.6 → 1.1 | 3.5 → 2.2 | 13.2 → 8.1 | 0% | 10 → 7% | 19/21 → 1/1% | 14 → 2% |
+| 800 (4,000) | 1.6 → 0.5 | 2.4 → 1.0 | 3.9 → 1.8 | 19.1 → 10.2 | 0% | 17 → 12% | 33/35 → 1/1% | 20 → 3% |
+| 1600 (8,000) | **60.5 → 0.5** | **522.3 → 30.0** | **1223.4 → 75.2** | 1938.4 → 298.9 | 0% | **25 → 24%** | 52/57 → 1/1% | 35 → 3% |
+
+(지연은 ms, CPU는 코어 하나 = 100%·단계 30초 평균. 원시 결과 `docs/perf/issue-29/after/`.) 계단 전체 채널 조회 96,004건 중 **Spring까지 간 것 529건(0.55%)**.
+
+**읽은 것**
+
+- **Spring·DB 부하는 시청자 수와 거의 무관해졌다.** 1600 req/s에서 api CPU 55% → 1%, oracle 35% → 3%. Spring까지 가는 채널 조회는 채널 수 × (1~2초에 한 번)으로 묶인다.
+- **포화 지점에서 지연이 크게 줄었다.** 1600 req/s에서 p95 522ms → 30ms, p99 1223ms → 75ms.
+- **그래도 천장은 nginx다.** 1600 req/s에서 nginx CPU가 여전히 한도(`cpus: 0.25`)에 닿았고, p95가 800 req/s의 1.0ms에서 30ms로 뛰었다. 포화 지점은 여전히 800~1600 req/s 사이이고, 이제 막히는 곳은 nginx 하나뿐이다. 이 위로 올리려면 nginx CPU 한도나 업스트림 keepalive를 봐야 한다 — 이번 이슈 밖(한 번에 한 가지)이라 따로 정한다.
+- **낮은 부하에서 p95·p99가 조금 늘었다(50 req/s p95 3.2 → 4.9ms).** 첫 요청이 빈 캐시에서 잠금을 기다리기 때문으로 본다. nginx의 `proxy_cache_lock`은 기다리는 요청을 응답이 오는 즉시 깨우지 않고 500ms 간격으로 확인한다. 워밍업의 max 500.2ms가 그 흔적이다. 한 번 담긴 채널은 만료 때 `use_stale updating`으로 직전 값을 주므로 기다리지 않는다. 다시 차가워지는 것은 10초(`inactive=10s`) 동안 아무도 묻지 않은 채널뿐이다. 방송 중 채널은 5초 폴링이라 그 전에 다시 물린다.
+- **목표 부하 합격 기준(p95 ≤ 200ms, 오류율 < 0.1%)은 기준선·캐시 뒤 모두 넘는다.** 이 이슈의 효과는 합격 여부가 아니라 Spring·DB 부하 제거와 포화 구간 지연 감소다.
+
+**Green 뒤 변이 확인:** Red에서 지금 설정(캐시 없음)으로도 통과한 6개를 캐시 설정의 변이로 확인했다. `build.gradle.kts`에 `nginx.conf`를 테스트 입력으로 알린 뒤 저장소에서 하나씩 넣고 `NginxChannelCacheTest`를 돌려 `git checkout --`으로 되돌렸다.
+
+| 변이 | 실패한 테스트 |
+| --- | --- |
+| `proxy_cache_valid 200 60s` | `should ask Spring again when the same channel is requested after 1 second` |
+| `proxy_cache_key channel`(상수) | `should keep a separate cache for each channel` 외 3개 |
+| 캐시 location을 `~ ^/api/`로 | `should pass every request for the studio channel to Spring`, `…logged-in member…` |
+| 캐시 location에 `limit_except GET { deny all; }` | `should pass every channel update to Spring` |
+| `proxy_cache_valid any 1s` | `should not cache an error response for a channel` |
+| `proxy_cache_lock on;` 삭제 | `should ask Spring once when 20 viewers request the same uncached channel at the same time`(20번 감) — 처음에는 가짜 Spring이 너무 빨라 이 변이가 살아남았다. 가짜 Spring의 채널 9를 `limit_rate`로 약 0.5초 걸리게 바꾼 뒤 잡혔다(커밋 931dafe) |
+
+덧붙여 처음 변이에서 Gradle이 "최신"이라며 테스트를 돌리지 않았다. 테스트가 읽는 `nginx.conf`를 Gradle이 몰랐기 때문이다(`NginxInternalPathTest`도 같다). `backend/build.gradle.kts`의 테스트 입력에 넣었다(커밋 e9c4fe8).
