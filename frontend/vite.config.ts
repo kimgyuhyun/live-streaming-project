@@ -1,9 +1,14 @@
+/// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 // 개발 서버에서도 배포와 같은 경로를 쓴다. Spring은 IDE에서(8080), MediaMTX는 compose에서(8888) 띄운다.
 export default defineConfig({
   plugins: [react()],
+  // 화면 상태 로직 테스트(Vitest). 컴포넌트를 렌더하므로 DOM이 필요하다
+  test: {
+    environment: 'jsdom',
+  },
   server: {
     proxy: {
       '/api': 'http://localhost:8080',
