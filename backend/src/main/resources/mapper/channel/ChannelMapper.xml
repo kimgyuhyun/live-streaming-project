@@ -8,16 +8,25 @@
         VALUES (#{memberId}, #{name}, #{description,jdbcType=VARCHAR})
     </insert>
 
+    <!-- live: 진행 중 방송(ended_at IS NULL)이 있으면 1(#11).
+         조건을 uk_broadcast_live_channel과 같은 식으로 써서 그 인덱스로 찾는다 -->
+    <sql id="columns">
+        c.id, c.member_id, c.name, c.description, c.stream_key_hash, c.stream_key_prefix,
+        CASE WHEN EXISTS (
+            SELECT 1 FROM broadcast b WHERE (CASE WHEN b.ended_at IS NULL THEN b.channel_id END) = c.id
+        ) THEN 1 ELSE 0 END AS live
+    </sql>
+
     <select id="findById" resultType="com.livestream.channel.Channel">
-        SELECT id, member_id, name, description, stream_key_hash, stream_key_prefix
-        FROM channel
-        WHERE id = #{id}
+        SELECT <include refid="columns"/>
+        FROM channel c
+        WHERE c.id = #{id}
     </select>
 
     <select id="findByMemberId" resultType="com.livestream.channel.Channel">
-        SELECT id, member_id, name, description, stream_key_hash, stream_key_prefix
-        FROM channel
-        WHERE member_id = #{memberId}
+        SELECT <include refid="columns"/>
+        FROM channel c
+        WHERE c.member_id = #{memberId}
     </select>
 
     <update id="update">

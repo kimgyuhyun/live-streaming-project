@@ -156,36 +156,36 @@ public class Channel {
 
 ### 정상
 
-- [ ] [정상] `BroadcastService.onAvailable` — should start a live broadcast for the channel when live and the channel id becomes available
-- [ ] [정상] `BroadcastService.onUnavailable` — should end the live broadcast of the channel when live and the channel id becomes unavailable
-- [ ] [정상] `BroadcastService.reconcile` — should start broadcasts for channels available in MediaMTX but not live in the database
-- [ ] [정상] `BroadcastService.reconcile` — should end broadcasts live in the database but not available in MediaMTX
-- [ ] [정상] `MediaMtxClient.findAvailablePaths` — should return the names of the available paths
-- [ ] [정상] `BroadcastReconciler.run` — should reconcile once per run
-- [ ] [정상] `ChannelService.find` — should return live true when the channel has a live broadcast
-- [ ] [정상] `BroadcastIntegration` — should create a live broadcast with a start time and show the channel as live when the available notice for live and the channel id arrives
-- [ ] [정상] `BroadcastIntegration` — should stamp the end time and show the channel as offline when the unavailable notice arrives
-- [ ] [정상] `BroadcastIntegration` — should start the broadcast when reconcile finds the channel available in MediaMTX without a live broadcast
-- [ ] [정상] `BroadcastIntegration` — should end the broadcast when reconcile finds it live in the database but not in MediaMTX
+- [x] [정상] `BroadcastService.onAvailable` — should start a live broadcast for the channel when live and the channel id becomes available
+- [x] [정상] `BroadcastService.onUnavailable` — should end the live broadcast of the channel when live and the channel id becomes unavailable
+- [x] [정상] `BroadcastService.reconcile` — should start broadcasts for channels available in MediaMTX but not live in the database
+- [x] [정상] `BroadcastService.reconcile` — should end broadcasts live in the database but not available in MediaMTX
+- [x] [정상] `MediaMtxClient.findAvailablePaths` — should return the names of the available paths
+- [x] [정상] `BroadcastReconciler.run` — should reconcile once per run
+- [x] [정상] `ChannelService.find` — should return live true when the channel has a live broadcast
+- [x] [정상] `BroadcastIntegration` — should create a live broadcast with a start time and show the channel as live when the available notice for live and the channel id arrives
+- [x] [정상] `BroadcastIntegration` — should stamp the end time and show the channel as offline when the unavailable notice arrives
+- [x] [정상] `BroadcastIntegration` — should start the broadcast when reconcile finds the channel available in MediaMTX without a live broadcast
+- [x] [정상] `BroadcastIntegration` — should end the broadcast when reconcile finds it live in the database but not in MediaMTX
 
 ### 경계
 
-- [ ] [경계] `BroadcastService.onAvailable` — should keep the existing live broadcast when the channel is already live
-- [ ] [경계] `BroadcastService.reconcile` — should leave channels that are both available and live untouched
-- [ ] [경계] `BroadcastService.reconcile` — should ignore available paths that are not live followed by a channel id
-- [ ] [경계] `MediaMtxClient.findAvailablePaths` — should leave out paths that are not available
-- [ ] [경계] `BroadcastIntegration` — should keep one live broadcast when the same available notice arrives twice
-- [ ] [경계] `BroadcastIntegration` — should keep one live broadcast when two servers start the same channel at the same time
+- [x] [경계] `BroadcastService.onAvailable` — should keep the existing live broadcast when the channel is already live
+- [x] [경계] `BroadcastService.reconcile` — should leave channels that are both available and live untouched
+- [x] [경계] `BroadcastService.reconcile` — should ignore available paths that are not live followed by a channel id
+- [x] [경계] `MediaMtxClient.findAvailablePaths` — should leave out paths that are not available
+- [x] [경계] `BroadcastIntegration` — should keep one live broadcast when the same available notice arrives twice
+- [x] [경계] `BroadcastIntegration` — should keep one live broadcast when two servers start the same channel at the same time
 
 ### 예외
 
-- [ ] [예외] `BroadcastService.onAvailable` — should change nothing when the path is not live followed by a channel id
-- [ ] [예외] `BroadcastService.onUnavailable` — should change nothing when the path is not live followed by a channel id
-- [ ] [예외] `BroadcastService.reconcile` — should change nothing when the MediaMTX API fails
-- [ ] [예외] `MediaMtxClient.findAvailablePaths` — should throw when the MediaMTX API responds with an error
-- [ ] [예외] `BroadcastReconciler.run` — should not let a failed reconcile escape the scheduler
-- [ ] [예외] `BroadcastIntegration` — should not start a broadcast when the available notice is for 720 and the channel id
-- [ ] [예외] `BroadcastIntegration` — should not end the live broadcast when the unavailable notice is for 720 and the channel id
+- [x] [예외] `BroadcastService.onAvailable` — should change nothing when the path is not live followed by a channel id
+- [x] [예외] `BroadcastService.onUnavailable` — should change nothing when the path is not live followed by a channel id
+- [x] [예외] `BroadcastService.reconcile` — should change nothing when the MediaMTX API fails
+- [x] [예외] `MediaMtxClient.findAvailablePaths` — should throw when the MediaMTX API responds with an error
+- [x] [예외] `BroadcastReconciler.run` — should not let a failed reconcile escape the scheduler
+- [x] [예외] `BroadcastIntegration` — should not start a broadcast when the available notice is for 720 and the channel id
+- [x] [예외] `BroadcastIntegration` — should not end the live broadcast when the unavailable notice is for 720 and the channel id
 
 ### 수동 확인 (로컬 compose + ffmpeg — 시나리오 수에 넣지 않는다)
 

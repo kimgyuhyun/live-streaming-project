@@ -41,9 +41,9 @@ public class ChannelService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHANNEL_NOT_FOUND));
     }
 
-    // 방송 상태는 #11에서 채운다. 그 전까지 늘 오프라인. 빈 소개는 Oracle에서 NULL로 읽힌다
+    // live는 진행 중 방송이 있는지(ChannelMapper가 broadcast에서 함께 읽는다). 빈 소개는 Oracle에서 NULL로 읽힌다
     private static ChannelResponse toResponse(Channel channel) {
         return new ChannelResponse(channel.getId(), channel.getName(),
-                Objects.requireNonNullElse(channel.getDescription(), ""), false);
+                Objects.requireNonNullElse(channel.getDescription(), ""), channel.isLive());
     }
 }

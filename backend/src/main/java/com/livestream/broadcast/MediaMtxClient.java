@@ -30,8 +30,11 @@ class MediaMtxClient implements PublisherDisconnector {
         }
     }
 
+    // 지금 읽을 수 있는(available) 경로 이름. 1.21에서 ready의 새 이름이 available이다.
+    // 첫 페이지(기본 100개)만 본다 — 1인 플랫폼 + 데모 몇 개라 넘지 않는다
     List<String> findAvailablePaths() {
-        throw new UnsupportedOperationException("not implemented");
+        Paths paths = restClient.get().uri("/v3/paths/list").retrieve().body(Paths.class);
+        return paths.items().stream().filter(PathItem::available).map(PathItem::name).toList();
     }
 
     // 필요한 필드만 읽는다. query(키가 들어 있다)는 받지 않는다
@@ -39,5 +42,11 @@ class MediaMtxClient implements PublisherDisconnector {
     }
 
     record RtmpConnection(String id, String state, String path) {
+    }
+
+    record Paths(List<PathItem> items) {
+    }
+
+    record PathItem(String name, boolean available) {
     }
 }

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.livestream.broadcast.BroadcastMapper">
+
+    <!-- 이미 진행 중이면 uk_broadcast_live_channel 위반(DuplicateKeyException). 시작 시각은 DB 기본값 -->
+    <insert id="insertLive">
+        INSERT INTO broadcast (channel_id) VALUES (#{channelId})
+    </insert>
+
+    <update id="endLive">
+        UPDATE broadcast SET ended_at = SYSTIMESTAMP
+        WHERE channel_id = #{channelId} AND ended_at IS NULL
+    </update>
+
+    <select id="findLiveChannelIds" resultType="long">
+        SELECT channel_id FROM broadcast WHERE ended_at IS NULL
+    </select>
+</mapper>
