@@ -143,6 +143,7 @@ class MediaMtxClient implements PublisherDisconnector {
 - [x] [경계] `PublishAuthService.canPublish` — should pass an 18-digit channel id in the path to the key check when the path is live followed by the id
 - [x] [경계] `PublishAuthService.canPublish` — should deny without calling the key check when the channel id in the path has 19 digits
 - [x] [경계] `PublishAuthIntegration` — should return 401 when the path is live followed by a 19-digit number larger than the long range
+- [x] [경계] `PublishAuthService.canPublish` — should deny when the channel id in the path starts with zero
 
 ### 예외
 
@@ -207,8 +208,9 @@ AC 5·6·7. Green 뒤, AC 검증 전에 `docker compose up --build -d`로 전체
 | --- | --- |
 | `[예외] PublishAuthService.canPublish — should deny when the action is not publish` | PRD "Spring은 publish만 판단". 설정이 빠졌을 때 열어 주지 않게 |
 | `[경계] OriginValidationFilter — should reject a POST without Origin when the path only starts with /internal but is not under /internal/` | 출처 검사 예외가 `/internal/` 밖으로 새지 않는지 |
+| `[경계] PublishAuthService.canPublish — should deny when the channel id in the path starts with zero` | 보안 점검 🔴. `live/007`이 채널 7의 키로 허용되면 MediaMTX에서는 `live/7`과 다른 경로라 같은 채널 두 번째 송출이 되고, 재발급 때 `live/7`만 끊어 이전 키 송출이 살아남는다(사용자 스토리 4) |
 
-**커버리지:** AC 7개 / 시나리오 30개(AC 검증 갭 처리 3개 포함) / 미커버 0개 (AC 5·6은 수동 확인만, AC 7은 설정 테스트 + 수동 확인)
+**커버리지:** AC 7개 / 시나리오 31개(AC 검증 갭 처리 3개, 보안 점검 1개 포함) / 미커버 0개 (AC 5·6은 수동 확인만, AC 7은 설정 테스트 + 수동 확인)
 
 ---
 
@@ -295,3 +297,130 @@ AC 5·6·7. Green 뒤, AC 검증 전에 `docker compose up --build -d`로 전체
 새 테스트 3개는 구현이 이미 18자리까지만 받아서 바로 통과했다(커밋 36f9884). 그래서 저장소에 변이를 넣어 실패를 확인하고 `git checkout --`으로 되돌렸다.
 - 경로 정규식을 `{1,19}`로 → `PublishAuthServiceTest`·`PublishAuthIntegrationTest` 27개 중 19자리 단위 테스트와 19자리 통합 테스트 2개만 실패.
 - 경로 정규식을 `{1,17}`로 → `PublishAuthServiceTest` 21개 중 18자리 테스트 1개만 실패.
+
+### 2차 검증 (AC 2만)
+
+> `harness:ac-verifier` (2026-11-21, HEAD a7f6b71). 범위를 AC 2로 좁히고 1차와 같은 제약(변이 최대 3번·20분·스크래치 복사본·클래스 단위)으로 띄웠다. 아래는 출력 원문이다(제목 수준만 두 단계 낮췄다).
+
+#### 이슈 #10 AC 2 재검증 (2차, feat/channel/issue-10, HEAD a7f6b71)
+
+**판정: AC 2 충족(✅).** 1차 갭은 메워졌고, AC 2에 남은 갭은 없습니다.
+
+1차에서 살아남았던 변이(`{1,19}`)를 이번에는 새 테스트 두 개가 잡았습니다. 하한 쪽 변이(`{1,17}`)도 18자리 테스트가 잡았습니다. 변이는 3번 돌렸고 3번 모두 잡혔습니다. 걸린 시간은 약 4분(11:06–11:10)입니다.
+
+##### AC 2 — Given 같은 요청, When 키가 다르거나·없거나·채널이 없거나·경로가 `live/{숫자}`가 아니면, Then 401이다
+
+**근거 테스트**
+- 이번에 더한 테스트 3개. 시나리오 문서 issue-10.md:143-145에 `[x]`로, AC 대조표 197행에도 들어 있습니다.
+  - `should pass an 18-digit channel id in the path to the key check when the path is live followed by the id` (PublishAuthServiceTest.java:71-77). 목은 `matches(999_999_999_999_999_999L, KEY)`에만 true를 줍니다. 그래서 18자리가 정확히 그 long 값으로 넘어가는지까지 확인합니다.
+  - `should deny without calling the key check when the channel id in the path has 19 digits` (PublishAuthServiceTest.java:79-86). false가 나오는지 보고, `verify(streamKeyService, never()).matches(anyLong(), anyString())`로 키 확인을 부르지 않았는지도 봅니다.
+  - `should return 401 when the path is live followed by a 19-digit number larger than the long range` (PublishAuthIntegrationTest.java:127-134). 보안 필터 전체를 거쳐 실제 HTTP 상태가 401인지 확인합니다.
+- 1차부터 있던 통합 테스트 (PublishAuthIntegrationTest.java)
+  - 키가 다를 때 (:93-100)
+  - 키가 없을 때 (:102-108)
+  - 채널이 없을 때 (:110-117)
+  - 경로가 `live/{숫자}`가 아닐 때 (:119-125)
+- 1차부터 있던 단위 테스트 (PublishAuthServiceTest.java)
+  - 경로 7종 (:102-107)
+  - 빈 query·null·`key=` (:56-62)
+  - 20자리 경로 (:64-68)
+  - 키 없음 (:96-100), 키 불일치 (:88-94)
+- StreamKeyService.matches 테스트: 키가 없는 채널(StreamKeyServiceTest.java:188-194)과 키가 다른 경우(:196-)
+
+**구현**
+- PublishAuthService.java:13: `live/(\d{1,18})`. 18자리까지는 언제나 long에 들어갑니다.
+- PublishAuthService.java:27-32: 경로가 `matches()`로 전체 일치해야 하고, 키가 null이면 거부합니다.
+- PublishAuthService.java:36-46: query에서 키를 꺼냅니다.
+- PublishAuthController.java:22: false면 401을 줍니다.
+- StreamKeyService.java:53-60: 채널이 없거나 해시가 없으면 false, 해시 비교는 상수 시간입니다.
+
+**판단 이유**
+- 숫자 길이 경계가 양쪽 모두 고정됐습니다.
+  - 상한: 19자리 테스트가 단위와 통합 두 층에서 `{1,19}` 변이를 잡았습니다. 통합 테스트의 실패 원인은 `ServletException: Request processing failed: java.lang.NumberFormatException: For input string: "9999999999999999999"`였습니다. 1차가 "500이 날 것으로 본다"고만 했던 경로를 이번에 실제로 확인한 셈입니다.
+  - 하한: `{1,17}` 변이를 18자리 테스트가 잡았습니다.
+- AC 2의 네 조건(키 다름, 키 없음, 채널 없음, 경로 형식 아님)은 모두 실제 DB와 보안 필터를 거치는 통합 테스트로 401이 확인됩니다.
+- 키 없음 조건은 변이 3에서 확인했습니다. null 키 가드를 빼면 실제 경로에서는 NPE로 500이 됩니다. 통합 테스트가 이 경로를 막고 있습니다.
+
+##### 변이 결과
+
+스크래치 복사본에서만 돌렸습니다. 위치는 `C:\Users\USER\AppData\Local\Temp\claude\1cbb40fc7d76b7b0\d434e676-b23e-4cde-8b32-82990af677dd\scratchpad\mut2`이고 `git archive HEAD`로 만들었습니다.
+
+| # | 변이 (PublishAuthService.java) | 돌린 클래스 | 결과 |
+|---|---|---|---|
+| 기준선 | 없음 | PublishAuthServiceTest, PublishAuthIntegrationTest | 27개 모두 통과 (canPublish 21, Integration 6) |
+| 1 | :13 `\d{1,18}`을 `\d{1,19}`로 | 두 클래스 | **잡힘.** 27개 중 2개 실패, 실패한 것은 19자리 단위 테스트(NumberFormatException)와 19자리 통합 테스트(ServletException ← NumberFormatException)뿐 |
+| 2 | :13 `\d{1,18}`을 `\d{1,17}`로 | PublishAuthServiceTest | **잡힘.** 21개 중 18자리 테스트 1개 실패 ("Expecting value to be true but was false") |
+| 3 | :32 `key != null &&` 제거 (정규식은 원복) | 두 클래스 | **잡힘.** 27개 중 `should return 401 when the query has no key` 통합 테스트 1개만 실패 (NPE `"key" is null`으로 ServletException). 단위 테스트 21개는 모두 통과 |
+
+##### 남은 갭 (AC 2)
+
+없습니다. 추가 시나리오 제안도 없습니다.
+
+##### 약한 단언 (가짜 테스트는 아님, AC 판정에는 영향 없음)
+
+- 변이 3에서 단위 테스트 `should deny when the query has no key`(PublishAuthServiceTest.java:96-100)와 `should deny when the query is empty`(:56-62)가 살아남았습니다.
+- 이유: 목의 기본 반환값 false에 기대고 있어서, 구현이 `matches(7, null)`을 불러도 통과합니다. 사실상 목의 반환값을 단언하는 것에 가깝습니다.
+- 같은 동작을 통합 테스트가 잡으므로 AC는 고정되어 있습니다.
+- 조이려면 이 두 테스트에도 19자리 테스트처럼 `verify(streamKeyService, never()).matches(anyLong(), anyString())`를 더하면 됩니다. 선택 사항입니다.
+
+##### 실행한 명령
+
+1. `cat .claude/harness.json && git log --oneline -3 && git status --short` → 설정 확인(scenariosDir=docs/result/scenarios), HEAD a7f6b71, 작업 트리 깨끗함
+2. Grep `PublishAuth` (backend/src) → 4개 파일
+3. Read로 PublishAuthService.java, PublishAuthController.java, PublishAuthServiceTest.java, PublishAuthIntegrationTest.java 본문 확인
+4. `gh issue view 10` 및 `grep -n "AC 검증" -A200 docs/result/scenarios/issue-10.md` → AC 7개, 1차 검증 원문과 갭 처리 기록 확인
+5. `cat -n StreamKeyService.java | sed -n 45,75p`, GlobalExceptionHandler의 `ExceptionHandler` grep, StreamKeyServiceTest의 matches grep → matches 구현(53-60) 확인, NumberFormatException과 NPE 처리기가 없음을 확인
+6. `git archive HEAD | tar -x -C .../scratchpad/mut2` → 스크래치 복사본 생성
+7. (스크래치) `./gradlew test --tests "PublishAuthServiceTest" --tests "PublishAuthIntegrationTest"` → 기준선 BUILD SUCCESSFUL, XML 기준 21+6개 failures=0
+8. (스크래치) 변이 1 sed 후 같은 두 클래스 실행 → BUILD FAILED, 27개 중 2개 실패(위 표)
+9. (스크래치) 변이 2 sed 후 `--tests "PublishAuthServiceTest"` 실행 → 21개 중 1개 실패
+10. (스크래치) 정규식을 원복하고 변이 3 sed 후 두 클래스 실행 → 27개 중 1개 실패(통합 테스트, NPE)
+11. `git -C C:/live-streaming-project status --short; git rev-parse --short HEAD; grep 18-digit/19 digits issue-10.md` → **status 출력은 비어 있음**, HEAD a7f6b71 그대로, 시나리오 문서 143-145행에 `[x]` 3개
+
+##### 기타
+
+- 저장소 작업 트리와 구현, 테스트는 건드리지 않았습니다. checkout, stash, 커밋도 하지 않았습니다.
+- docker compose는 조작하지 않았습니다. 통합 테스트는 Testcontainers로만 돌았습니다.
+- 스크래치 복사본에는 변이 3이 적용된 상태가 그대로 남아 있습니다.
+- AC 범위 밖 참고: `live/007`처럼 앞에 0이 붙은 경로는 채널 7의 키로 허용됩니다. `Long.parseLong`이 7로 읽기 때문입니다. 숫자 경로이므로 AC 2 위반은 아닙니다. 필요하면 security-review에서 볼 만한 사항입니다.
+
+관련 파일
+- C:\live-streaming-project\backend\src\main\java\com\livestream\broadcast\PublishAuthService.java
+- C:\live-streaming-project\backend\src\test\java\com\livestream\broadcast\PublishAuthServiceTest.java
+- C:\live-streaming-project\backend\src\test\java\com\livestream\broadcast\PublishAuthIntegrationTest.java
+- C:\live-streaming-project\docs\result\scenarios\issue-10.md
+
+#### 2차 뒤 구현자 메모
+
+- 약한 단언 2개는 선택 사항이라 손대지 않았다. 통합 테스트가 같은 동작을 잡는다.
+- `live/007` 지적은 보안 점검에서 다룬다(아래 `## 보안 점검`).
+
+---
+
+## 리팩터
+
+| 파일 | 기준 | 전 → 후 | 테스트 |
+| --- | --- | --- | --- |
+| `PublishAuthService.canPublish` | 불필요한 복잡도 | 경로가 null이면 `Matcher`를 null로 두고 다시 null을 검사하던 것을 → action 검사와 같은 줄의 조기 반환으로 | 전체 276개 통과 |
+
+손대지 않은 것: `PublisherDisconnector`는 구현이 하나뿐인 인터페이스지만, channel → broadcast 역방향 의존을 막으려고 둔 것이다(시그니처 판단 1). 테스트 없는 코드는 이번 변경에 없다.
+
+---
+
+## 보안 점검
+
+> `/harness:security-review 10` (2026-11-21). 사전 승인에 따라 🔴는 고치고, 🟡는 고치지 않고 "사용자 결정 대기"로 남긴다.
+
+**수집:** `compileJava compileTestJava` 성공, `tsc -b` 성공, `npm audit` 0건, 비밀값 패턴·알려진 접두사 grep 0건, 브랜치가 커밋한 `.env` 없음. 새 로그는 `StreamKeyService`의 경고 한 줄(채널 id와 예외 클래스 이름만).
+
+| 분류 | 파일·줄 | 무엇 | 판단 | 처리 |
+| --- | --- | --- | --- | --- |
+| 🔴 | `PublishAuthService.java` 경로 정규식 | `live/007`·`live/07`이 채널 7의 키로 허용됐다(2차 AC 검증이 짚음). MediaMTX에서는 `live/7`과 다른 경로라 같은 채널로 두 번째 송출이 되고, 재발급은 `path == live/7`인 연결만 끊으므로 **이전 키로 `live/007`에 붙은 송출이 재발급 뒤에도 살아남는다** — 사용자 스토리 4 위반 | 키를 가진 사람(유출 상황이면 공격자)이 재발급을 피해 갈 수 있다 | 고침. 시나리오 `[경계] PublishAuthService.canPublish — should deny when the channel id in the path starts with zero`를 더해 Red 확인(3개 실패, 커밋 afdd746) → 정규식을 `live/([1-9]\d{0,17})`로(커밋 dec1c5f). 전체 279개 통과 |
+| 🟡 | `infra/mediamtx/mediamtx.yml` | MediaMTX API가 인증 없이 도커 내부망 전체에 열려 있다(`authHTTPExclude`에 `api`). 같은 네트워크의 다른 컨테이너(nginx 등)가 뚫리면 연결 목록(`query`에 키)을 읽고 송출을 끊을 수 있다 | PRD 결정("Spring만 내부망으로 부른다, 호스트 포트로 열지 않는다")대로다. 막으려면 API에 내부 사용자 인증(`authInternalUsers`)을 두고 Spring이 자격을 싣거나, MediaMTX·Spring만 붙는 별도 네트워크로 나눠야 한다 | **사용자 결정 대기** |
+| 🟡 | `infra/mediamtx/mediamtx.yml` | 1.21은 MoQ 서버가 기본으로 켜져 있다(`moq: true`, 컨테이너 안 8892/8893). 스파이크 1절 7번은 `moq: no`를 권했다 | 호스트에 포트를 열지 않아 바깥에서 닿지 않는다. 이 이슈 AC와 무관해 이번에 넣지 않았다 | **사용자 결정 대기** |
+| ⚪ | `PublishAuthController` | `/internal/mediamtx/auth`는 로그인·출처 검사 없이 받는다 | PRD 결정. nginx가 404로 막고(설정 테스트 + compose curl 4종), api 컨테이너는 호스트 포트가 없다. 키는 256비트라 내부망에서도 대입은 현실적이지 않다 | 그대로 |
+| ⚪ | `nginx.conf` | 슬래시 없는 `/internal`은 `location /`의 SPA(200 index.html)로 간다 | Spring에 닿지 않는다(1차 AC 검증 확인). Spring의 엔드포인트는 모두 `/internal/` 아래다 | 그대로 |
+| ⚪ | 키가 남는 곳 | 키 확인 응답은 빈 본문, `MediaMtxClient`는 연결 목록의 `query`를 읽지 않는다, 경고 로그는 예외 메시지를 남기지 않는다 | compose 수동 확인에서 mediamtx·api-1·api-2 로그 전체에 `key=` 0줄 | 그대로 |
+| ⚪ | `application.yml` `spring.http.client.*-timeout: 2s` | RestClient 전역 시간 제한 | MediaMTX가 멈춰도 재발급 요청이 2초 남짓에 끝난다. 지금 RestClient를 쓰는 곳은 MediaMTX뿐이다 | 그대로 |
+
+**재스캔:** 고친 뒤 `compileJava compileTestJava`·전체 테스트(279개) 통과. 남은 항목은 위 표의 🟡 2개(사용자 결정 대기)와 ⚪뿐이다.
