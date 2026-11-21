@@ -123,21 +123,21 @@ nginx 동작은 설정 문자열이 아니라 **실제 nginx로** 본다. `Nginx
 
 ### 정상
 
-- [ ] [정상] `nginx channel cache` — should answer a second request for the same channel within 1 second without asking Spring again
-- [ ] [정상] `nginx channel cache` — should ask Spring again when the same channel is requested after 1 second
+- [x] [정상] `nginx channel cache` — should answer a second request for the same channel within 1 second without asking Spring again
+- [x] [정상] `nginx channel cache` — should ask Spring again when the same channel is requested after 1 second
 
 ### 경계
 
-- [ ] [경계] `nginx channel cache` — should ask Spring once when 20 viewers request the same uncached channel at the same time
-- [ ] [경계] `nginx channel cache` — should keep a separate cache for each channel
-- [ ] [경계] `nginx channel cache` — should serve the cached answer when the same channel is requested with a different query string
+- [x] [경계] `nginx channel cache` — should ask Spring once when 20 viewers request the same uncached channel at the same time
+- [x] [경계] `nginx channel cache` — should keep a separate cache for each channel
+- [x] [경계] `nginx channel cache` — should serve the cached answer when the same channel is requested with a different query string
 
 ### 예외
 
-- [ ] [예외] `nginx channel cache` — should pass every request for the studio channel to Spring
-- [ ] [예외] `nginx channel cache` — should pass every request for the logged-in member to Spring
-- [ ] [예외] `nginx channel cache` — should pass every channel update to Spring
-- [ ] [예외] `nginx channel cache` — should not cache an error response for a channel
+- [x] [예외] `nginx channel cache` — should pass every request for the studio channel to Spring
+- [x] [예외] `nginx channel cache` — should pass every request for the logged-in member to Spring
+- [x] [예외] `nginx channel cache` — should pass every channel update to Spring
+- [x] [예외] `nginx channel cache` — should not cache an error response for a channel
 
 ### 수동 확인·측정 (로컬 compose + k6 — 시나리오 수에 넣지 않는다)
 
