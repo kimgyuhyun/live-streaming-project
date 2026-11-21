@@ -142,6 +142,29 @@ Green 뒤, AC 검증 전에 `docker compose up --build -d`로 전체를 띄워 �
 - 송출 없음 → 스튜디오 연결 상태 `송출 없음`. ffmpeg 송출 시작 → 몇 초 안에 `송출 중`(5초 다시 조회). 끊으면 `송출 없음`
 - 송출 중에 제목을 바꾸고 채널 페이지를 다시 열면 새 제목
 
+**확인 결과 (2026-11-21, Green 뒤, HEAD beaafe9):** `docker compose up --build -d`로 전체를 띄웠다(api 기동 로그 `Migrating schema "APP" to version "6 - add title to channel"` → `now at version v6`). #10·#11 수동 확인 때 만든 채널 21과 그 키(스크래치 파일에만 있음)로 `ffmpeg -re -f lavfi -i testsrc=size=640x360:rate=30 -f lavfi -i sine -c:v libx264 -g 60 -c:a aac -t 60 -f flv "rtmp://localhost:1935/live/21?key={키}"`를 송출했다. 화면은 브라우저 패널에서 채널 21의 스트리머로 로그인해 봤다. 시각은 UTC.
+
+| 한 것 | 관찰 |
+| --- | --- |
+| 제목을 정하기 전 | `GET /api/channels/21` → `"title":"st3046016259의 방송"`(채널 이름 + "의 방송"). 스튜디오 제목 입력란도 이 값 ✅ |
+| 스튜디오 첫 화면(송출 없음) | `연결 상태: 송출 없음` ✅ |
+| 스튜디오에서 제목 저장 | `저장했습니다`. 채널 API `title`이 저장한 값 ✅ |
+| ffmpeg 시작(04:14:28.168) | MediaMTX `04:14:32 [path live/21] runOnAvailable command started` → `is publishing to path 'live/21'`. 열어 둔 스튜디오가 다시 읽지 않고(새로고침 없이) **04:14:33.426에 `연결 상태: 송출 중`** ✅ |
+| 송출 중에 제목 변경 → `/channels/21` 다시 열기 | `방송 중`, 제목 **`방송 중에 바꾼 제목`** ✅ |
+| ffmpeg 종료(04:15:28.523) | MediaMTX `04:15:29 runOnUnavailable command launched`. 스튜디오 다시 열기 → `송출 없음` |
+| 덧붙여(폴링 전환, 15초 송출) | 스튜디오를 열어 둔 채 ffmpeg 04:15:51.999 시작 → MediaMTX 04:15:56 available → 화면 **04:15:57.335 `송출 중`** → ffmpeg 04:16:07.083 종료·MediaMTX 04:16:07 unavailable → 화면 **04:16:07.371 `송출 없음`**. 새로고침 없이 5초 다시 조회로 바뀐다 ✅ |
+| 덧붙여(XSS) | 제목을 `<img src=x onerror="window.__xss=1">t`로 저장 → 채널 페이지 `h2`의 글자가 그대로 이 문자열, `main img` 0개, `window.__xss` 없음(텍스트로 들어간다) ✅. 확인 뒤 제목을 `테스트 방송`으로 되돌렸다 |
+| 덧붙여(51자) | 브라우저에서 `PUT /api/studio/title` 51자 → 400 `{"code":"INVALID_INPUT","message":"방송 제목은 1~50자입니다"}` ✅ |
+| 키 노출 | api-1·api-2 로그(최근 5분)에 `key=` 0줄 |
+
+**Red에서 통과했던 테스트의 변이 확인 (Green):** Red에서 3개가 구현 없이 통과했다. 스튜디오 `live`(#11의 조회 SQL)와 `/api/studio/**` 스트리머 제한(#9)이 이미 있어서다. Green 커밋 뒤 저장소에 변이를 하나씩 넣고 `ChannelIntegrationTest`(16개)를 돌린 뒤 `git checkout --`으로 되돌렸다.
+
+| 변이 | 실패한 테스트 |
+| --- | --- |
+| `ChannelMapper.xml` live를 `THEN 0 ELSE 0`(늘 오프라인) | `should return live true from the studio channel when the channel has a live broadcast`, `should show the new title on the channel page when the streamer changes the title during a live broadcast` |
+| live를 `THEN 1 ELSE 1`(늘 방송 중) | `should return live false from the studio channel when the channel has no live broadcast`, (#8) `should show name, description and offline status to a visitor without login` |
+| `SecurityConfig` `/api/studio/**`를 `authenticated()`로 | `should return 403 with code FORBIDDEN when a member who is not a streamer sets a title`, (#8) `…opens the studio channel` |
+
 ---
 
 ## AC 대조
