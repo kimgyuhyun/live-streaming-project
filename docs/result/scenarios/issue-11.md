@@ -487,3 +487,31 @@ AC 7 (✅, 변이 C 회귀 보호용, 선택):
 - AC 8의 남은 것은 PR 생성이다. `pr11.md`에 빠졌다는 "덧붙여(인덱스)" 행을 넣고 그 본문으로 PR을 만든다.
 
 `[경계] BroadcastService.reconcile — should keep reconciling the remaining channels when starting one available channel hits an already live broadcast`: 구현이 이미 공유 `start()`를 써서 바로 통과했다(커밋 fff2f52). 2차 검증의 변이 C(`reconcile`의 `start(channelId)` → `broadcastMapper.insertLive(channelId)`)를 저장소에 넣자 `BroadcastServiceTest` 21개 중 이 테스트 1개만 실패했다. `git checkout --`으로 되돌렸다. 3차 검증은 띄우지 않았다(사전 승인).
+
+---
+
+## 리팩터
+
+없음. 이번 이슈의 소스 파일(`broadcast/*`, `Channel`·`ChannelService`·`ChannelResponse`, 두 매퍼 XML)에서 근거가 분명한 대상을 찾지 못했다.
+- `LivePath`로 경로 규칙을 한 곳에 모은 것은 Green에서 이미 했다(시그니처 판단 1).
+- `reconcile()`의 `live.contains`는 리스트 검색이지만 진행 중 방송이 몇 개뿐이라 바꿀 이유가 없다.
+- 동시성 골격이 `BroadcastIntegrationTest`에 두 번 있지만 테스트 파일이라 리팩터 범위 밖이다.
+전체 테스트 316개 통과(보안 점검과 같은 실행).
+
+---
+
+## 보안 점검
+
+> `/harness:security-review 11` (2026-11-21). 사전 승인에 따라 🔴는 고치고, 🟡는 "사용자 결정 대기"로 남긴다.
+
+**수집:** `./gradlew build`(테스트 316개) 성공, `tsc -b`·`npm run lint`·`npm run build` 성공, `npm audit` 0건, 비밀값 패턴·알려진 접두사 grep 0건, 브랜치가 커밋한 `.env` 없음, 매퍼 SQL에 `${}` 치환 없음(모두 `#{}` 바인딩). 새 로그는 `BroadcastReconciler`의 경고 한 줄(예외 클래스 이름만).
+
+| 분류 | 파일·줄 | 무엇 | 판단 | 처리 |
+| --- | --- | --- | --- | --- |
+| ⚪ | `BroadcastHookController` | 훅 엔드포인트(`/internal/mediamtx/available`·`unavailable`)는 인증 없이 받는다. 내부망의 다른 컨테이너가 거짓 알림을 보내면 방송 상태가 바뀔 수 있다 | PRD C2 결과("훅 알림은 인증 없이 내부망에서만 받는다"). nginx의 `location /internal/ { return 404; }`(#10)가 이 경로도 막고 `NginxInternalPathTest`가 지킨다. 거짓 상태는 1분 대조가 MediaMTX 기준으로 되돌린다. 내부망 신뢰 범위 자체는 #10 🟡 1(MediaMTX API 무인증)과 같은 결정이다 | 그대로 |
+| ⚪ | `infra/mediamtx/mediamtx.yml` 훅 명령 | `$MTX_PATH`를 셸 명령에 넣는다 | 큰따옴표 안의 변수 확장은 다시 해석되지 않아 명령 주입이 되지 않는다. 송출은 키 확인을 통과한 `live/{숫자}`만 되므로 훅이 도는 경로도 그 꼴이다. `MTX_QUERY`(키)는 싣지 않는다 — compose 확인에서 로그 `key=`·`MTX_QUERY` 0줄 | 그대로 |
+| ⚪ | `BroadcastService.reconcile` | MediaMTX API 오류 | 오류를 "송출 없음"으로 읽지 않고 아무것도 바꾸지 않는다(테스트 + 변이로 확인). 경고 로그에 예외 메시지를 남기지 않는다 | 그대로 |
+| ⚪ | `compose.yml` | mediamtx 이미지가 `-ffmpeg`(Alpine, 셸·ffmpeg 포함)로 커졌다 | PRD C2가 정한 이미지. 컨테이너 포트는 #10과 같다(1935·8888만 127.0.0.1에) | 그대로 |
+| — | #10의 🟡 2개 | MediaMTX API 무인증, MoQ 기본 켜짐 | 이번 이슈가 바꾸지 않았다. #10 기록대로 **사용자 결정 대기** | 그대로 |
+
+**결과:** 🔴 0, 🟡 새로 없음. 재스캔은 위 수집과 같다.
