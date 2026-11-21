@@ -45,6 +45,17 @@ describe('useBroadcastView', () => {
     expect(result.current).toBeNull()
   })
 
+  it('should switch from ended to live when a later response says a new broadcast started', () => {
+    const { result, rerender } = renderHook(({ live }) => useBroadcastView(live), {
+      initialProps: { live: true as boolean | undefined },
+    })
+    rerender({ live: false })
+
+    rerender({ live: true })
+
+    expect(result.current).toBe('live')
+  })
+
   it('should stay offline when a channel that was offline from the start is fetched again', () => {
     const { result, rerender } = renderHook(({ live }) => useBroadcastView(live), {
       initialProps: { live: false as boolean | undefined },
@@ -59,6 +70,10 @@ describe('useBroadcastView', () => {
 describe('pollInterval', () => {
   it('should poll every 5 seconds while the channel is live', () => {
     expect(pollInterval(true)).toBe(LIVE_POLL_INTERVAL_MS)
+  })
+
+  it('should poll every 5000 ms while the channel is live', () => {
+    expect(pollInterval(true)).toBe(5000)
   })
 
   it('should not poll before the first channel response arrives', () => {
