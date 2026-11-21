@@ -196,6 +196,27 @@ AC 8. Green 뒤, AC 검증 전에 `docker compose up --build -d`로 전체를 �
 - MediaMTX 로그에 훅 명령 오류가 없고, api 로그에 훅 요청이 남는다. `MTX_QUERY`(키)가 어디에도 실리지 않는다
 - 덧붙여(대조): 훅을 거치지 않고 DB에만 진행 중 방송을 남긴 뒤 1분 안에 대조가 종료시키는지
 
+**확인 결과 (2026-11-21, Green 뒤, HEAD ddb1e30):** `docker compose up --build -d`로 전체를 띄웠다(mediamtx `bluenviron/mediamtx:1.21.4-ffmpeg`, 앱이 뜨면서 V5가 로컬 개발 DB에 적용됨). #10 수동 확인 때 만든 채널 21과 그 키(스크래치 파일에만 있음)로 `ffmpeg -re -f lavfi -i testsrc=size=640x360:rate=30 -f lavfi -i sine -c:v libx264 -g 60 -c:a aac -t 30 -f flv "rtmp://localhost:1935/live/21?key={키}"`를 30초 송출했다. 채널 API는 250ms마다 물었다.
+
+| 한 것 | 관찰 |
+| --- | --- |
+| 송출 전 | `GET /api/channels/21` → `"live":false` |
+| ffmpeg 시작(02:32:15) | MediaMTX `02:32:19 [path live/21] runOnAvailable command started` → `stream is available and online` → `is publishing to path 'live/21'`. DB `broadcast` 1번 행 `started_at 02:32:19.697`. 채널 API `live=true`(첫 조회에서 이미 true), 브라우저 패널 `/channels/21` → **`방송 중`** ✅ |
+| ffmpeg 종료(02:32:45.752) | MediaMTX `02:32:45 runOnAvailable command stopped` → `runOnUnavailable command launched` → `closed: stream unpublished`. DB `ended_at 02:32:45.418`. 채널 API `live=false`를 02:32:45.795에 확인(종료 뒤 0.1초 안), `/channels/21` 다시 열기 → **`오프라인`** ✅ |
+| 훅 오류·키 노출 | mediamtx 로그에 `wget`·`error` 0줄. mediamtx·api-1·api-2 로그에 `key=` 0줄, `MTX_QUERY` 0줄 ✅ |
+| 덧붙여(1분 대조) | 송출 없이 로컬 DB에 진행 중 방송을 넣음(02:33:18, 채널 API `live=true`) → 35.7초 뒤 `live=false`, DB 2번 행 `ended_at 02:33:55`. api 로그에 `대조 실패` 0줄 ✅ |
+| 덧붙여(인덱스) | `user_indexes`에 `UK_BROADCAST_LIVE_CHANNEL UNIQUE` |
+
+**Red에서 통과했던 테스트의 변이 확인 (Green):** `[예외] BroadcastService.reconcile — should change nothing when the MediaMTX API fails`가 구현 없이 통과했다(stub의 예외를 테스트가 받아 두고 갱신 호출이 없는지만 보므로). Green 커밋 뒤 `reconcile()`에서 `findAvailablePaths()` 실패를 빈 목록으로 바꾸는 변이를 넣자 `BroadcastServiceTest` 20개 중 이 테스트 1개만 실패했다. `git checkout --`으로 되돌렸다.
+
+**DB 제약 전후 (defect-repro):** V5를 유니크 인덱스 없이 먼저 만들어 돌린 뒤 인덱스를 더했다.
+
+| 항목 | 인덱스 없음 | `uk_broadcast_live_channel` 있음 |
+| --- | --- | --- |
+| 같은 시작 알림 두 번(통합) | 진행 중 방송 2개 | 1개 |
+| 8개 스레드가 같은 채널을 동시에 시작 처리(통합) | 진행 중 방송 8개 | 1개 |
+| 전체 테스트 | 2개 실패 | 313개 통과 |
+
 ---
 
 ## AC 대조
