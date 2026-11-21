@@ -138,6 +138,20 @@ Green 뒤, AC 검증 전에 `docker compose up --build -d`로 전체를 띄워 �
 - 오프라인 채널을 열면 `video`가 없고 오프라인 표시
 - 보는 중에 ffmpeg를 끊는다 → 5초 폴링 안에 플레이어 자리에 `방송이 종료되었습니다`
 
+**확인 결과 (2026-11-21, Green 뒤, HEAD dc7f4a7):** `docker compose up --build -d`로 새 프론트를 담아 전체를 다시 띄웠다. 채널 21과 그 키(스크래치 파일에만 있음)로 `ffmpeg -re -f lavfi -i testsrc=size=640x360:rate=30 -f lavfi -i sine -c:v libx264 -g 60 -c:a aac -t 45 -f flv "rtmp://localhost:1935/live/21?key={키}"`를 송출했다. 브라우저 패널은 #13 확인 때 로그인했던 테스트 스트리머를 `로그아웃`해 비로그인 시청자로 봤다(`GET /api/members/me` → 401). 시각은 UTC.
+
+| 한 것 | 관찰 |
+| --- | --- |
+| 송출 전 `/channels/21` | `st3046016259` / `테스트 방송` / **`오프라인`**, `video` 요소 0개 ✅ |
+| ffmpeg 시작(04:29:31.131) | MediaMTX `04:29:34 runOnAvailable command started`, 채널 API `live=true`를 04:29:35.303에 확인 |
+| `/channels/21` 다시 열기(비로그인) | 화면 `방송 중` + `video` 1개, 방송 제목 `테스트 방송`. 첫 HLS 요청 **`/hls/live/21/index.m3u8`** → `video1_stream.m3u8`·`audio2_stream.m3u8`(MediaMTX `[HLS] [muxer live/21] created`, `is reading from muxer`). `paused=false`, `muted=true`, `readyState=4` ✅ |
+| 재생 진행 | `currentTime` 04:29:50.696 → 20.13, 51.712 → 21.15, 52.719 → 22.15, 53.729 → 23.15(1초에 1초씩 늘어남) ✅ |
+| ffmpeg 종료(04:30:16.362) | MediaMTX `04:30:16 runOnUnavailable command launched`, `[HLS] [muxer live/21] destroyed`. 열어 둔 페이지가 새로고침 없이 **04:30:19.753에 `방송이 종료되었습니다`**(MediaMTX 종료 뒤 약 3.4초, 5초 폴링 안), `video` 1개 → 0개 ✅ |
+| 키 노출 | api-1·api-2 로그(최근 3분)에 `key=` 0줄 |
+| 참고 | MediaMTX가 `part duration changed from 200ms to 234ms - this will cause an error in iOS clients` 경고를 냈다. 테스트 송출의 키프레임 간격(`-g 60`, 2초)과 LL-HLS 조각 길이가 맞지 않아 생기는 송출 측 경고로, 이 이슈의 코드와는 관계없다. iOS 실기기 재생은 확인하지 않았다 |
+
+**Red에서 통과했던 테스트의 변이 확인 (Green):** `[경계] ChannelPage — should show the offline notice without a player when a visitor opens an offline channel`이 구현 없이 통과했다(#8의 `오프라인` 줄이 이미 있고 플레이어가 없었다). Green 커밋 뒤 `PlayerArea`가 오프라인에서도 `HlsPlayer`를 그리게 하는 변이를 넣자 Vitest 23개 중 이 테스트와 `PlayerArea` 오프라인 테스트 2개가 실패했다. 덧붙여 `ChannelPage`의 `channel.isError && channel.data === undefined`를 `channel.isError`로 되돌리는 변이에서 `should keep the player when one poll fails while the channel is live` 1개가 실패했다. 둘 다 `git checkout --`으로 되돌렸다.
+
 ---
 
 ## AC 대조
