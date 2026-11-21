@@ -139,6 +139,19 @@ class BroadcastServiceTest {
             verify(broadcastMapper, never()).insertLive(anyLong());
         }
 
+        // 다른 서버의 대조나 훅이 먼저 넣었으면 그 채널의 INSERT는 유니크 위반이다. 그래도 이 회차의 나머지 채널은 맞춘다
+        @Test
+        @DisplayName("should keep reconciling the remaining channels when starting one available channel hits an already live broadcast")
+        void keepsReconcilingAfterDuplicate() {
+            given(mediaMtxClient.findAvailablePaths()).willReturn(List.of("live/7", "live/8"));
+            given(broadcastMapper.findLiveChannelIds()).willReturn(List.of());
+            willThrow(new DuplicateKeyException("uk_broadcast_live_channel")).given(broadcastMapper).insertLive(7L);
+
+            service.reconcile();
+
+            verify(broadcastMapper).insertLive(8L);
+        }
+
         // 응답하지 않는 MediaMTX를 "송출이 하나도 없다"로 읽으면 진행 중 방송을 모두 끝내 버린다
         @Test
         @DisplayName("should change nothing when the MediaMTX API fails")
