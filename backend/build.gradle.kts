@@ -39,6 +39,8 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // Nginx*Test가 이 파일을 읽는다. 입력으로 알려야 nginx.conf만 바꿔도 테스트가 다시 돈다
+    inputs.file("../infra/nginx/nginx.conf")
 }
 
 tasks.bootJar {
