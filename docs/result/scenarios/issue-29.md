@@ -3,7 +3,7 @@
 > GitHub: https://github.com/kimgyuhyun/live-streaming-project/issues/29
 > PRD: `docs/result/prd/channel.md`
 > 담당: kimgyuhyun
-> 상태: 시그니처 승인
+> 상태: 시나리오 승인
 
 ---
 
