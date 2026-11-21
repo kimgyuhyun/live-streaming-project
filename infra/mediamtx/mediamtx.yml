@@ -1,5 +1,5 @@
 # 여기에 없는 항목은 MediaMTX 기본값을 쓴다.
-# 지금은 누구나 송출할 수 있다. 스트림 키 검증(Spring 연동)은 인프라 검증 단계에서 넣는다 — 그 전에는 서버에 올리지 않는다.
+# 설정 근거와 실측값은 docs/spikes/infra-validation.md 1절.
 
 logLevel: info
 
@@ -14,8 +14,28 @@ hlsVariant: lowLatency
 rtsp: no
 webrtc: no
 srt: no
-api: no
 metrics: no
+
+# 재발급 때 Spring이 송출 연결을 끊는 데 쓴다. compose에서 포트를 열지 않는다 —
+# 연결 목록 응답의 query에 스트림 키가 그대로 있다(PRD channel).
+api: yes
+apiAddress: :9997
+
+# 송출 시작 때 Spring에 키를 묻는다. 2xx면 허용, 그 밖(응답 없음 포함)은 거부.
+# api는 compose의 네트워크 별칭(api-1·api-2). Spring은 publish만 판단하므로 나머지 action은 인증에서 뺀다
+# (1.21 기본값은 빈 목록이라 API 호출·시청까지 Spring으로 간다).
+authMethod: http
+authHTTPAddress: http://api:8080/internal/mediamtx/auth
+authHTTPExclude:
+  - action: read
+  - action: api
+  - action: metrics
+  - action: pprof
+  - action: playback
+
+pathDefaults:
+  # 같은 채널의 두 번째 송출을 거부한다. 기본값 true면 나중 송출이 기존 송출을 밀어낸다(PRD channel)
+  overridePublisher: false
 
 paths:
   all_others:

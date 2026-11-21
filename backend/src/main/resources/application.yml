@@ -19,6 +19,11 @@ spring:
     redis:
       repository-type: indexed
     timeout: 7d   # 마지막 요청 후 7일
+  # RestClient(MediaMTX API 호출). MediaMTX가 응답하지 않아도 키 재발급 요청이 묶이지 않게
+  http:
+    client:
+      connect-timeout: 2s
+      read-timeout: 2s
 
 server:
   # nginx가 넘긴 X-Forwarded-For를 Tomcat이 실제 사용자 IP로 쓴다. 내부 프록시 대역에서 온 것만 믿는다
@@ -43,6 +48,9 @@ app:
     password: ${OPERATOR_PASSWORD:}
   # 스튜디오 OBS 안내의 "서버" 값(PRD channel 송출 주소). 서버 배포 때 실제 주소로 바꾼다
   obs-server: ${APP_OBS_SERVER:rtmp://localhost/live}
+  # MediaMTX API(재발급 때 송출 연결 끊기). 도커 내부망에서만 열린다(PRD channel). compose는 http://mediamtx:9997
+  mediamtx:
+    api-url: ${MEDIAMTX_API_URL:http://localhost:9997}
 
 # nginx가 /api/ 만 Spring으로 넘기므로 actuator도 그 아래에 둔다. 기본 노출은 health 하나뿐이다.
 management:

@@ -2,8 +2,11 @@ package com.livestream.channel;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -20,6 +23,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 
 class StreamKeyServiceTest {
 
@@ -28,12 +32,14 @@ class StreamKeyServiceTest {
     private static final String OBS_SERVER = "rtmp://stream.example.test/live";
 
     private ChannelMapper channelMapper;
+    private PublisherDisconnector publisherDisconnector;
     private StreamKeyService service;
 
     @BeforeEach
     void setUp() {
         channelMapper = mock(ChannelMapper.class);
-        service = new StreamKeyService(channelMapper, OBS_SERVER);
+        publisherDisconnector = mock(PublisherDisconnector.class);
+        service = new StreamKeyService(channelMapper, OBS_SERVER, publisherDisconnector);
     }
 
     // 테스트가 기대값을 따로 계산한다. 구현과 같은 형식(SHA-256, 소문자 16진수)
@@ -124,6 +130,29 @@ class StreamKeyServiceTest {
         }
 
         @Test
+        @DisplayName("should disconnect the channel's publisher after saving the new key")
+        void disconnectsAfterSaving() {
+            givenChannel(null, null);
+
+            service.issue(MEMBER_ID);
+
+            InOrder order = inOrder(channelMapper, publisherDisconnector);
+            order.verify(channelMapper).updateStreamKey(eq(CHANNEL_ID), anyString(), anyString());
+            order.verify(publisherDisconnector).disconnect(CHANNEL_ID);
+        }
+
+        @Test
+        @DisplayName("should still return the new key when disconnecting the publisher fails")
+        void returnsKeyWhenDisconnectFails() {
+            givenChannel(null, null);
+            willThrow(new IllegalStateException("MediaMTX down")).given(publisherDisconnector).disconnect(CHANNEL_ID);
+
+            IssuedStreamKeyResponse response = service.issue(MEMBER_ID);
+
+            assertThat(response.streamKey()).matches("[A-Za-z0-9_-]{43}");
+        }
+
+        @Test
         @DisplayName("should throw CHANNEL_NOT_FOUND when the member has no channel")
         void rejectsMemberWithoutChannel() {
             given(channelMapper.findByMemberId(MEMBER_ID)).willReturn(Optional.empty());
@@ -132,6 +161,52 @@ class StreamKeyServiceTest {
                     .isInstanceOf(BusinessException.class)
                     .extracting("code")
                     .isEqualTo(ErrorCode.CHANNEL_NOT_FOUND);
+        }
+    }
+
+    @Nested
+    @DisplayName("StreamKeyService.matches")
+    class Matches {
+
+        private static final String KEY = "abcdSecretRestOfTheKey";
+
+        private void givenChannelById(String hash) {
+            Channel channel = new Channel(MEMBER_ID, "방송채널", "");
+            channel.setId(CHANNEL_ID);
+            channel.setStreamKeyHash(hash);
+            given(channelMapper.findById(CHANNEL_ID)).willReturn(Optional.of(channel));
+        }
+
+        @Test
+        @DisplayName("should return true when the key hashes to the saved hash of the channel")
+        void matchesSavedHash() throws Exception {
+            givenChannelById(sha256Hex(KEY));
+
+            assertThat(service.matches(CHANNEL_ID, KEY)).isTrue();
+        }
+
+        @Test
+        @DisplayName("should return false when the channel has no key")
+        void rejectsChannelWithoutKey() {
+            givenChannelById(null);
+
+            assertThat(service.matches(CHANNEL_ID, KEY)).isFalse();
+        }
+
+        @Test
+        @DisplayName("should return false when the key differs from the saved one")
+        void rejectsDifferentKey() throws Exception {
+            givenChannelById(sha256Hex(KEY));
+
+            assertThat(service.matches(CHANNEL_ID, KEY + "x")).isFalse();
+        }
+
+        @Test
+        @DisplayName("should return false when the channel does not exist")
+        void rejectsMissingChannel() {
+            given(channelMapper.findById(CHANNEL_ID)).willReturn(Optional.empty());
+
+            assertThat(service.matches(CHANNEL_ID, KEY)).isFalse();
         }
     }
 

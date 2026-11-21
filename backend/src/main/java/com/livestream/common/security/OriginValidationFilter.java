@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.List;
 import java.util.Set;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 // 상태를 바꾸는 요청은 Origin(없으면 Referer)이 허용 목록에 있을 때만 통과시킨다.
@@ -17,11 +19,18 @@ import org.springframework.web.filter.OncePerRequestFilter;
 class OriginValidationFilter extends OncePerRequestFilter {
 
     private static final Set<String> SAFE_METHODS = Set.of("GET", "HEAD", "OPTIONS", "TRACE");
+    // MediaMTX가 도커 내부망으로 부르는 경로. 브라우저 요청이 아니라 Origin·Referer가 없다. nginx가 넘기지 않는다(PRD channel)
+    private static final RequestMatcher INTERNAL = PathPatternRequestMatcher.withDefaults().matcher("/internal/**");
 
     private final List<String> allowedOrigins;
 
     OriginValidationFilter(List<String> allowedOrigins) {
         this.allowedOrigins = allowedOrigins;
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return INTERNAL.matches(request);
     }
 
     @Override
