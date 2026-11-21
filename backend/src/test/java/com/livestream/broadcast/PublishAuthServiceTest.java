@@ -1,8 +1,12 @@
 package com.livestream.broadcast;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import com.livestream.channel.StreamKeyService;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,6 +65,24 @@ class PublishAuthServiceTest {
         @DisplayName("should deny when the channel id in the path is too long for a number")
         void deniesTooLongChannelId() {
             assertThat(service.canPublish(publish("live/99999999999999999999", "key=" + KEY))).isFalse();
+        }
+
+        // long의 최대값은 19자리(9223372036854775807)다. 18자리는 늘 long에 들어간다
+        @Test
+        @DisplayName("should pass an 18-digit channel id in the path to the key check when the path is live followed by the id")
+        void passesEighteenDigitChannelId() {
+            given(streamKeyService.matches(999_999_999_999_999_999L, KEY)).willReturn(true);
+
+            assertThat(service.canPublish(publish("live/999999999999999999", "key=" + KEY))).isTrue();
+        }
+
+        @Test
+        @DisplayName("should deny without calling the key check when the channel id in the path has 19 digits")
+        void deniesNineteenDigitChannelId() {
+            boolean allowed = service.canPublish(publish("live/9999999999999999999", "key=" + KEY));
+
+            assertThat(allowed).isFalse();
+            verify(streamKeyService, never()).matches(anyLong(), anyString());
         }
 
         @Test

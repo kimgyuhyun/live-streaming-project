@@ -123,5 +123,14 @@ class PublishAuthIntegrationTest {
 
             authorize("720/" + channel.channelId(), "key=" + channel.key()).andExpect(status().isUnauthorized());
         }
+
+        // long의 최대값(9223372036854775807)보다 큰 19자리. 숫자로 바꾸다 터지면 401이 아니라 500이 된다
+        @Test
+        @DisplayName("should return 401 when the path is live followed by a 19-digit number larger than the long range")
+        void rejectsChannelIdBeyondLongRange() throws Exception {
+            ChannelWithKey channel = channelWithKey();
+
+            authorize("live/9999999999999999999", "key=" + channel.key()).andExpect(status().isUnauthorized());
+        }
     }
 }
