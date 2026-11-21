@@ -22,6 +22,8 @@ function ChannelPage() {
     <section>
       <h1>{channel.data.name}</h1>
       <p>{channel.data.live ? '방송 중' : '오프라인'}</p>
+      {/* 방송 중이면 지금 방송의, 아니면 다음 방송의 제목. 텍스트로 넣어 React가 이스케이프한다 */}
+      <h2>{channel.data.title}</h2>
       {channel.data.description && <p>{channel.data.description}</p>}
     </section>
   )

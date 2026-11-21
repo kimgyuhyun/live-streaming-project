@@ -107,32 +107,32 @@ class ChannelController {
 
 ### 정상
 
-- [ ] [정상] `ChannelService.find` — should return the stored title when the channel has a title
-- [ ] [정상] `ChannelService.updateTitle` — should save the title and return it when the streamer sets a title
-- [ ] [정상] `PUT /api/studio/title` — should return 200 with the channel showing the new title when the streamer sends a valid title
-- [ ] [정상] `ChannelIntegration` — should show the new title on the channel page when the streamer changes the title during a live broadcast
-- [ ] [정상] `ChannelIntegration` — should return live true from the studio channel when the channel has a live broadcast
-- [ ] [정상] `ChannelIntegration` — should return live false from the studio channel when the channel has no live broadcast
+- [x] [정상] `ChannelService.find` — should return the stored title when the channel has a title
+- [x] [정상] `ChannelService.updateTitle` — should save the title and return it when the streamer sets a title
+- [x] [정상] `PUT /api/studio/title` — should return 200 with the channel showing the new title when the streamer sends a valid title
+- [x] [정상] `ChannelIntegration` — should show the new title on the channel page when the streamer changes the title during a live broadcast
+- [x] [정상] `ChannelIntegration` — should return live true from the studio channel when the channel has a live broadcast
+- [x] [정상] `ChannelIntegration` — should return live false from the studio channel when the channel has no live broadcast
 
 ### 경계
 
-- [ ] [경계] `ChannelService.find` — should return the channel name followed by 의 방송 as the title when no title has been set
-- [ ] [경계] `PUT /api/studio/title` — should accept a title of 1 character
-- [ ] [경계] `PUT /api/studio/title` — should accept a title of 50 characters
-- [ ] [경계] `ChannelIntegration` — should save a 1-character title and show it on the channel page
-- [ ] [경계] `ChannelIntegration` — should save a 50-character title and show it on the channel page
-- [ ] [경계] `ChannelIntegration` — should show 하늘의 방송 as the title on the channel page when the channel 하늘 has never set a title
+- [x] [경계] `ChannelService.find` — should return the channel name followed by 의 방송 as the title when no title has been set
+- [x] [경계] `PUT /api/studio/title` — should accept a title of 1 character
+- [x] [경계] `PUT /api/studio/title` — should accept a title of 50 characters
+- [x] [경계] `ChannelIntegration` — should save a 1-character title and show it on the channel page
+- [x] [경계] `ChannelIntegration` — should save a 50-character title and show it on the channel page
+- [x] [경계] `ChannelIntegration` — should show 하늘의 방송 as the title on the channel page when the channel 하늘 has never set a title
 
 ### 예외
 
-- [ ] [예외] `ChannelService.updateTitle` — should throw CHANNEL_NOT_FOUND without saving when the member has no channel
-- [ ] [예외] `PUT /api/studio/title` — should return 400 with code INVALID_INPUT when the title has 51 characters
-- [ ] [예외] `PUT /api/studio/title` — should return 400 with code INVALID_INPUT when the title is only spaces
-- [ ] [예외] `PUT /api/studio/title` — should return 400 with code INVALID_INPUT when the title is empty
-- [ ] [예외] `PUT /api/studio/title` — should return 400 with code INVALID_INPUT when the title is missing
-- [ ] [예외] `ChannelIntegration` — should return 400 with code INVALID_INPUT and keep the previous title when the streamer sends a 51-character title
-- [ ] [예외] `ChannelIntegration` — should return 400 with code INVALID_INPUT and keep the previous title when the streamer sends a title of only spaces
-- [ ] [예외] `ChannelIntegration` — should return 403 with code FORBIDDEN when a member who is not a streamer sets a title
+- [x] [예외] `ChannelService.updateTitle` — should throw CHANNEL_NOT_FOUND without saving when the member has no channel
+- [x] [예외] `PUT /api/studio/title` — should return 400 with code INVALID_INPUT when the title has 51 characters
+- [x] [예외] `PUT /api/studio/title` — should return 400 with code INVALID_INPUT when the title is only spaces
+- [x] [예외] `PUT /api/studio/title` — should return 400 with code INVALID_INPUT when the title is empty
+- [x] [예외] `PUT /api/studio/title` — should return 400 with code INVALID_INPUT when the title is missing
+- [x] [예외] `ChannelIntegration` — should return 400 with code INVALID_INPUT and keep the previous title when the streamer sends a 51-character title
+- [x] [예외] `ChannelIntegration` — should return 400 with code INVALID_INPUT and keep the previous title when the streamer sends a title of only spaces
+- [x] [예외] `ChannelIntegration` — should return 403 with code FORBIDDEN when a member who is not a streamer sets a title
 
 ### 수동 확인 (로컬 compose + ffmpeg + 브라우저 패널 — 시나리오 수에 넣지 않는다)
 

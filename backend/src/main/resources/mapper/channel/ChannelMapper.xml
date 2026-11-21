@@ -11,7 +11,7 @@
     <!-- live: 진행 중 방송(ended_at IS NULL)이 있으면 1(#11).
          조건을 uk_broadcast_live_channel과 같은 식으로 써서 그 인덱스로 찾는다 -->
     <sql id="columns">
-        c.id, c.member_id, c.name, c.description, c.stream_key_hash, c.stream_key_prefix,
+        c.id, c.member_id, c.name, c.description, c.stream_key_hash, c.stream_key_prefix, c.title,
         CASE WHEN EXISTS (
             SELECT 1 FROM broadcast b WHERE (CASE WHEN b.ended_at IS NULL THEN b.channel_id END) = c.id
         ) THEN 1 ELSE 0 END AS live
@@ -32,6 +32,10 @@
     <update id="update">
         UPDATE channel SET name = #{name}, description = #{description,jdbcType=VARCHAR}
         WHERE id = #{id}
+    </update>
+
+    <update id="updateTitle">
+        UPDATE channel SET title = #{title} WHERE id = #{id}
     </update>
 
     <update id="updateStreamKey">

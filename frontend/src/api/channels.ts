@@ -1,11 +1,12 @@
 import { api } from './client.ts'
 
-// live는 방송 중 여부(진행 중 방송이 있으면 true)
+// live는 방송 중 여부(진행 중 방송이 있으면 true). title은 방송 제목, 정한 적 없으면 "{name}의 방송"
 export interface ChannelResponse {
   id: number
   name: string
   description: string
   live: boolean
+  title: string
 }
 
 export interface UpdateChannelRequest {
@@ -26,4 +27,9 @@ export function fetchMyChannel(): Promise<ChannelResponse> {
 // 이름 2~20자·소개 0~200자가 아니면 400, 내 채널이 아니면 403
 export function updateChannel(channelId: number, req: UpdateChannelRequest): Promise<ChannelResponse> {
   return api<ChannelResponse>(`/channels/${channelId}`, { method: 'PUT', body: JSON.stringify(req) })
+}
+
+// 스튜디오에서 내 채널의 방송 제목을 바꾼다. 1~50자(공백만은 안 됨)가 아니면 400
+export function updateTitle(title: string): Promise<ChannelResponse> {
+  return api<ChannelResponse>('/studio/title', { method: 'PUT', body: JSON.stringify({ title }) })
 }

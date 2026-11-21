@@ -39,6 +39,6 @@ class ChannelController {
     @PutMapping("/api/studio/title")
     ChannelResponse updateTitle(@AuthenticationPrincipal LoginMember loginMember,
                                 @Valid @RequestBody UpdateTitleRequest request) {
-        throw new UnsupportedOperationException("not implemented");
+        return channelService.updateTitle(loginMember.id(), request);
     }
 }
