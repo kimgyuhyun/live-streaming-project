@@ -44,6 +44,15 @@ class NginxChannelCacheTest {
                 location = /api/channels/404 {
                     return 404 '{"code":"CHANNEL_NOT_FOUND"}';
                 }
+                # 동시 요청 시험용 느린 Spring. limit_rate는 첫 1초 몫(1KB)을 바로 보내므로 1.5KB를 줘 약 0.5초 걸리게 한다.
+                # 빠르면 동시에 보낸 요청이 실제로는 앞 응답이 캐시된 뒤에 도착해 잠금이 없어도 한 번만 간다
+                location = /api/channels/9 {
+                    limit_rate 1k;
+                    add_header Cache-Control "no-cache, no-store, max-age=0, must-revalidate";
+                    add_header Expires 0;
+                    return 200 '{"answer":"$request_id","pad":"%s"}';
+                }""".formatted("x".repeat(1500)) + """
+
                 location / {
                     add_header Cache-Control "no-cache, no-store, max-age=0, must-revalidate";
                     add_header Expires 0;
