@@ -1,6 +1,6 @@
 import { api } from './client.ts'
 
-// live는 방송 중 여부. #11 전까지 늘 false
+// live는 방송 중 여부(진행 중 방송이 있으면 true)
 export interface ChannelResponse {
   id: number
   name: string

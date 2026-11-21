@@ -36,6 +36,10 @@ authHTTPExclude:
 pathDefaults:
   # 같은 채널의 두 번째 송출을 거부한다. 기본값 true면 나중 송출이 기존 송출을 밀어낸다(PRD channel)
   overridePublisher: false
+  # 방송 시작·종료를 Spring에 알린다(PRD channel C2). 실패해도 다시 보내지 않는다 — Spring이 1분마다 API로 대조한다.
+  # MTX_PATH는 live/21 꼴. MTX_QUERY에는 스트림 키가 있으므로 싣지 않는다. Spring은 live/{채널ID}가 아니면 무시한다
+  runOnAvailable: 'wget -q -O /dev/null -T 5 --post-data "" "http://api:8080/internal/mediamtx/available?path=$MTX_PATH"'
+  runOnUnavailable: 'wget -q -O /dev/null -T 5 --post-data "" "http://api:8080/internal/mediamtx/unavailable?path=$MTX_PATH"'
 
 paths:
   all_others:

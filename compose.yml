@@ -70,7 +70,8 @@ services:
   api-2: *api
 
   mediamtx:
-    image: bluenviron/mediamtx:1.21.4
+    # 훅(runOnAvailable·runOnUnavailable)이 셸과 wget을 쓴다. 기본 이미지에는 둘 다 없다(PRD channel C2)
+    image: bluenviron/mediamtx:1.21.4-ffmpeg
     volumes:
       - ./infra/mediamtx/mediamtx.yml:/mediamtx.yml:ro
     ports:

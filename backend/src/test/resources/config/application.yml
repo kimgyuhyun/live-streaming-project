@@ -1,6 +1,9 @@
 # 테스트 전체에 같은 값을 준다(컨텍스트 캐시가 갈리지 않게). classpath:/config/ 는 classpath:/application.yml 위에 겹쳐 읽힌다.
-# 재발급 통합 테스트(StreamKeyReissueIntegrationTest)가 이 포트에 가짜 MediaMTX API를 띄운다.
-# 그 밖의 테스트에서는 아무도 듣지 않아 연결이 거부된다(재발급은 그래도 성공해야 한다)
 app:
+  # 재발급·대조 통합 테스트(StreamKeyReissueIntegrationTest, BroadcastIntegrationTest)가 이 포트에 가짜 MediaMTX API를 띄운다.
+  # 그 밖의 테스트에서는 아무도 듣지 않아 연결이 거부된다(재발급은 그래도 성공해야 한다)
   mediamtx:
     api-url: http://localhost:19997
+  # 1분 대조(BroadcastReconciler)를 띄우지 않는다. 대조 테스트는 BroadcastService.reconcile()을 직접 부른다
+  scheduling:
+    enabled: false

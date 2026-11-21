@@ -1,5 +1,6 @@
 package com.livestream.broadcast;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -41,6 +42,48 @@ class MediaMtxClientTest {
         return "{\"id\":\"" + id + "\",\"created\":\"2026-11-21T00:00:00Z\",\"remoteAddr\":\"172.18.0.1:50000\","
                 + "\"state\":\"" + state + "\",\"path\":\"" + path + "\",\"query\":\"key=secret\","
                 + "\"bytesReceived\":1,\"bytesSent\":0}";
+    }
+
+    // 1.21 /v3/paths/list 모양(issue-11.md 1.21 확인 사항). available이 1.21에서 ready의 새 이름이다
+    private static String path(String name, boolean available) {
+        return "{\"name\":\"" + name + "\",\"confName\":\"all_others\",\"ready\":" + available + ","
+                + "\"available\":" + available + ",\"online\":" + available + ","
+                + "\"source\":{\"type\":\"rtmpConn\",\"id\":\"x\"},\"tracks\":[\"H264\"],\"readers\":[]}";
+    }
+
+    @Nested
+    @DisplayName("MediaMtxClient.findAvailablePaths")
+    class FindAvailablePaths {
+
+        private static final String PATHS = API + "/v3/paths/list";
+
+        @Test
+        @DisplayName("should return the names of the available paths")
+        void returnsAvailablePaths() {
+            server.expect(requestTo(PATHS)).andExpect(method(HttpMethod.GET))
+                    .andRespond(withSuccess(connections(path("live/7", true), path("live/8", true)),
+                            MediaType.APPLICATION_JSON));
+
+            assertThat(client.findAvailablePaths()).containsExactly("live/7", "live/8");
+        }
+
+        @Test
+        @DisplayName("should leave out paths that are not available")
+        void leavesOutUnavailablePaths() {
+            server.expect(requestTo(PATHS))
+                    .andRespond(withSuccess(connections(path("live/7", false), path("live/8", true)),
+                            MediaType.APPLICATION_JSON));
+
+            assertThat(client.findAvailablePaths()).containsExactly("live/8");
+        }
+
+        @Test
+        @DisplayName("should throw when the MediaMTX API responds with an error")
+        void throwsOnApiError() {
+            server.expect(requestTo(PATHS)).andRespond(withServerError());
+
+            assertThatThrownBy(() -> client.findAvailablePaths()).isInstanceOf(HttpServerErrorException.class);
+        }
     }
 
     @Nested
