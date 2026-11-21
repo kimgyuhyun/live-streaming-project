@@ -19,6 +19,11 @@ spring:
     redis:
       repository-type: indexed
     timeout: 7d   # 마지막 요청 후 7일
+  # RestClient(MediaMTX API 호출). MediaMTX가 응답하지 않아도 키 재발급 요청이 묶이지 않게
+  http:
+    client:
+      connect-timeout: 2s
+      read-timeout: 2s
 
 server:
   # nginx가 넘긴 X-Forwarded-For를 Tomcat이 실제 사용자 IP로 쓴다. 내부 프록시 대역에서 온 것만 믿는다

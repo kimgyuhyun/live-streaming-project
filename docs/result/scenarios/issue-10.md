@@ -123,39 +123,39 @@ class MediaMtxClient implements PublisherDisconnector {
 
 ### 정상
 
-- [ ] [정상] `StreamKeyService.matches` — should return true when the key hashes to the saved hash of the channel
-- [ ] [정상] `StreamKeyService.issue` — should disconnect the channel's publisher after saving the new key
-- [ ] [정상] `PublishAuthService.canPublish` — should allow when action is publish, path is live and the channel id, and the query key matches
-- [ ] [정상] `MediaMtxClient.disconnect` — should kick the connection publishing to live and the channel id
-- [ ] [정상] `OriginValidationFilter` — should pass a POST without Origin or Referer when the path is under /internal/
-- [ ] [정상] `PublishAuthIntegration` — should return 200 for a publish check without Origin or login when the key of the channel matches
-- [ ] [정상] `StreamKeyReissueIntegration` — should ask MediaMTX to disconnect only after the new key hash is committed when a streamer reissues the key
-- [ ] [정상] `nginx.conf` — should answer /internal/ with 404 without passing it to Spring
+- [x] [정상] `StreamKeyService.matches` — should return true when the key hashes to the saved hash of the channel
+- [x] [정상] `StreamKeyService.issue` — should disconnect the channel's publisher after saving the new key
+- [x] [정상] `PublishAuthService.canPublish` — should allow when action is publish, path is live and the channel id, and the query key matches
+- [x] [정상] `MediaMtxClient.disconnect` — should kick the connection publishing to live and the channel id
+- [x] [정상] `OriginValidationFilter` — should pass a POST without Origin or Referer when the path is under /internal/
+- [x] [정상] `PublishAuthIntegration` — should return 200 for a publish check without Origin or login when the key of the channel matches
+- [x] [정상] `StreamKeyReissueIntegration` — should ask MediaMTX to disconnect only after the new key hash is committed when a streamer reissues the key
+- [x] [정상] `nginx.conf` — should answer /internal/ with 404 without passing it to Spring
 
 ### 경계
 
-- [ ] [경계] `StreamKeyService.matches` — should return false when the channel has no key
-- [ ] [경계] `PublishAuthService.canPublish` — should find the key among other query parameters
-- [ ] [경계] `PublishAuthService.canPublish` — should deny when the query is empty
-- [ ] [경계] `PublishAuthService.canPublish` — should deny when the channel id in the path is too long for a number
-- [ ] [경계] `MediaMtxClient.disconnect` — should kick nothing when no connection publishes to that path
-- [ ] [경계] `OriginValidationFilter` — should reject a POST without Origin when the path only starts with /internal but is not under /internal/
+- [x] [경계] `StreamKeyService.matches` — should return false when the channel has no key
+- [x] [경계] `PublishAuthService.canPublish` — should find the key among other query parameters
+- [x] [경계] `PublishAuthService.canPublish` — should deny when the query is empty
+- [x] [경계] `PublishAuthService.canPublish` — should deny when the channel id in the path is too long for a number
+- [x] [경계] `MediaMtxClient.disconnect` — should kick nothing when no connection publishes to that path
+- [x] [경계] `OriginValidationFilter` — should reject a POST without Origin when the path only starts with /internal but is not under /internal/
 
 ### 예외
 
-- [ ] [예외] `StreamKeyService.matches` — should return false when the key differs from the saved one
-- [ ] [예외] `StreamKeyService.matches` — should return false when the channel does not exist
-- [ ] [예외] `StreamKeyService.issue` — should still return the new key when disconnecting the publisher fails
-- [ ] [예외] `PublishAuthService.canPublish` — should deny when the key does not match
-- [ ] [예외] `PublishAuthService.canPublish` — should deny when the query has no key
-- [ ] [예외] `PublishAuthService.canPublish` — should deny when the path is not live followed by a number
-- [ ] [예외] `PublishAuthService.canPublish` — should deny when the action is not publish
-- [ ] [예외] `MediaMtxClient.disconnect` — should throw when the MediaMTX API responds with an error
-- [ ] [예외] `PublishAuthIntegration` — should return 401 when the key differs from the channel key
-- [ ] [예외] `PublishAuthIntegration` — should return 401 when the query has no key
-- [ ] [예외] `PublishAuthIntegration` — should return 401 when the channel does not exist
-- [ ] [예외] `PublishAuthIntegration` — should return 401 when the path is not live followed by a number
-- [ ] [예외] `StreamKeyReissueIntegration` — should return 200 with a new key when the MediaMTX API is unreachable
+- [x] [예외] `StreamKeyService.matches` — should return false when the key differs from the saved one
+- [x] [예외] `StreamKeyService.matches` — should return false when the channel does not exist
+- [x] [예외] `StreamKeyService.issue` — should still return the new key when disconnecting the publisher fails
+- [x] [예외] `PublishAuthService.canPublish` — should deny when the key does not match
+- [x] [예외] `PublishAuthService.canPublish` — should deny when the query has no key
+- [x] [예외] `PublishAuthService.canPublish` — should deny when the path is not live followed by a number
+- [x] [예외] `PublishAuthService.canPublish` — should deny when the action is not publish
+- [x] [예외] `MediaMtxClient.disconnect` — should throw when the MediaMTX API responds with an error
+- [x] [예외] `PublishAuthIntegration` — should return 401 when the key differs from the channel key
+- [x] [예외] `PublishAuthIntegration` — should return 401 when the query has no key
+- [x] [예외] `PublishAuthIntegration` — should return 401 when the channel does not exist
+- [x] [예외] `PublishAuthIntegration` — should return 401 when the path is not live followed by a number
+- [x] [예외] `StreamKeyReissueIntegration` — should return 200 with a new key when the MediaMTX API is unreachable
 
 ### 수동 확인 (로컬 compose + ffmpeg — 시나리오 수에 넣지 않는다)
 

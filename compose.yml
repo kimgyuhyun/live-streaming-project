@@ -15,7 +15,14 @@ x-api: &api
     OPERATOR_PASSWORD: ${OPERATOR_PASSWORD:-}
     # 스튜디오 OBS 안내의 송출 서버 주소
     APP_OBS_SERVER: ${APP_OBS_SERVER:-rtmp://localhost/live}
+    # 재발급 때 송출 연결을 끊는 MediaMTX API. 내부망에서만 열린다(mediamtx에 9997 포트를 열지 않는다)
+    MEDIAMTX_API_URL: http://mediamtx:9997
     JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=60
+  # MediaMTX가 키 확인을 보낼 내부 이름. api-1·api-2가 같은 이름을 나눠 가져 한 대가 죽어도 다른 대가 받는다(PRD channel)
+  networks:
+    default:
+      aliases:
+        - api
   depends_on:
     oracle:
       condition: service_healthy

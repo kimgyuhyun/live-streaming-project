@@ -50,6 +50,8 @@ class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/members").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers("/api/actuator/health").permitAll()
+                        // MediaMTX의 송출 키 확인. 도커 내부망에서만 오고 nginx는 넘기지 않는다(PRD channel)
+                        .requestMatchers("/internal/**").permitAll()
                         // 로그인할 때 ROLE_{역할} 권한을 싣는다(AuthController)
                         .requestMatchers("/api/operator/**").hasRole("OPERATOR")
                         // 채널 페이지는 비로그인 시청자도 본다. 고치기(PUT)는 로그인 + 주인 확인(ChannelService)
