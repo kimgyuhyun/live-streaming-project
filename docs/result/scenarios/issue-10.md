@@ -166,6 +166,24 @@ AC 5·6·7. Green 뒤, AC 검증 전에 `docker compose up --build -d`로 전체
 - AC 7: `curl http://localhost:8080/internal/mediamtx/auth` (GET·POST) → 404, api 로그에 그 요청이 없다
 - 덧붙여: 9997 포트가 호스트에 열려 있지 않다(`docker compose port mediamtx 9997`)
 
+**확인 결과 (2026-11-21, Green 뒤, HEAD 4a9614a):** `docker compose up --build -d`로 전체(oracle·redis·api-1·api-2·mediamtx·nginx)를 띄웠다. `.env`에 운영자 계정이 없어 #8 수동 확인과 같이 테스트 계정 둘을 API로 가입시키고 하나의 역할만 SQL로 `OPERATOR`로 바꿨다(로컬 개발 DB). 가입 → 스트리머 신청 → 운영자 승인 → `POST /api/studio/stream-key`를 curl(ASCII JSON)로 해서 채널 21과 키(43자)를 받았다. 키는 스크래치 파일에만 두고 화면·문서에 옮기지 않았다. 송출 원본은 `ffmpeg -re -f lavfi -i testsrc=size=640x360:rate=30 -f lavfi -i sine -c:v libx264 -g 60 -c:a aac -f flv "rtmp://localhost:1935/live/21?key={키}"`.
+
+| AC | 한 것 | 관찰 |
+| --- | --- | --- |
+| 5 | 맞는 키로 송출 | MediaMTX `[conn 172.27.0.1:42572] is publishing to path 'live/21'`, `GET /hls/live/21/index.m3u8` 200 ✅ |
+| 5 | 송출 중 `POST /api/studio/stream-key`(재발급) | 응답 200, 새 키 ≠ 이전 키. 같은 초(01:55:42)에 `[conn 172.27.0.1:42572] closed: terminated`, ffmpeg `Error submitting a packet to the muxer: End of file`로 종료, HLS 404 ✅ |
+| 5 | 이전 키로 다시 송출 | ffmpeg `Server error: authentication failed`, MediaMTX `failed to authenticate: server replied with code 401` ✅ |
+| 6 | 새 키로 첫 송출 중에 같은 채널로 두 번째 송출 | 두 번째: `[conn 172.27.0.1:37658] closed: someone is already publishing to path 'live/21'`. 첫 송출(`conn …:34926`)은 닫히지 않았고 HLS 200 그대로 ✅ |
+| 7 | 호스트에서 `curl http://localhost:8080/internal/mediamtx/auth` (GET·POST), `/api/../internal/...`·`/api/%2e%2e/internal/...`(`--path-as-is`) | 4개 모두 404. nginx 접근 로그 `upstream=-`(Spring으로 넘기지 않음), api-1·api-2 로그에 `/internal/mediamtx` 0줄 ✅ |
+| 덧붙여 | `docker compose port mediamtx 9997` | `no port 9997/tcp` — 호스트에 열려 있지 않다 ✅ |
+| 덧붙여 | nginx 컨테이너에서 `nslookup api` | 172.27.0.5·172.27.0.6 = api-1·api-2의 IP. 별칭 `api`가 두 대를 묶는다 ✅ |
+| 덧붙여 | 키가 로그에 남는지 | mediamtx·api-1·api-2 로그 전체에서 `key=` 0줄 ✅ |
+
+**Red에서 통과했던 테스트의 변이 확인 (Green):** 3개가 구현 없이 통과했다 — 끊기 실패 시 재발급 성공 2개(Red의 `issue()`는 끊기를 부르지 않았다)와 `/internalx` 거부(기존 출처 검사 동작). Green 커밋 뒤 두 변이를 넣었다.
+- `issue()`의 `disconnectPublisher(...)`(예외를 받는 감싸기)를 `publisherDisconnector.disconnect(...)` 직접 호출로 → `StreamKeyServiceTest`·`StreamKeyReissueIntegrationTest` 17개 중 끊기 실패 2개 + 커밋 순서 1개(첫 발급이 연결 거부로 500)가 실패.
+- 출처 검사 예외를 `request.getRequestURI().startsWith("/internal")`로 → `OriginValidationFilterTest` 8개 중 `/internalx` 1개만 실패.
+둘 다 `git checkout --`으로 되돌렸다.
+
 ---
 
 ## AC 대조
