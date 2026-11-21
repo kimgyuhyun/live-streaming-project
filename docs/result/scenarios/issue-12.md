@@ -100,35 +100,35 @@ export function PlayerArea(props: { view: BroadcastView; channelId: number }): J
 
 ### 정상
 
-- [ ] [정상] `nextBroadcastView` — should choose live when the first channel response is live
-- [ ] [정상] `nextBroadcastView` — should choose offline when the first channel response is offline
-- [ ] [정상] `nextBroadcastView` — should choose ended when a live channel turns offline
-- [ ] [정상] `useBroadcastView` — should switch from live to ended when a later response says the channel is offline
-- [ ] [정상] `pollInterval` — should poll every 5 seconds while the channel is live
-- [ ] [정상] `hlsUrl` — should build /hls/live/{channelId}/index.m3u8 for the channel
-- [ ] [정상] `HlsPlayer` — should load the HLS address into hls.js and attach it to the video when hls.js is supported
-- [ ] [정상] `PlayerArea` — should show the player for /hls/live/7/index.m3u8 when the view is live
-- [ ] [정상] `PlayerArea` — should show the offline notice instead of the player when the view is offline
-- [ ] [정상] `PlayerArea` — should show 방송이 종료되었습니다 instead of the player when the view is ended
-- [ ] [정상] `ChannelPage` — should show the player and the broadcast title when a visitor opens a live channel
-- [ ] [정상] `ChannelPage` — should replace the player with 방송이 종료되었습니다 when the next poll says the channel is no longer live
+- [x] [정상] `nextBroadcastView` — should choose live when the first channel response is live
+- [x] [정상] `nextBroadcastView` — should choose offline when the first channel response is offline
+- [x] [정상] `nextBroadcastView` — should choose ended when a live channel turns offline
+- [x] [정상] `useBroadcastView` — should switch from live to ended when a later response says the channel is offline
+- [x] [정상] `pollInterval` — should poll every 5 seconds while the channel is live
+- [x] [정상] `hlsUrl` — should build /hls/live/{channelId}/index.m3u8 for the channel
+- [x] [정상] `HlsPlayer` — should load the HLS address into hls.js and attach it to the video when hls.js is supported
+- [x] [정상] `PlayerArea` — should show the player for /hls/live/7/index.m3u8 when the view is live
+- [x] [정상] `PlayerArea` — should show the offline notice instead of the player when the view is offline
+- [x] [정상] `PlayerArea` — should show 방송이 종료되었습니다 instead of the player when the view is ended
+- [x] [정상] `ChannelPage` — should show the player and the broadcast title when a visitor opens a live channel
+- [x] [정상] `ChannelPage` — should replace the player with 방송이 종료되었습니다 when the next poll says the channel is no longer live
 
 ### 경계
 
-- [ ] [경계] `nextBroadcastView` — should stay ended when the channel is still offline after the broadcast ended
-- [ ] [경계] `nextBroadcastView` — should choose live when an offline channel turns live
-- [ ] [경계] `nextBroadcastView` — should choose live when a new broadcast starts after the previous one ended
-- [ ] [경계] `useBroadcastView` — should return null before the first channel response arrives
-- [ ] [경계] `useBroadcastView` — should stay offline when a channel that was offline from the start is fetched again
-- [ ] [경계] `pollInterval` — should not poll before the first channel response arrives
-- [ ] [경계] `HlsPlayer` — should set the HLS address as the video source when the browser plays HLS without hls.js
-- [ ] [경계] `HlsPlayer` — should destroy the hls.js instance when the player is removed
-- [ ] [경계] `ChannelPage` — should show the offline notice without a player when a visitor opens an offline channel
+- [x] [경계] `nextBroadcastView` — should stay ended when the channel is still offline after the broadcast ended
+- [x] [경계] `nextBroadcastView` — should choose live when an offline channel turns live
+- [x] [경계] `nextBroadcastView` — should choose live when a new broadcast starts after the previous one ended
+- [x] [경계] `useBroadcastView` — should return null before the first channel response arrives
+- [x] [경계] `useBroadcastView` — should stay offline when a channel that was offline from the start is fetched again
+- [x] [경계] `pollInterval` — should not poll before the first channel response arrives
+- [x] [경계] `HlsPlayer` — should set the HLS address as the video source when the browser plays HLS without hls.js
+- [x] [경계] `HlsPlayer` — should destroy the hls.js instance when the player is removed
+- [x] [경계] `ChannelPage` — should show the offline notice without a player when a visitor opens an offline channel
 
 ### 예외
 
-- [ ] [예외] `pollInterval` — should not poll while the channel is offline
-- [ ] [예외] `ChannelPage` — should keep the player when one poll fails while the channel is live
+- [x] [예외] `pollInterval` — should not poll while the channel is offline
+- [x] [예외] `ChannelPage` — should keep the player when one poll fails while the channel is live
 
 ### 수동 확인 (로컬 compose + ffmpeg + 브라우저 패널 — 시나리오 수에 넣지 않는다)
 
