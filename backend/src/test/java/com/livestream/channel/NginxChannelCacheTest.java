@@ -285,6 +285,16 @@ class NginxChannelCacheTest {
         }
 
         @Test
+        @DisplayName("should pass a channel id with leading zeros to Spring without caching it")
+        void passesLeadingZeroIds() throws Exception {
+            // Spring은 0110을 채널 110으로 읽지만 캐시 키는 따로라, 담으면 변형마다 캐시를 채운다(#29 보안 점검)
+            get("/api/channels/0110");
+            get("/api/channels/0110");
+
+            assertThat(springCalls("GET", "/api/channels/0110")).isEqualTo(2);
+        }
+
+        @Test
         @DisplayName("should not cache a server error response for a channel")
         void doesNotCacheServerErrors() throws Exception {
             get("/api/channels/500");
