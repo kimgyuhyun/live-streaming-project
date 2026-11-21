@@ -21,11 +21,11 @@ public class PublishAuthService {
 
     // publish만 판단한다. read·api는 MediaMTX 설정(authHTTPExclude)에서 빼므로 여기 오면 설정이 빠진 것이라 막는다
     public boolean canPublish(MediaMtxAuthRequest request) {
-        if (!"publish".equals(request.action())) {
+        if (!"publish".equals(request.action()) || request.path() == null) {
             return false;
         }
-        Matcher path = request.path() == null ? null : LIVE_PATH.matcher(request.path());
-        if (path == null || !path.matches()) {
+        Matcher path = LIVE_PATH.matcher(request.path());
+        if (!path.matches()) {
             return false;
         }
         String key = keyOf(request.query());
