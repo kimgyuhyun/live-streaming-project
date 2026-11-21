@@ -50,7 +50,7 @@ OBS로 송출한 방송을 웹에서 실시간으로 보고 채팅하는 1인 �
 | 백엔드 실행 | `cd backend && ./gradlew bootRun` (루트 `.env`를 읽는다) |
 | 백엔드 테스트 | `cd backend && ./gradlew test` (Testcontainers가 Oracle·Redis를 띄운다. Docker 필요) |
 | 테스트 클래스 하나 | `cd backend && ./gradlew test --tests "AuthServiceTest"` (`@Nested` 안쪽 테스트까지 돈다) |
-| 프론트 | `cd frontend && npm run dev` / `npm run lint` / `npm run build` |
+| 프론트 | `cd frontend && npm run dev` / `npm run lint` / `npm run build` / `npm test`(Vitest) |
 
 - `./gradlew`는 **JDK 21**이 필요하다. 이 PC는 `JAVA_HOME`·PATH를 일부러 잡아 두지 않았고, JDK는 IntelliJ가 받아 둔 `~/.jdks/liberica-21.0.7`이다. 명령 앞에 `JAVA_HOME="$HOME/.jdks/liberica-21.0.7"`을 붙여 실행한다. `harness.json`의 Gradle 명령은 `JAVA_HOME`이 없으면 이 경로를 쓴다. "JDK가 없다"고 결론 내거나 환경변수를 설정하라고 하지 않는다.
 - `.claude/launch.json`(앱의 브라우저 미리보기로 `backend`·`frontend` 서버를 띄우는 설정)에는 **이 PC 전용 절대 경로가 두 개** 있다. `backend`의 `runtimeExecutable`(`C:/live-streaming-project/backend/gradlew.bat`)과 `env.JAVA_HOME`(`C:/Users/USER/.jdks/liberica-21.0.7`)이다. 다른 PC에서는 저장소 위치와 JDK 21 경로에 맞게 이 둘을 고친다. JSON이라 파일 안에 주석을 달 수 없어 여기 적는다.
@@ -111,7 +111,17 @@ class MemberServiceTest {
 
 ## 프론트 컨벤션
 
-React + Vite + TypeScript. 테스트 도구는 아직 없다 — 화면 로직이 있는 첫 프론트 이슈에서 Vitest를 넣고 이 절과 `harness.json`(`test`·`testGlobs`)을 고친다. E2E(Playwright)는 `frontend/playwright.config.ts`가 생기면 하네스의 E2E 게이트가 켜진다.
+React + Vite + TypeScript. E2E(Playwright)는 `frontend/playwright.config.ts`가 생기면 하네스의 E2E 게이트가 켜진다.
+
+### 테스트
+
+Vitest + jsdom + `@testing-library/react`(#12에서 넣음). 설정은 `vite.config.ts`의 `test`.
+
+- 위치: 대상과 **같은 폴더**에 `{대상}.test.ts`(JSX가 있으면 `.test.tsx`). 하네스는 `frontend/src/*.test.ts(x)`를 테스트로 센다.
+- 대상 함수·컴포넌트마다 `describe('{이름}')`로 묶고, 시나리오 문장을 **`it('…')`에 그대로** 넣는다. 하네스의 대조 스크립트가 `it`·`test` 이름을 읽는다.
+- `describe`·`it`·`expect`·`vi`는 `vitest`에서 import한다(전역 설정을 켜지 않았다). 그래서 Testing Library가 자동 정리를 하지 않는다 — 렌더하는 파일은 `afterEach(cleanup)`을 둔다.
+- 화면 상태를 고르는 규칙은 순수 함수나 얇은 훅으로 뽑아 테스트한다(예: `pages/broadcastView.ts`). jsdom에는 MediaSource가 없어 `hls.js`는 `vi.mock`으로 가짜를 쓴다.
+- API는 `vi.mock('../api/{파일}.ts')`로 바꾼다. 폴링은 `vi.useFakeTimers({ shouldAdvanceTime: true })` + `vi.advanceTimersByTimeAsync`로 넘긴다.
 
 ## 미디어 (MediaMTX)
 
