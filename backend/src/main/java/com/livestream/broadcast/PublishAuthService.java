@@ -9,8 +9,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class PublishAuthService {
 
-    // 18자리까지만 받는다. 더 길면 long을 넘는다
-    private static final Pattern LIVE_PATH = Pattern.compile("live/(\\d{1,18})");
+    // 18자리까지만 받는다. 더 길면 long을 넘는다.
+    // 0으로 시작하면 막는다 — live/007은 MediaMTX에서 live/7과 다른 경로라, 받아 주면 같은 채널로 두 번째 송출이 되고
+    // 재발급 때 live/7만 끊으므로 그 송출이 살아남는다
+    private static final Pattern LIVE_PATH = Pattern.compile("live/([1-9]\\d{0,17})");
     private static final String KEY_PARAM = "key=";
 
     private final StreamKeyService streamKeyService;
