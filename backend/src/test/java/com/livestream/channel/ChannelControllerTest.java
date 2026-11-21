@@ -66,7 +66,7 @@ class ChannelControllerTest {
         given(channelService.update(eq(CHANNEL_ID), eq(MEMBER_ID), any(UpdateChannelRequest.class)))
                 .willAnswer(invocation -> {
                     UpdateChannelRequest request = invocation.getArgument(2);
-                    return new ChannelResponse(CHANNEL_ID, request.name(), request.description(), false);
+                    return new ChannelResponse(CHANNEL_ID, request.name(), request.description(), false, "방송채널의 방송");
                 });
     }
 
@@ -78,7 +78,7 @@ class ChannelControllerTest {
         @DisplayName("should return 200 with name, description and live false when service finds the channel")
         void returnsChannel() throws Exception {
             given(channelService.find(CHANNEL_ID))
-                    .willReturn(new ChannelResponse(CHANNEL_ID, "방송채널", "안녕하세요", false));
+                    .willReturn(new ChannelResponse(CHANNEL_ID, "방송채널", "안녕하세요", false, "방송채널의 방송"));
 
             mockMvc.perform(get("/api/channels/{channelId}", CHANNEL_ID))
                     .andExpect(status().isOk())
@@ -108,7 +108,7 @@ class ChannelControllerTest {
         @DisplayName("should return 200 with the channel of the logged-in streamer")
         void returnsMyChannel() throws Exception {
             given(channelService.findMine(MEMBER_ID))
-                    .willReturn(new ChannelResponse(CHANNEL_ID, "방송채널", "", false));
+                    .willReturn(new ChannelResponse(CHANNEL_ID, "방송채널", "", false, "방송채널의 방송"));
             logInAsStreamer();
 
             mockMvc.perform(get("/api/studio/channel"))
@@ -232,6 +232,95 @@ class ChannelControllerTest {
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("CHANNEL_NOT_OWNER"))
                     .andExpect(jsonPath("$.message").value("내 채널만 고칠 수 있습니다"));
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /api/studio/title")
+    class UpdateTitle {
+
+        private ResultActions putTitle(Object body) throws Exception {
+            logInAsStreamer();
+            return mockMvc.perform(put("/api/studio/title")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(body)));
+        }
+
+        // 서비스가 받은 제목을 그대로 돌려준다. 받아들인 값이 서비스까지 갔는지 응답으로 본다
+        private void serviceEchoesTitle() {
+            given(channelService.updateTitle(eq(MEMBER_ID), any(UpdateTitleRequest.class)))
+                    .willAnswer(invocation -> {
+                        UpdateTitleRequest request = invocation.getArgument(1);
+                        return new ChannelResponse(CHANNEL_ID, "방송채널", "", false, request.title());
+                    });
+        }
+
+        @Test
+        @DisplayName("should return 200 with the channel showing the new title when the streamer sends a valid title")
+        void returnsChannelWithNewTitle() throws Exception {
+            serviceEchoesTitle();
+
+            putTitle(new UpdateTitleRequest("오늘은 노래"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(CHANNEL_ID))
+                    .andExpect(jsonPath("$.title").value("오늘은 노래"));
+        }
+
+        @Test
+        @DisplayName("should accept a title of 1 character")
+        void acceptsOneCharacterTitle() throws Exception {
+            serviceEchoesTitle();
+
+            putTitle(new UpdateTitleRequest("가")).andExpect(status().isOk()).andExpect(jsonPath("$.title").value("가"));
+        }
+
+        @Test
+        @DisplayName("should accept a title of 50 characters")
+        void acceptsFiftyCharacterTitle() throws Exception {
+            serviceEchoesTitle();
+            String title = "가".repeat(50);
+
+            putTitle(new UpdateTitleRequest(title)).andExpect(status().isOk()).andExpect(jsonPath("$.title").value(title));
+        }
+
+        @Test
+        @DisplayName("should return 400 with code INVALID_INPUT when the title has 51 characters")
+        void rejectsFiftyOneCharacterTitle() throws Exception {
+            putTitle(new UpdateTitleRequest("가".repeat(51)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"))
+                    .andExpect(jsonPath("$.message").value("방송 제목은 1~50자입니다"));
+            verify(channelService, never()).updateTitle(anyLong(), any());
+        }
+
+        @Test
+        @DisplayName("should return 400 with code INVALID_INPUT when the title is only spaces")
+        void rejectsBlankTitle() throws Exception {
+            putTitle(new UpdateTitleRequest("   "))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"))
+                    .andExpect(jsonPath("$.message").value("방송 제목을 입력해 주세요"));
+            verify(channelService, never()).updateTitle(anyLong(), any());
+        }
+
+        @Test
+        @DisplayName("should return 400 with code INVALID_INPUT when the title is empty")
+        void rejectsEmptyTitle() throws Exception {
+            putTitle(new UpdateTitleRequest(""))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"))
+                    .andExpect(jsonPath("$.message").value("방송 제목을 입력해 주세요"));
+            verify(channelService, never()).updateTitle(anyLong(), any());
+        }
+
+        @Test
+        @DisplayName("should return 400 with code INVALID_INPUT when the title is missing")
+        void rejectsMissingTitle() throws Exception {
+            putTitle(Map.of())
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"))
+                    .andExpect(jsonPath("$.message").value("방송 제목을 입력해 주세요"));
+            verify(channelService, never()).updateTitle(anyLong(), any());
         }
     }
 }

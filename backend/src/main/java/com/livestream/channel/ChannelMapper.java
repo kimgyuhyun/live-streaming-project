@@ -17,5 +17,7 @@ public interface ChannelMapper {
 
     void update(@Param("id") long id, @Param("name") String name, @Param("description") String description);
 
+    void updateTitle(@Param("id") long id, @Param("title") String title);
+
     void updateStreamKey(@Param("id") long id, @Param("hash") String hash, @Param("prefix") String prefix);
 }

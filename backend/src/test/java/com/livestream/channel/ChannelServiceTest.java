@@ -49,7 +49,7 @@ class ChannelServiceTest {
 
             ChannelResponse response = channelService.find(CHANNEL_ID);
 
-            assertThat(response).isEqualTo(new ChannelResponse(CHANNEL_ID, "방송채널", "안녕하세요", false));
+            assertThat(response).isEqualTo(new ChannelResponse(CHANNEL_ID, "방송채널", "안녕하세요", false, "방송채널의 방송"));
         }
 
         @Test
@@ -69,6 +69,24 @@ class ChannelServiceTest {
             given(channelMapper.findById(CHANNEL_ID)).willReturn(Optional.of(savedChannel(null)));
 
             assertThat(channelService.find(CHANNEL_ID).description()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("should return the stored title when the channel has a title")
+        void returnsStoredTitle() {
+            Channel channel = savedChannel("소개");
+            channel.setTitle("오늘은 노래");
+            given(channelMapper.findById(CHANNEL_ID)).willReturn(Optional.of(channel));
+
+            assertThat(channelService.find(CHANNEL_ID).title()).isEqualTo("오늘은 노래");
+        }
+
+        @Test
+        @DisplayName("should return the channel name followed by 의 방송 as the title when no title has been set")
+        void returnsDefaultTitle() {
+            given(channelMapper.findById(CHANNEL_ID)).willReturn(Optional.of(savedChannel("소개")));
+
+            assertThat(channelService.find(CHANNEL_ID).title()).isEqualTo("방송채널의 방송");
         }
 
         @Test
@@ -93,7 +111,7 @@ class ChannelServiceTest {
             given(channelMapper.findByMemberId(OWNER_ID)).willReturn(Optional.of(savedChannel("소개")));
 
             assertThat(channelService.findMine(OWNER_ID))
-                    .isEqualTo(new ChannelResponse(CHANNEL_ID, "방송채널", "소개", false));
+                    .isEqualTo(new ChannelResponse(CHANNEL_ID, "방송채널", "소개", false, "방송채널의 방송"));
         }
 
         @Test
@@ -121,7 +139,7 @@ class ChannelServiceTest {
                     new UpdateChannelRequest("새이름", "새 소개"));
 
             verify(channelMapper).update(CHANNEL_ID, "새이름", "새 소개");
-            assertThat(response).isEqualTo(new ChannelResponse(CHANNEL_ID, "새이름", "새 소개", false));
+            assertThat(response).isEqualTo(new ChannelResponse(CHANNEL_ID, "새이름", "새 소개", false, "새이름의 방송"));
         }
 
         @Test
@@ -147,6 +165,34 @@ class ChannelServiceTest {
                     .isInstanceOf(BusinessException.class)
                     .extracting("code")
                     .isEqualTo(ErrorCode.CHANNEL_NOT_FOUND);
+        }
+    }
+
+    @Nested
+    @DisplayName("ChannelService.updateTitle")
+    class UpdateTitle {
+
+        @Test
+        @DisplayName("should save the title and return it when the streamer sets a title")
+        void savesTitle() {
+            given(channelMapper.findByMemberId(OWNER_ID)).willReturn(Optional.of(savedChannel("소개")));
+
+            ChannelResponse response = channelService.updateTitle(OWNER_ID, new UpdateTitleRequest("오늘은 노래"));
+
+            verify(channelMapper).updateTitle(CHANNEL_ID, "오늘은 노래");
+            assertThat(response.title()).isEqualTo("오늘은 노래");
+        }
+
+        @Test
+        @DisplayName("should throw CHANNEL_NOT_FOUND without saving when the member has no channel")
+        void rejectsMemberWithoutChannel() {
+            given(channelMapper.findByMemberId(OWNER_ID)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> channelService.updateTitle(OWNER_ID, new UpdateTitleRequest("오늘은 노래")))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("code")
+                    .isEqualTo(ErrorCode.CHANNEL_NOT_FOUND);
+            verify(channelMapper, never()).updateTitle(anyLong(), anyString());
         }
     }
 }
