@@ -176,8 +176,9 @@ public class Channel {
 - [x] [경계] `MediaMtxClient.findAvailablePaths` — should leave out paths that are not available
 - [x] [경계] `BroadcastIntegration` — should keep one live broadcast when the same available notice arrives twice
 - [x] [경계] `BroadcastIntegration` — should keep one live broadcast when two servers start the same channel at the same time
-- [ ] [경계] `BroadcastIntegration` — should keep the end time of an earlier broadcast when a later broadcast of the same channel ends
-- [ ] [경계] `BroadcastIntegration` — should let no start call throw when two servers start the same channel at the same time
+- [x] [경계] `BroadcastIntegration` — should keep the end time of an earlier broadcast when a later broadcast of the same channel ends
+- [x] [경계] `BroadcastIntegration` — should let no start call throw when two servers start the same channel at the same time
+- [x] [경계] `BroadcastService.reconcile` — should keep reconciling the remaining channels when starting one available channel hits an already live broadcast
 
 ### 예외
 
@@ -233,7 +234,7 @@ AC 8. Green 뒤, AC 검증 전에 `docker compose up --build -d`로 전체를 �
 | 4. `live/`가 아닌 경로(`720/7` 등)의 알림 → 아무것도 바뀌지 않음 | `[예외] BroadcastService.onAvailable — should change nothing when the path is not live followed by a channel id`<br>`[예외] BroadcastService.onUnavailable — should change nothing when the path is not live followed by a channel id`<br>`[예외] BroadcastIntegration — should not start a broadcast when the available notice is for 720 and the channel id`<br>`[예외] BroadcastIntegration — should not end the live broadcast when the unavailable notice is for 720 and the channel id` |
 | 5. MediaMTX에는 송출 중, DB에 진행 중 방송 없음 → 대조하면 시작 | `[정상] BroadcastService.reconcile — should start broadcasts for channels available in MediaMTX but not live in the database`<br>`[경계] BroadcastService.reconcile — should leave channels that are both available and live untouched`<br>`[경계] BroadcastService.reconcile — should ignore available paths that are not live followed by a channel id`<br>`[정상] MediaMtxClient.findAvailablePaths — should return the names of the available paths`<br>`[경계] MediaMtxClient.findAvailablePaths — should leave out paths that are not available`<br>`[정상] BroadcastIntegration — should start the broadcast when reconcile finds the channel available in MediaMTX without a live broadcast` |
 | 6. DB에는 진행 중, MediaMTX에 송출 없음 → 대조하면 종료 | `[정상] BroadcastService.reconcile — should end broadcasts live in the database but not available in MediaMTX`<br>`[정상] BroadcastIntegration — should end the broadcast when reconcile finds it live in the database but not in MediaMTX` |
-| 7. 대조가 두 서버에서 동시에 같은 채널을 시작 처리 → 진행 중 방송 하나(DB 제약) | `[경계] BroadcastIntegration — should keep one live broadcast when two servers start the same channel at the same time`<br>`[경계] BroadcastIntegration — should let no start call throw when two servers start the same channel at the same time` (갭 처리) |
+| 7. 대조가 두 서버에서 동시에 같은 채널을 시작 처리 → 진행 중 방송 하나(DB 제약) | `[경계] BroadcastIntegration — should keep one live broadcast when two servers start the same channel at the same time`<br>`[경계] BroadcastIntegration — should let no start call throw when two servers start the same channel at the same time` (갭 처리)<br>`[경계] BroadcastService.reconcile — should keep reconciling the remaining channels when starting one available channel hits an already live broadcast` (2차 갭 처리) |
 | 8. 로컬 compose: ffmpeg 송출 시작 → 끊기 → 채널 페이지 `방송 중` → `오프라인` 몇 초 안 | 수동 확인 + 갭 처리 수동 2개(`AC 8 PR 기록`, `AC 8 시작 지연`) |
 
 **AC에 없는데 넣은 시나리오**
@@ -243,7 +244,7 @@ AC 8. Green 뒤, AC 검증 전에 `docker compose up --build -d`로 전체를 �
 | `[예외] BroadcastService.reconcile — should change nothing when the MediaMTX API fails`<br>`[예외] MediaMtxClient.findAvailablePaths — should throw when the MediaMTX API responds with an error` | MediaMTX가 응답하지 않을 때 "목록이 비었다"로 읽으면 진행 중 방송을 모두 끝내 버린다 |
 | `[정상] BroadcastReconciler.run — should reconcile once per run`<br>`[예외] BroadcastReconciler.run — should not let a failed reconcile escape the scheduler` | C2의 "1분마다 대조"를 실제로 거는 곳. 실패가 새도 다음 회차가 돌아야 한다 |
 
-**커버리지:** AC 8개 / 시나리오 26개(AC 검증 갭 처리 2개 포함) / 미커버 0개 (AC 8은 수동 확인)
+**커버리지:** AC 8개 / 시나리오 27개(AC 검증 갭 처리 1차 2개·2차 1개 포함) / 미커버 0개 (AC 8은 수동 확인)
 
 ---
 
@@ -348,3 +349,141 @@ AC 7 (✅지만 단언이 약함):
 | 02:47:34.566 | `live=false` 확인(ffmpeg 종료를 기다린 뒤 첫 조회) |
 
 - `AC 8 PR 기록`: PR 본문에 위 "확인 결과" 표와 이 시작 지연 표를 옮긴다(create-pr 단계).
+
+### 2차 검증 (AC 3·7·8)
+
+> `harness:ac-verifier` (2026-11-21, HEAD a2b6158). 범위를 AC 3·7·8로 좁히고 1차와 같은 제약으로 띄웠다. 아래는 출력 원문이다(제목 수준만 두 단계 낮췄다).
+
+#### 이슈 #11 AC 검증 2차 (AC 3·7·8, HEAD a2b6158, feat/channel/issue-11)
+
+**요약:** 세 AC 중 ✅ 2개(AC 3·7), ⚠️ 1개(AC 8), ❌ 0개.
+
+- 1차 때 남은 갭 두 개(AC 3 변이 생존, AC 7 예외 삼킴)는 메워졌습니다. 변이를 다시 넣어 두 테스트가 실제로 실패하는 것을 확인했습니다.
+- AC 8은 PR 본문 초안에 필요한 내용이 다 들어 있습니다. 남은 것은 PR을 실제로 만드는 일 하나입니다.
+- 변이는 3번 돌렸습니다. 2개는 테스트가 잡았고 1개는 살아남았습니다. 살아남은 변이도 AC 7의 Then(진행 중 방송은 하나)을 깨지는 않습니다.
+- 걸린 시간은 약 8분입니다(11:49:39–11:57:25).
+
+저장소 작업 트리: 변이를 마친 뒤 `git -C C:/live-streaming-project status --short`를 돌렸고 **출력이 비어 있습니다**(종료 코드 0). 수정, checkout, stash, 커밋, docker compose 조작은 하지 않았습니다.
+
+아래 경로는 모두 `C:/live-streaming-project/` 기준입니다. 테스트는 `backend/src/test/java/com/livestream/broadcast/`, 구현은 `backend/src/main/` 아래에 있습니다.
+
+##### AC 3 — Given 진행 중 방송, When `live/7` 종료 알림이 오면, Then 방송에 종료 시각이 찍히고 채널은 `오프라인`이다
+
+**✅ 충족 (1차 갭 메워짐)**
+
+- **테스트:**
+  - "should stamp the end time and show the channel as offline when the unavailable notice arrives" (BroadcastIntegrationTest.java:146)
+  - "should keep the end time of an earlier broadcast when a later broadcast of the same channel ends" (BroadcastIntegrationTest.java:161, 단언은 :173)
+  - "should end the live broadcast of the channel when live and the channel id becomes unavailable" (BroadcastServiceTest.java:75)
+- **구현:**
+  - BroadcastHookController.java:25-29
+  - BroadcastService.java:27-28, 60-61
+  - resources/mapper/broadcast/BroadcastMapper.xml:11-12 (`WHERE channel_id = #{channelId} AND ended_at IS NULL`)
+  - ChannelMapper.xml:11-17 (live 판정)
+- **근거:**
+  - 새 테스트의 흐름: 시작 → 종료로 첫 방송의 종료 시각을 마이크로초까지(`FF6`) 읽어 둡니다. 다시 시작 → 종료한 뒤, 첫 행의 종료 시각이 그대로인지 단언합니다.
+  - 변이 A(endLive에서 `AND ended_at IS NULL` 제거)를 넣으면 이 테스트 하나만 실패합니다. 메시지는 `expected "…02:51:34.034243" but was "…02:51:34.055932"`입니다.
+  - 컬럼은 `TIMESTAMP`(V5:5)입니다. 두 HTTP 훅 사이에 수십 ms 차이가 나므로 같은 값이 나와서 우연히 통과할 가능성은 사실상 없습니다.
+  - 종료 시각이 찍히는 것과 API `live=false`는 1차대로 :146 테스트가 봅니다.
+
+##### AC 7 — Given 대조가 두 서버에서 동시에 돌면, When 같은 채널을 시작 처리하면, Then 진행 중 방송은 하나다(DB 제약)
+
+**✅ 충족 (1차 갭 (b) 메워짐, (a)는 참고로 남음)**
+
+- **테스트:**
+  - "should keep one live broadcast when two servers start the same channel at the same time" (BroadcastIntegrationTest.java:222)
+  - "should let no start call throw when two servers start the same channel at the same time" (BroadcastIntegrationTest.java:257, 단언은 :288)
+- **구현:**
+  - V5__create_broadcast.sql:13-14 (`uk_broadcast_live_channel`)
+  - BroadcastService.java:52-58 (insert 후 `DuplicateKeyException`을 받음)
+  - reconcile은 :41에서 같은 `start()`를 씁니다
+- **근거:**
+  - 새 테스트는 스레드 안의 예외를 `AtomicInteger`로 세고, 그 수가 0인지 단언합니다.
+  - 변이 B(`start()`의 try/catch 제거)를 넣으면 다음 3개가 실패합니다.
+    - 새 테스트: `expected: 0 but was: 7`
+    - "same available notice arrives twice": ServletException/DuplicateKeyException
+    - BroadcastServiceTest "should keep the existing live broadcast…"(:56)
+  - 1차 갭 (b)(예외를 모두 삼킴)는 메워졌습니다. "하나"라는 Then은 1차 변이(인덱스 제거 → 8개)로 이미 입증됐습니다.
+- **남은 참고 사항 (a):** 두 동시성 테스트는 모두 훅 진입점(`onAvailable`)으로 부릅니다.
+  - 변이 C: reconcile :41의 `start(channelId)`를 `broadcastMapper.insertLive(channelId)`로 바꿔 `DuplicateKeyException` 받기를 우회했습니다. 그래도 30개 테스트가 모두 통과했습니다.
+  - AC의 Then은 이 변이에서도 DB 제약 덕분에 지켜집니다. 그래서 판정은 ✅입니다.
+  - 다만 동시 대조에서 진 서버의 그 회차는 예외로 중간에 멈춥니다. 같은 회차의 나머지 채널 시작·종료가 1분 밀립니다. 이 회귀를 막는 테스트는 없습니다.
+  - PR 초안 58줄에 "reconcile 두 개 대신 공유 함수"라는 근거가 적혀 있습니다. 회귀 보호를 원하면 아래 제안 1개를 더하면 됩니다(선택).
+
+##### AC 8 — Given 로컬 compose, When ffmpeg로 송출을 시작했다 끊으면, Then 채널 페이지 상태가 몇 초 안에 `방송 중` → `오프라인`으로 바뀐다(확인 결과를 PR에 남긴다)
+
+**⚠️ 부분 충족: 내용 갭은 없고, PR이 아직 없음**
+
+- **자동 테스트:** 없습니다(수동 확인으로 정해 둠).
+- **근거 기록:**
+  - docs/result/scenarios/issue-11.md:203-212 ("확인 결과")
+  - docs/result/scenarios/issue-11.md:340-348 (시작 지연)
+- **PR 본문 초안 확인** (`C:\Users\USER\AppData\Local\Temp\claude\1cbb40fc7d76b7b0\d434e676-b23e-4cde-8b32-82990af677dd\scratchpad\pr11.md`):
+  - **"확인 결과" 표가 있습니다**(30-40줄): 송출 전, 시작, 종료, 훅 오류·키 노출 0줄, 1분 대조.
+  - **시작 지연 표가 있습니다**(42-50줄): ffmpeg 시작 02:47:19.112 → 채널 API 처음 `live=true` 02:47:23.406, 4.29초.
+  - 52줄에 "다시 열면 바뀐다"는 해석과 #12로 넘기는 이유가 적혀 있습니다.
+  - 원문과의 차이는 사소한 두 가지뿐입니다. "덧붙여(인덱스)" 행이 빠졌고, "(첫 조회에서 이미 true)" 문구가 빠졌습니다. AC에는 영향이 없습니다.
+- **1차 갭 (3) 시작 지연:** 메워졌습니다.
+  - 폴링을 먼저 띄워 시작 지연 4.29초를 쟀습니다.
+  - 종료 쪽은 런 1에서 ffmpeg가 끝나고 0.1초 안에 `live=false`가 됐습니다. 런 2에서는 unpublish(02:47:33)부터 `live=false` 확인(34.566)까지가 상한 약 1.6초입니다.
+  - 둘 다 "몇 초 안"에 들어갑니다.
+- **1차 갭 (2) PR 기록:** 아직 남아 있습니다. `gh pr list --head feat/channel/issue-11 --state all`의 출력이 비어 있습니다. 이 초안으로 PR을 만들면 ✅가 됩니다. 남은 갭은 이것 하나입니다.
+- **해석 이견 ("다시 열면 바뀐다"):** 구현자 쪽에 근거가 있습니다.
+  - docs/result/issues.md:251에 #12 AC "Given 시청 중, When 방송이 끝나면, Then … 종료되었습니다"가 따로 있습니다.
+  - frontend/src/pages/ChannelPage.tsx:10, 24는 열 때 `fetchChannel`로 `live`를 받아 `방송 중`/`오프라인`을 보여 줍니다. 폴링은 없습니다.
+  - 받아들일지는 사람이 정합니다. 저는 이 해석을 갭으로 세지 않았습니다.
+- **제가 확인하지 못한 것:**
+  - compose 재현은 제약 때문에 하지 않았습니다. 판정은 기록에만 기댑니다.
+  - 초안 23줄의 "백엔드 전체 테스트 통과"는 전체 스위트를 돌리지 말라는 제약 때문에 검증하지 않았습니다.
+
+##### 변이 결과 (스크래치 복사본 `.../scratchpad/v2/{base,a,b,c}`, 각각 `git archive HEAD | tar -x`)
+
+모든 실행은 `--tests "BroadcastIntegrationTest" --tests "BroadcastServiceTest"`로 했습니다.
+
+| # | 변이 (diff로 한 줄씩만 바뀐 것을 확인) | 결과 |
+|---|---|---|
+| 원본 | 없음 | BUILD SUCCESSFUL in 48s. 통합 10, 서비스 8+7+5, 실패 0 |
+| A | BroadcastMapper.xml:12 `AND ended_at IS NULL` 제거 | **잡음.** 30개 중 1개 실패: "keep the end time of an earlier broadcast…"(:173) |
+| B | BroadcastService.java:53, 55-57의 try/catch 제거 | **잡음.** 30개 중 3개 실패: "let no start call throw…"(0 기대, 7), "same available notice arrives twice"(DuplicateKeyException), BroadcastServiceTest:56 |
+| C | BroadcastService.java:41 `start(channelId)` → `broadcastMapper.insertLive(channelId)` (대조만 받기 우회) | **살아남음.** 30개 모두 통과, BUILD SUCCESSFUL in 1m 4s |
+
+로그는 `C:/Users/USER/AppData/Local/Temp/claude/1cbb40fc7d76b7b0/d434e676-b23e-4cde-8b32-82990af677dd/scratchpad/v2/{base,a,b,c}.log`에 있습니다.
+
+##### 갭을 메울 시나리오 제안
+
+AC 8 (⚠️): 시나리오를 더할 필요는 없습니다. 기존 수동 항목 `AC 8 PR 기록`을 `pr11.md`로 PR을 만들 때 처리하면 됩니다.
+
+AC 7 (✅, 변이 C 회귀 보호용, 선택):
+- [ ] [경계] `BroadcastService.reconcile` — should keep reconciling the remaining channels when starting one available channel hits an already live broadcast
+
+이 시나리오는 단위 테스트로 짤 수 있습니다. 목 `insertLive(7)`이 DuplicateKeyException을 던지게 하고, available은 `live/7`·`live/8`로 줍니다. 그 뒤 예외가 없고 `insertLive(8)`이 불렸는지 봅니다. 변이 C를 결정적으로 잡습니다.
+
+##### 가짜 테스트 또는 약한 단언
+
+- 1차에서 지적한 BroadcastIntegrationTest의 예외를 모두 삼키는 문제는, 별도 테스트 :257-289(예외 수 0 단언)로 보완됐습니다. :236의 `catch (Exception e)`는 남아 있습니다. 하지만 이 테스트는 진행 중 방송 수만 보도록 범위를 정했고, 예외는 :257 테스트가 맡으므로 문제가 없습니다.
+- 이번 범위에서 새로 찾은 가짜 테스트는 없습니다. 인자 없는 예외 단언, `await` 누락, 단언 없는 테스트, 목 반환값 단언 모두 없습니다.
+
+##### 실행한 명령 목록
+
+1. `cat .claude/harness.json; git log --oneline -3; git status --short` → scenariosDir=docs/result/scenarios, HEAD a2b6158, 상태 비어 있음
+2. `gh issue view 11` → AC 8개 확인 (범위는 3·7·8)
+3. Grep `^#+ ` 및 Read issue-11.md:150-351 → 시나리오, AC 대조표, 1차 검증 원문, 갭 처리 결과(시작 지연 표 340-348)
+4. `cat -n BroadcastIntegrationTest.java; git show --stat b39cad0` → 새 테스트 :161, :257, b39cad0은 이 파일 +54줄만 바꿈
+5. `cat -n .../scratchpad/pr11.md` → 확인 결과 표(30-40), 시작 지연 표(42-50), 해석 문단(52)
+6. `cat -n BroadcastService.java BroadcastMapper.xml V5__create_broadcast.sql BroadcastHookController.java; grep live ChannelMapper.xml` → 구현 줄 번호
+7. `grep BroadcastServiceTest.java; grep Werror build.gradle; gh pr list --head feat/channel/issue-11 --state all; grep #12 issues.md` → reconcile에 DuplicateKey 단위 테스트 없음, -Werror 없음, **PR 출력 비어 있음**, #12는 issues.md:242
+8. `git archive HEAD | tar -x` ×4 (base,a,b,c) + sed 3개 + `diff -r` → 각 변이가 의도한 줄만 바뀐 것을 확인
+9. base에서 `./gradlew test --tests BroadcastIntegrationTest --tests BroadcastServiceTest` → BUILD SUCCESSFUL in 48s, 실패 0
+10. a, b, c를 차례로 같은 명령으로 실행 → a는 1개 실패, b는 3개 실패. c는 백그라운드로 넘어감
+11. a·b 로그와 결과 XML의 failure 메시지 grep → 실패 테스트 이름과 expected/actual 값
+12. `git status --short` → 출력 비어 있음, 종료 코드 0
+13. `tail c.log`, `timeout 400 tail -f c.log | grep -m1 BUILD` → c는 BUILD SUCCESSFUL in 1m 4s
+14. c 결과 XML grep, `git status --short` → c는 30개 모두 통과, 상태 비어 있음(종료 코드 0)
+15. `grep ChannelPage.tsx; sed -n 242,252p issues.md` → ChannelPage.tsx:10, 24 확인, #12 AC 3이 issues.md:251에 있음
+
+#### 2차 뒤 처리
+
+- AC 7 제안(`[경계] BroadcastService.reconcile — should keep reconciling the remaining channels when starting one available channel hits an already live broadcast`)은 내가 AC 7을 훅 진입점으로만 좁게 옮겨서 생긴 갭이라, 사전 승인에 따라 한 번 더 메우고 3차는 띄우지 않았다(아래).
+- AC 8의 남은 것은 PR 생성이다. `pr11.md`에 빠졌다는 "덧붙여(인덱스)" 행을 넣고 그 본문으로 PR을 만든다.
+
+`[경계] BroadcastService.reconcile — should keep reconciling the remaining channels when starting one available channel hits an already live broadcast`: 구현이 이미 공유 `start()`를 써서 바로 통과했다(커밋 fff2f52). 2차 검증의 변이 C(`reconcile`의 `start(channelId)` → `broadcastMapper.insertLive(channelId)`)를 저장소에 넣자 `BroadcastServiceTest` 21개 중 이 테스트 1개만 실패했다. `git checkout --`으로 되돌렸다. 3차 검증은 띄우지 않았다(사전 승인).
