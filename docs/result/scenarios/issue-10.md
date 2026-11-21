@@ -424,3 +424,5 @@ AC 5·6·7. Green 뒤, AC 검증 전에 `docker compose up --build -d`로 전체
 | ⚪ | `application.yml` `spring.http.client.*-timeout: 2s` | RestClient 전역 시간 제한 | MediaMTX가 멈춰도 재발급 요청이 2초 남짓에 끝난다. 지금 RestClient를 쓰는 곳은 MediaMTX뿐이다 | 그대로 |
 
 **재스캔:** 고친 뒤 `compileJava compileTestJava`·전체 테스트(279개) 통과. 남은 항목은 위 표의 🟡 2개(사용자 결정 대기)와 ⚪뿐이다.
+
+**사용자 결정 (2026-11-21, 이슈 #11 머지 뒤):** 🟡 2(MoQ)는 `moq: no`로 껐다(`chore/mediamtx-moq-off`, MediaMTX 로그에 MoQ 리스너가 더 뜨지 않는 것 확인). 🟡 1(API 무인증)은 별도 이슈 #26 "MediaMTX API는 Spring만 부를 수 있다"로 넘겼다 — API 호출도 Spring 키 확인 엔드포인트를 거치게 하고 Spring이 내부 비밀번호를 싣는 방식. 네트워크 분리는 nginx가 HLS 때문에 mediamtx와 같은 망에 있어야 해서 막지 못한다.

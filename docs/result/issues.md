@@ -1,6 +1,6 @@
 # 이슈 목록 — 계정, 채널·송출
 
-> 상태: **확정, GitHub 등록 완료** (2026-11-20) — #1~#14, 라벨 `member`·`channel`.
+> 상태: **확정, GitHub 등록 완료** (2026-11-20) — #1~#14(#26은 2026-11-21에 더함), 라벨 `member`·`channel`.
 > 근거: `docs/result/spec-fixed.md`, `docs/result/prd/member.md`, `docs/result/prd/channel.md`
 > 번호는 GitHub 번호와 같다(이 저장소의 이슈·PR이 0개라 #1부터 이어진다).
 
@@ -30,6 +30,7 @@
 | 12 | 채널 페이지에서 방송을 본다 | channel | #8, #11 | 1일 |
 | 13 | 스튜디오에서 방송 제목을 정하고 연결 상태를 본다 | channel | #11 | 반나절 |
 | 14 | 데모 방송 3개가 뜬다 | channel | #9, #12 | 1일 |
+| 26 | MediaMTX API는 Spring만 부를 수 있다 | channel | #10 | 반나절 |
 
 
 ---
@@ -287,3 +288,23 @@ PRD: docs/result/prd/channel.md
 
 PRD: docs/result/prd/channel.md
 
+
+---
+
+## #26 MediaMTX API는 Spring만 부를 수 있다
+
+> #1~#14 뒤에 더한 이슈(2026-11-21). #10 보안 점검 🟡 1을 사용자가 별도 이슈로 정했다. GitHub 번호는 PR과 같은 순번을 써서 #26이다.
+
+MediaMTX API(내부 :9997)가 인증 없이 도커 내부망 전체에 열려 있는 것(#10 보안 점검 🟡 1)을 막는다. `authHTTPExclude`에서 `api`를 빼 API 호출도 Spring 키 확인 엔드포인트가 판단하게 하고, Spring의 MediaMTX 클라이언트는 환경변수의 내부 비밀번호를 Basic 인증으로 싣는다. 채널 PRD "키 확인 연동"(API 호출은 인증에서 뺀다)을 바꾸므로 PRD 표도 고친다. 네트워크 분리로는 막을 수 없다 — nginx가 HLS(:8888) 때문에 mediamtx와 같은 망에 있어야 한다. 반나절.
+
+**선행**: #10
+
+## Acceptance Criteria
+- [ ] Given 설정된 내부 비밀번호, When MediaMTX가 `action: api`와 그 사용자·비밀번호로 확인을 요청하면, Then 200이다
+- [ ] Given 같은 요청, When 비밀번호가 다르거나·비었거나·내부 비밀번호가 설정되지 않았으면, Then 401이다
+- [ ] Given 재발급(끊기)·1분 대조, When Spring이 MediaMTX API를 부르면, Then 내부 비밀번호를 Basic 인증으로 싣는다
+- [ ] Given 로컬 compose, When 내부망의 다른 컨테이너에서 자격 없이 `/v3/rtmpconns/list`를 부르면, Then 401이다(확인 결과를 PR에 남긴다)
+- [ ] Given 로컬 compose, When 송출 중 키를 재발급하고 1분 대조가 돌면, Then 송출 끊기와 대조가 그대로 동작한다(확인 결과를 PR에 남긴다)
+- [ ] Given 키 확인 요청 처리, When 로그·응답을 보면, Then 내부 비밀번호가 남지 않는다
+
+PRD: docs/result/prd/channel.md
