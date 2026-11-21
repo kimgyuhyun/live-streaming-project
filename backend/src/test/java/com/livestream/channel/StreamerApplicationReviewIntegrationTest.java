@@ -376,6 +376,11 @@ class StreamerApplicationReviewIntegrationTest {
                 }
 
                 @Override
+                public void updateTitle(long id, String title) {
+                    channelMapper.updateTitle(id, title);
+                }
+
+                @Override
                 public void updateStreamKey(long id, String hash, String prefix) {
                     channelMapper.updateStreamKey(id, hash, prefix);
                 }

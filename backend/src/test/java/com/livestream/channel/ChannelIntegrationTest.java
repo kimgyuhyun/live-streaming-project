@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.livestream.TestcontainersConfiguration;
+import com.livestream.broadcast.BroadcastService;
 import com.livestream.member.LoginRequest;
 import com.livestream.member.MemberService;
 import com.livestream.member.Role;
@@ -56,6 +57,10 @@ class ChannelIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    // 진행 중 방송은 송출 시작 알림과 같은 처리로 만든다(#11)
+    @Autowired
+    private BroadcastService broadcastService;
 
     private static String unique() {
         return String.valueOf(ThreadLocalRandom.current().nextInt(100_000, 1_000_000));
@@ -109,6 +114,14 @@ class ChannelIntegrationTest {
                 .cookie(session)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new UpdateChannelRequest(name, description))));
+    }
+
+    private ResultActions setTitle(Cookie session, String title) throws Exception {
+        return mockMvc.perform(put("/api/studio/title")
+                .header(HttpHeaders.ORIGIN, ALLOWED_ORIGIN)
+                .cookie(session)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new UpdateTitleRequest(title))));
     }
 
     private ResultActions channelPage(long channelId) throws Exception {
@@ -206,6 +219,120 @@ class ChannelIntegrationTest {
             signUp(email);
 
             mockMvc.perform(get("/api/studio/channel").cookie(loggedIn(email)))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+        }
+
+        @Test
+        @DisplayName("should save a 1-character title and show it on the channel page")
+        void savesOneCharacterTitle() throws Exception {
+            String email = newEmail();
+            long channelId = streamerChannel(email);
+
+            setTitle(loggedIn(email), "가").andExpect(status().isOk());
+
+            channelPage(channelId).andExpect(jsonPath("$.title").value("가"));
+        }
+
+        @Test
+        @DisplayName("should save a 50-character title and show it on the channel page")
+        void savesFiftyCharacterTitle() throws Exception {
+            String email = newEmail();
+            long channelId = streamerChannel(email);
+            // 한글은 UTF-8로 3바이트다. 컬럼이 글자 수(CHAR) 기준이어야 들어간다
+            String title = "제".repeat(50);
+
+            setTitle(loggedIn(email), title).andExpect(status().isOk());
+
+            channelPage(channelId).andExpect(jsonPath("$.title").value(title));
+        }
+
+        @Test
+        @DisplayName("should show 하늘의 방송 as the title on the channel page when the channel 하늘 has never set a title")
+        void showsDefaultTitle() throws Exception {
+            String email = newEmail();
+            long channelId = streamerChannel(email);
+            update(channelId, loggedIn(email), "하늘", "").andExpect(status().isOk());
+
+            channelPage(channelId).andExpect(jsonPath("$.title").value("하늘의 방송"));
+        }
+
+        @Test
+        @DisplayName("should show the new title on the channel page when the streamer changes the title during a live broadcast")
+        void showsNewTitleDuringLiveBroadcast() throws Exception {
+            String email = newEmail();
+            long channelId = streamerChannel(email);
+            Cookie session = loggedIn(email);
+            setTitle(session, "before").andExpect(status().isOk());
+            broadcastService.onAvailable("live/" + channelId);
+            channelPage(channelId).andExpect(jsonPath("$.live").value(true));
+
+            setTitle(session, "after").andExpect(status().isOk());
+
+            channelPage(channelId).andExpect(jsonPath("$.title").value("after"));
+        }
+
+        @Test
+        @DisplayName("should return live true from the studio channel when the channel has a live broadcast")
+        void returnsStudioLive() throws Exception {
+            String email = newEmail();
+            long channelId = streamerChannel(email);
+            broadcastService.onAvailable("live/" + channelId);
+
+            mockMvc.perform(get("/api/studio/channel").cookie(loggedIn(email)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.live").value(true));
+        }
+
+        @Test
+        @DisplayName("should return live false from the studio channel when the channel has no live broadcast")
+        void returnsStudioOffline() throws Exception {
+            String email = newEmail();
+            long channelId = streamerChannel(email);
+            // 방송을 한 번 하고 끝낸 채널. 지난 방송 기록이 있어도 진행 중이 아니면 송출 없음이다
+            broadcastService.onAvailable("live/" + channelId);
+            broadcastService.onUnavailable("live/" + channelId);
+
+            mockMvc.perform(get("/api/studio/channel").cookie(loggedIn(email)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.live").value(false));
+        }
+
+        @Test
+        @DisplayName("should return 400 with code INVALID_INPUT and keep the previous title when the streamer sends a 51-character title")
+        void rejectsFiftyOneCharacterTitle() throws Exception {
+            String email = newEmail();
+            long channelId = streamerChannel(email);
+            Cookie session = loggedIn(email);
+            setTitle(session, "before").andExpect(status().isOk());
+
+            setTitle(session, "제".repeat(51))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+            channelPage(channelId).andExpect(jsonPath("$.title").value("before"));
+        }
+
+        @Test
+        @DisplayName("should return 400 with code INVALID_INPUT and keep the previous title when the streamer sends a title of only spaces")
+        void rejectsBlankTitle() throws Exception {
+            String email = newEmail();
+            long channelId = streamerChannel(email);
+            Cookie session = loggedIn(email);
+            setTitle(session, "before").andExpect(status().isOk());
+
+            setTitle(session, "   ")
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+            channelPage(channelId).andExpect(jsonPath("$.title").value("before"));
+        }
+
+        @Test
+        @DisplayName("should return 403 with code FORBIDDEN when a member who is not a streamer sets a title")
+        void forbidsTitleForMember() throws Exception {
+            String email = newEmail();
+            signUp(email);
+
+            setTitle(loggedIn(email), "오늘은 노래")
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("FORBIDDEN"));
         }

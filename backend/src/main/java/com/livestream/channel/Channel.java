@@ -12,6 +12,8 @@ public class Channel {
     private String streamKeyPrefix;
     // 진행 중 방송(broadcast.ended_at IS NULL)이 있으면 true. 조회 SQL이 함께 읽는다
     private boolean live;
+    // 방송 제목. 정한 적 없으면 null
+    private String title;
 
     public Channel() {
     }
@@ -76,5 +78,13 @@ public class Channel {
 
     public void setLive(boolean live) {
         this.live = live;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 }

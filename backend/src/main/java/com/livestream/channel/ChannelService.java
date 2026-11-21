@@ -36,6 +36,11 @@ public class ChannelService {
         return toResponse(channel);
     }
 
+    // 내 채널의 방송 제목을 바꾼다. 방송 중이면 다음 조회부터 새 제목이 보인다
+    public ChannelResponse updateTitle(long memberId, UpdateTitleRequest request) {
+        throw new UnsupportedOperationException("not implemented");
+    }
+
     private Channel findChannel(long channelId) {
         return channelMapper.findById(channelId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHANNEL_NOT_FOUND));
@@ -44,6 +49,6 @@ public class ChannelService {
     // live는 진행 중 방송이 있는지(ChannelMapper가 broadcast에서 함께 읽는다). 빈 소개는 Oracle에서 NULL로 읽힌다
     private static ChannelResponse toResponse(Channel channel) {
         return new ChannelResponse(channel.getId(), channel.getName(),
-                Objects.requireNonNullElse(channel.getDescription(), ""), channel.isLive());
+                Objects.requireNonNullElse(channel.getDescription(), ""), channel.isLive(), null);
     }
 }

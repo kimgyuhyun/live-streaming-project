@@ -34,4 +34,11 @@ class ChannelController {
     ChannelResponse myChannel(@AuthenticationPrincipal LoginMember loginMember) {
         return channelService.findMine(loginMember.id());
     }
+
+    // 내 채널은 세션으로 정한다(스트림 키와 같은 모양)
+    @PutMapping("/api/studio/title")
+    ChannelResponse updateTitle(@AuthenticationPrincipal LoginMember loginMember,
+                                @Valid @RequestBody UpdateTitleRequest request) {
+        throw new UnsupportedOperationException("not implemented");
+    }
 }
