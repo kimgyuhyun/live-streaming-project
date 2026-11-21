@@ -365,9 +365,167 @@ AC 6개를 확인했습니다. ✅ 3, ⚠️ 3, ❌ 0입니다. 구현(`infra/ng
 
 **포화 지점 (PLATFORM 10절 정의: 부하를 올려도 처리량은 늘지 않고 지연만 늘어나는 지점)**
 
-- **기준선: 약 1,400~1,500 req/s(시청자 약 7,000명).** 1600 요청에서 이미 1,479만 냈고 그 위로는 늘지 않았다. 그때 **api 두 대가 CPU 한도(1.0)에 닿고**(97·98%) nginx도 한도(25%)였다. 계단을 50부터 올린 첫 기준선(1600에서 p50 60ms)보다 나쁜 것은, 이번에는 워밍업(50) 뒤 바로 1600으로 뛰어 요청이 쌓였기 때문으로 본다.
-- **캐시 뒤: 약 4,000 req/s(시청자 약 20,000명), 기준선의 약 2.7배.** 3200까지 요청한 만큼 냈고, 4800 요청에서 4,022로 멈췄다. 그때 api는 1%대, oracle 3~4%로 남아 있고 **nginx만 CPU 한도(25%)**에 붙어 있다. 4800 이상에서는 지연이 길어지며 k6 연결이 늘어 nginx 로그에 `1024 worker_connections are not enough`가 찍혔고, 오류(0.9% → 28.7%)는 여기서 나왔다.
+- **기준선: 약 1,400~1,500 req/s(시청자 약 7,000명).** 1600 요청에서 이미 1,479만 냈고 그 위로는 늘지 않았다. 그때 **api 두 대가 CPU 한도(1.0)에 닿고**(97·98%) nginx도 한도(25%)였다. 계단을 50부터 올린 첫 기준선(1600에서 1,600 req/s를 다 냈고 p50 60ms, api CPU 52·57%)보다 나쁘다. 같은 1600에서 요청 하나당 api CPU를 약 2배 썼고, 워밍업(50)부터 api CPU가 평균 19~22%(첫 기준선은 4%)였다. 워밍업 뒤 바로 1600으로 뛴 탓인지 JVM 상태가 달랐던 탓인지는 **확인하지 못했다(검증되지 않은 가설)**. 그래서 기준선 천장은 계단 방식에 따라 1,400~1,600 이상 사이로 읽는다.
+- **캐시 뒤: 약 4,000 req/s(시청자 약 20,000명). 1600부터 시작하는 같은 계단에서 기준선의 약 2.7배**(50부터 올리는 계단이면 기준선 천장이 1600 이상이라 배율은 약 2.5배 이하). k6 CPU를 재지 못했고 4800 단계에서 k6가 VU를 수천 개 새로 만들었으므로(vus max 13,039) "약 4,000"은 하한 쪽 추정이다. 3200까지 요청한 만큼 냈고, 4800 요청에서 4,022로 멈췄다. 그때 api는 1%대, oracle 3~4%로 남아 있고 **nginx만 CPU 한도(25%)**에 붙어 있다. 4800 이상에서는 지연이 길어지며 k6 연결이 늘어 nginx 로그에 `1024 worker_connections are not enough`가 찍혔고, 오류(0.9% → 28.7%)는 여기서 나왔다.
 - **다음 천장은 nginx 하나다.** CPU 한도(`cpus: 0.25`)와 `worker_connections`(1024). 이 이슈에서는 바꾸지 않는다(한 번에 한 가지).
 - **부하 생성기:** k6가 같은 호스트(12코어)에서 돌았다. k6 프로세스 CPU는 직접 재지 못했다(Git Bash `time`이 네이티브 프로세스의 CPU를 세지 못한다). 포화 때 서버 쪽 컨테이너(기준선은 api 두 대, 캐시 뒤는 nginx)가 각자 CPU 한도에 붙어 있었으므로 병목은 생성기가 아니라 서버 쪽으로 본다.
 - `perf/channel-poll.js`에 `STEPS` 환경변수를 더했다(기본값은 이슈가 정한 계단 그대로). 높은 rate에서 k6가 VU를 수천 개 미리 만들지 않도록 `preAllocatedVUs`를 최대 1,000으로 묶었다(모자라면 `maxVUs`까지 늘린다). 기존 계단(최대 1600)의 측정에는 영향이 없다 — 그 구간의 필요 VU는 수십~수백 개다.
 - **캐시 적중률의 원시 근거:** 앞 측정의 229/13,502·529/96,004는 nginx 접근 로그를 센 값이다. 로그 원문은 커밋하지 않았다(요청마다 한 줄이라 수십 MB). 세는 방법은 위 "수동 확인·측정 결과"에 적었다.
+
+### 2차 검증 (AC 2·5·6)
+
+> `harness:ac-verifier` (2026-11-21, HEAD b37ff4b). 범위를 AC 2·5·6으로 좁히고 1차와 같은 제약으로 띄웠다. 중간에 사용량 한도로 멈췄다가 같은 에이전트를 이어서 끝냈다. 아래는 출력 원문이다(제목 수준만 세 단계 낮췄다).
+
+#### 이슈 #29 2차 AC 검증 (AC 2·5·6, 브랜치 feat/channel/issue-29, HEAD b37ff4b)
+
+**결론: AC 3개 모두 ✅입니다. 1차에서 지적한 갭 3개가 모두 메워졌습니다.**
+
+- AC 2와 AC 5는 1차에서 살아남았던 변이 두 개가 이번에는 둘 다 새 테스트에 잡혔습니다.
+- AC 6은 캐시 전후 모두 처리량이 더 늘지 않는 지점까지 쟀습니다. 원시 JSON·CSV로 다시 계산한 값이 문서 표와 일치합니다.
+- AC 6에는 고칠 필요는 없지만 적어 둘 점이 있습니다. 문서에 쓴 "2.7배"는 측정 조건에 따라 달라지는 값입니다(아래 설명).
+
+##### 판정 표
+
+| AC | 판정 | 근거 테스트 (@DisplayName, 파일:줄) | 구현 | 판단 이유 |
+|---|---|---|---|---|
+| 2. 캐시된 지 1초가 지나면 Spring에 다시 물어 새 값을 준다 | ✅ | `should ask Spring again when the same channel is requested after 1 second` (NginxChannelCacheTest.java:190-200)<br>`should return a fresh answer from Spring when the same channel is requested after 1 second` (:202-211) | infra/nginx/nginx.conf:68 (`proxy_cache_valid 200 1s`), :70-71 (lock + `use_stale updating`, background_update 없음) | 새 테스트는 2.1초 뒤 응답 본문이 첫 응답과 다르다고 단언합니다. 가짜 Spring은 요청마다 다른 `$request_id`를 돌려줍니다(:59, :79).<br>1차 변이 `proxy_cache_background_update on`이 이제 잡힙니다(변이 1). `200 2s` 변이도 이번 한 번 실행에서 두 테스트 모두에 잡혔습니다(변이 3).<br>"제목·방송 상태"를 실제 Spring으로 끝까지 보지는 않습니다. 다만 nginx는 응답 본문을 해석하지 않으므로, "Spring의 현재 응답이 그대로 온다"를 보면 AC를 증명한 것과 같습니다.<br>경계는 2.1초 뒤 한 점입니다. nginx는 캐시 시각을 초 단위로 다뤄 1~2초 사이는 결과가 정해지지 않으므로 타당한 선택입니다(:194 주석). |
+| 5. 다른 API·쓰기·오류 응답은 캐시하지 않는다 | ✅ | `should not cache a server error response for a channel` (:287-294, 가짜 Spring `/api/channels/500` → `return 500`, :48-50)<br>`should not cache an error response for a channel` (:296-303)<br>`should pass every request for the studio channel to Spring` (:260-267)<br>`should pass every request for the logged-in member to Spring` (:269-276)<br>`should pass every channel update to Spring` (:278-285) | nginx.conf:58 (정규식 location은 `/api/channels/{숫자}`만), :68 (200만 담음), proxy_cache_methods 기본값(GET·HEAD) | 1차 변이 `proxy_cache_valid 200 500 502 503 504 1s`가 이제 `expected: 2L but was: 1L`로 잡힙니다(변이 2).<br>`springCalls`(:155-167)는 이제 로그 줄 수가 300ms 동안 늘지 않을 때까지(최대 3초) 기다립니다. 1차 약한 단언 2의 거짓 통과 위험이 줄었습니다.<br>참고(판정에 영향 없음): 5xx는 500 하나만 봅니다. `proxy_cache_valid 200 503 1s`처럼 503만 넣는 변이는 테스트 구조상 살아남을 것입니다(돌리지 않고 읽어서 판단). 그래도 구현이 `200`만 나열하므로 404·500 대표값이면 충분하다고 봤습니다. |
+| 6. 캐시 전후 측정 기록, 캐시 뒤 목표 부하 합격 (PLATFORM 10절) | ✅ | 테스트가 아니라 기록으로 판단했습니다. docs/result/scenarios/issue-29.md:349-373, docs/perf/issue-29/{baseline,after}-extended/steps-{summary.json,stats.csv} | perf/channel-poll.js:17-18 (`STEPS` 환경변수, 기본값은 이슈가 정한 계단 그대로), :31 (preAllocatedVUs를 최대 1,000으로 제한) | 1차 ⚠️(포화 지점 미도달)가 해소됐습니다. 판단 근거와 남는 점은 아래 세부에 있습니다. |
+
+###### AC 6 세부
+
+**원시 데이터를 다시 계산한 결과 (node로 JSON 추출)**
+
+- **캐시 뒤:**
+  - 1600·2400·3200 req/s 단계는 요청한 만큼 냈습니다. 오류 0%, dropped 0입니다.
+  - 4800 단계는 성공 4,022 req/s(p50 375ms, p95 809ms, 오류 0.94%, dropped 18,510)였습니다.
+  - 6400 단계는 3,438 req/s(오류 28.7%)로 오히려 줄었습니다.
+  - 따라서 PLATFORM 정의(처리량은 늘지 않고 지연만 늘어나는 지점)에 맞는 지점은 3200~4800 사이, 약 4,000 req/s입니다.
+- **기준선:**
+  - 1600 단계 1,479, 2400 단계 1,415, 3200 단계 747, 4800 단계 1,387(오류 66%), 6400 단계 548입니다.
+  - 1600 이상에서 처리량이 더 늘지 않았습니다.
+- 문서 표(issue-29.md:351-357)와 모두 일치합니다.
+
+**CPU (docker stats CSV를 30초 단계로 묶은 평균)**
+
+- 기준선 1600 단계: nginx 25, api-1 97, api-2 98, oracle 38%
+- 캐시 뒤 4800 단계: nginx 25, api 1/1, oracle 4%
+- 문서 표(:359-364)와 일치합니다.
+
+**기록 시각**
+
+- after-extended CSV는 08:22:46~08:25:48 UTC = 17:22~17:25 KST입니다. 측정 대상인 3a21a0a(17:20:26)보다 뒤입니다.
+- baseline-extended CSV는 17:26~17:29 KST입니다. 이 측정을 담은 커밋 b37ff4b(17:30:48)보다 앞섭니다. 시각이 서로 맞습니다.
+
+**PLATFORM 10절 "기준선 먼저"**
+
+- 처음 기준선(f24b7e3)이 구현보다 먼저 측정됐으므로 충족합니다.
+- extended 기준선은 캐시 뒤 extended보다 나중에 쟀습니다. 둘 다 같은 조건(같은 STEPS, 커밋은 nginx.conf만 다름)이라 비교는 유효합니다.
+
+**남는 점 (판정은 ✅로 유지, 문서 보완 권장)**
+
+1. **"기준선의 약 2.7배"는 조건에 따라 달라집니다.**
+   - 처음 기준선(50부터 계단으로 올림)은 1600 단계에서 1600.0 req/s를 냈습니다. 그때 api CPU는 52/57%였습니다.
+   - extended 기준선은 같은 1600 단계에서 1,479 req/s를 냈고, api CPU는 97/98%였습니다. 같은 1600에서 요청 하나당 CPU를 약 2배 썼습니다.
+   - extended 기준선은 워밍업(50 req/s) 단계부터 api CPU가 평균 19~22%, 최대 88~89%였습니다. 처음 기준선의 50 req/s 단계는 4%였습니다. 즉 api JVM이 다른 상태였을 가능성이 있습니다.
+   - 문서의 설명("워밍업 뒤 바로 1600으로 뛰어 요청이 쌓였다", :368)은 검증되지 않은 가설입니다.
+   - 계단으로 올리는 조건이라면 기준선 천장이 1600 이상이므로, 배율은 약 2.5배 이하가 됩니다. "같은 계단 조건(1600부터 시작)에서"라는 단서를 붙이기를 권합니다.
+2. **4800 단계의 dropped 18,510 일부는 부하 생성기 쪽에서 생겼을 수 있습니다.**
+   - 이번 커밋에서 preAllocatedVUs를 최대 1,000으로 제한했습니다. 그래서 4800 단계에서는 k6가 측정 중에 VU를 수천 개 새로 만들었습니다(vus max 13,039).
+   - k6는 같은 호스트에서 돌았고, k6 자체의 CPU는 재지 않았습니다. 문서도 이 점을 인정합니다(:371).
+   - 서버 쪽이 병목이라는 근거도 있습니다. nginx CPU가 한도에 붙어 있었고, p50이 2400 단계부터 늘었습니다.
+   - 따라서 "약 4,000"은 하한 쪽 추정으로 읽는 것이 안전합니다.
+3. nginx 로그 `1024 worker_connections are not enough`와 캐시 적중률(229/13,502, 529/96,004)은 원문이 저장소에 없어 확인하지 못했습니다. 문서에는 로그를 커밋하지 않은 이유가 적혀 있습니다. AC 문구의 요구 항목은 아닙니다.
+
+##### 변이 결과
+
+- 스크래치 복사본: `C:/Users/USER/AppData/Local/Temp/claude/1cbb40fc7d76b7b0/e5a53947-02cd-44f6-934c-3e8edfbbefcf/scratchpad/ac29-r2`
+- `git archive HEAD`로 만들었습니다. 매번 `nginx.conf.orig`로 되돌린 뒤 sed로 변이 하나만 넣었습니다.
+- 결과 XML의 timestamp로 테스트가 실제로 다시 돌았는지 확인했습니다.
+- 변이 실행은 3번입니다. 1번은 중단 전에 돌렸고, 2·3번은 재개 뒤에 돌렸습니다.
+
+| # | 변이 (nginx.conf) | 겨냥한 AC | 결과 | 실패한 테스트 / 메시지 |
+|---|---|---|---|---|
+| 0 | 없음 (기준) | - | 13/13 통과 (08:33:25Z) | - |
+| 1 | `proxy_cache_use_stale updating;` 뒤에 `proxy_cache_background_update on;` 추가 | AC 2 (새 값) | **잡힘** (08:33:51Z) | `should return a fresh answer from Spring when the same channel is requested after 1 second`. 같은 `{"answer":"22e480ff…"}`가 두 번 왔습니다 |
+| 2 | `proxy_cache_valid 200 1s;` → `proxy_cache_valid 200 500 502 503 504 1s;` | AC 5 (5xx) | **잡힘** (11:56:09Z) | `should not cache a server error response for a channel`. expected: 2L but was: 1L |
+| 3 | `proxy_cache_valid 200 1s;` → `proxy_cache_valid 200 2s;` | AC 2 (1초 경계) | **잡힘** (11:56:43Z) | `should ask Spring again … after 1 second` (expected 2L but was 1L), `should return a fresh answer …` (본문 같음) |
+
+변이 3은 한 번만 돌렸습니다. 매번 잡히는지는 확인하지 않았습니다.
+
+##### 남은 갭과 제안 시나리오
+
+- 필수 갭은 없습니다. AC 2·5·6 모두 ✅입니다.
+- 원하면 붙일 수 있는 선택 항목은 아래 두 개입니다.
+
+```
+- [ ] [예외] `nginx channel cache` — should not cache a service unavailable response for a channel
+      (가짜 Spring에 `location = /api/channels/503 { return 503 ...; }`. `proxy_cache_valid 200 503 1s` 변이를 잡는다. 선택)
+- [ ] [수동] `perf/channel-poll.js` — should state the step pattern next to the baseline saturation point when the extended baseline differs from the first baseline at 1600 req/s
+      (issue-29.md:368-369의 "약 2.7배"에 "1600부터 시작하는 같은 계단 조건" 단서를 붙이거나, 50부터 이어지는 계단으로 기준선을 다시 잰다. 선택)
+```
+
+##### 가짜 테스트
+
+- 다음 경우는 없습니다: await 누락, 인자 없는 예외 단언, 단언이 없는 테스트, 목이 돌려준 값을 그대로 단언하는 경우.
+- 1차의 약한 단언 2(고정 300ms 대기)는 :155-167에서 "줄 수가 300ms 동안 늘지 않을 때까지 기다림"으로 고쳐졌습니다.
+
+##### 실행한 명령
+
+중단 전:
+
+1. `cat .claude/harness.json; git log --oneline -8; git status --short; gh issue view 29` → 설정 확인, HEAD b37ff4b, 작업 트리 깨끗함, AC 6개
+2. `grep -n "^## \|^### " issue-29.md; git diff --stat origin/main...HEAD; git diff --stat f2055f4 HEAD` → 문서 절 위치, 바뀐 파일 7개 확인
+3. Read `docs/result/scenarios/issue-29.md` → 1차 검증 원문, 갭 처리, extended 표 확인
+4. `cat -n NginxChannelCacheTest.java; cat -n infra/nginx/nginx.conf` → 테스트 13개와 캐시 설정(:58-75) 확인
+5. `grep -n "^## " PLATFORM.md; git log --date=iso-strict -6; git show --stat 3a21a0a b37ff4b; git diff f2055f4 HEAD -- perf/channel-poll.js backend/build.gradle.kts` → 10절 위치, 커밋 시각, STEPS 추가와 preAllocatedVUs 제한 확인
+6. `sed -n 218,233p PLATFORM.md; cat -n perf/channel-poll.js; ls -la *-extended; head/tail CSV` → 10절 정의, 스크립트, 결과 파일 4개, CSV 시각 범위 확인
+7. `node -e …` (두 extended summary JSON) → 단계별 reqs, 성공 req/s, p50/p95/p99, 오류, dropped가 문서 표와 일치. vus_max는 22,400(기준선)·16,660(캐시 뒤)
+8. `node -e …` (두 extended stats CSV를 30초 단계로 묶음) → CPU가 문서 표와 일치. 기준선 워밍업의 api CPU 평균 19~22%·최대 88~89%
+9. `mkdir ac29-r2 && git archive HEAD | tar -x -C …; cp nginx.conf nginx.conf.orig` → 스크래치 복사본 생성
+10. `./gradlew test --tests "NginxChannelCacheTest"` (변이 없음) → 13/13 통과
+11. 변이 1(sed로 background_update 추가) 후 같은 테스트 → 1개 실패(fresh answer)
+12. `grep failure message` → 같은 본문이 두 번 온 것 확인
+
+재개 뒤:
+
+13. `git log -1; git status --short` → HEAD b37ff4b, 출력 없음. 이어서 변이 2(sed로 5xx 추가) 후 같은 테스트 → 1개 실패(server error, 2L/1L)
+14. 변이 3(sed로 `200 2s`) 후 같은 테스트 → 2개 실패. 이어서 `git -C C:/live-streaming-project status --short` 실행
+
+테스트 실행 시간은 합쳐 약 2분입니다. docker compose와 k6는 실행하지 않았습니다. python은 쓰지 않았습니다.
+
+##### 원본 저장소 상태
+
+`git -C C:/live-streaming-project status --short`의 출력은 **비어 있었습니다**(종료 코드 0). 원본 저장소는 바뀌지 않았습니다.
+
+스크래치 폴더 `C:/Users/USER/AppData/Local/Temp/claude/1cbb40fc7d76b7b0/e5a53947-02cd-44f6-934c-3e8edfbbefcf/scratchpad/ac29-r2`는 남겨 두었습니다. 마지막 변이(변이 3, `200 2s`)가 적용된 상태입니다.
+
+#### 2차 뒤 처리
+
+- 남는 점 1·2는 내 문서 문장이 맞는 범위를 넘은 것이라 고쳤다(위 "갭 처리 결과"의 포화 지점 문단). "약 2.7배"에 "1600부터 시작하는 같은 계단에서"라는 단서를 붙였고, extended 기준선이 처음 기준선보다 나빴던 이유는 "검증되지 않은 가설"로 바꿨다. "약 4,000 req/s"는 생성기 CPU를 재지 못해 하한 쪽 추정이라고 적었다.
+- 선택 제안 1(503 따로 시험)은 더하지 않았다. 구현이 `proxy_cache_valid 200 1s` 하나로 200만 나열해 5xx를 상태 코드마다 다르게 다루지 않고, 404·500이 그 규칙을 대표한다. 3차는 띄우지 않았다.
+
+---
+
+## 리팩터
+
+없음. 이번 이슈의 소스는 `infra/nginx/nginx.conf`(그리고 측정 스크립트)다.
+- `proxy_set_header` 세 줄이 `/api/`·채널 캐시·`/ws` 세 곳에 있다. 세 번째라 뽑을 만하지만, nginx에서 뽑으려면 조각 파일을 `include`하고 `infra/nginx/Dockerfile`이 그 파일도 복사해야 한다. 그러면 `NginxChannelCacheTest`·`NginxInternalPathTest`가 `nginx.conf` 하나만 넣어 시험하는 구조도 바뀐다. 세 줄 중복보다 비용이 커서 두지 않는다.
+
+---
+
+## 보안 점검
+
+> `/harness:security-review 29` (2026-11-21). 🔴는 고치고, 🟡는 사용자에게 묻는다.
+
+**수집:** `compileJava`·`compileTestJava`·`tsc -b` 성공, `npm audit` 0건, 비밀값 패턴·알려진 접두사 grep 0건, 브랜치가 커밋한 `.env` 없음. 백엔드 소스는 바뀌지 않았다(테스트·빌드 스크립트만).
+
+| 분류 | 파일·줄 | 무엇 | 판단 | 처리 |
+| --- | --- | --- | --- | --- |
+| 🟡 | `nginx.conf` 채널 캐시 location | **캐시 우회·오염.** 키가 `$uri`라 `/api/channels/021`·`/0021`처럼 앞자리 0을 붙인 변형은 Spring이 같은 채널 21로 읽지만 캐시 키는 매번 다르다. 로컬에서 확인: `021` MISS → HIT, `0021` MISS, `21` MISS. 변형을 바꿔 가며 보내면 첫 요청마다 Spring·DB로 가고, 200 응답이라 캐시 영역(1MB, 약 8천 키)도 채운다 | Spring·DB까지 가는 것은 없는 채널 id(404, 담지 않음)를 돌려 보내도 이미 되는 일이라 새 공격 면은 아니다. 다만 앞자리 0 변형은 **담기기 때문에** 캐시를 오염시킬 수 있다(오래 안 쓴 키부터 밀려나므로, 5초마다 물리는 방송 중 채널은 남는다). 선택지: (a) 캐시 location 정규식을 `^/api/channels/[1-9][0-9]*$`로 좁혀 앞자리 0은 캐시 밖(그냥 Spring)으로 보낸다 — 오염만 막는다. (b) 공개 API에 IP당 요청 수 제한(`limit_req`)을 둔다 — 우회 전체(없는 id 포함)를 막는다. 둘은 겹치지 않는다 | **사용자 결정 대기** |
+| ⚪ | `nginx.conf` | 모든 사용자에게 같은 캐시 응답을 준다 | 채널 조회는 공개 정보이고 로그인 여부와 상관없이 같다. 사용자별 API(`/api/studio/**`·`/api/members/me`)는 캐시 location 밖이다(테스트 + 변이 "캐시 location을 `~ ^/api/`로"로 확인). nginx는 `Set-Cookie`가 있는 응답을 담지 않는다 | 그대로 |
+| ⚪ | `nginx.conf` | `proxy_ignore_headers Cache-Control Expires` | nginx만 Spring의 `no-store`를 무시한다. 브라우저로 가는 응답 헤더는 그대로라(`curl` 확인) 브라우저·중간 프록시는 담지 않는다 | 그대로 |
+| ⚪ | `nginx.conf` | `X-Cache-Status` 헤더 | HIT·MISS 같은 캐시 상태만 드러난다. 설정 값·내부 주소는 없다 | 그대로 |
+| ⚪ | `nginx.conf` | 쓰기(PUT) | `proxy_cache_methods` 기본값(GET·HEAD) 밖이라 매번 Spring으로 간다(테스트 + 변이로 확인) | 그대로 |
+
+**결과:** 🔴 0, 🟡 1(캐시 우회·오염 — 사용자 결정 대기).
