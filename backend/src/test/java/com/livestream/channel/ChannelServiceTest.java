@@ -53,6 +53,16 @@ class ChannelServiceTest {
         }
 
         @Test
+        @DisplayName("should return live true when the channel has a live broadcast")
+        void returnsLive() {
+            Channel channel = savedChannel("안녕하세요");
+            channel.setLive(true);
+            given(channelMapper.findById(CHANNEL_ID)).willReturn(Optional.of(channel));
+
+            assertThat(channelService.find(CHANNEL_ID).live()).isTrue();
+        }
+
+        @Test
         @DisplayName("should return an empty description when the stored description is null")
         void returnsEmptyDescriptionForNull() {
             // Oracle은 빈 문자열을 NULL로 저장한다

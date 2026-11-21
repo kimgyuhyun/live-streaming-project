@@ -10,6 +10,8 @@ public class Channel {
     // 스트림 키의 SHA-256 해시(소문자 16진수)와 앞 4자리. 키가 없으면 null (PRD channel C1)
     private String streamKeyHash;
     private String streamKeyPrefix;
+    // 진행 중 방송(broadcast.ended_at IS NULL)이 있으면 true. 조회 SQL이 함께 읽는다
+    private boolean live;
 
     public Channel() {
     }
@@ -66,5 +68,13 @@ public class Channel {
 
     public void setStreamKeyPrefix(String streamKeyPrefix) {
         this.streamKeyPrefix = streamKeyPrefix;
+    }
+
+    public boolean isLive() {
+        return live;
+    }
+
+    public void setLive(boolean live) {
+        this.live = live;
     }
 }

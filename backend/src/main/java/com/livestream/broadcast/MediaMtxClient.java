@@ -30,6 +30,10 @@ class MediaMtxClient implements PublisherDisconnector {
         }
     }
 
+    List<String> findAvailablePaths() {
+        throw new UnsupportedOperationException("not implemented");
+    }
+
     // 필요한 필드만 읽는다. query(키가 들어 있다)는 받지 않는다
     record RtmpConnections(List<RtmpConnection> items) {
     }
