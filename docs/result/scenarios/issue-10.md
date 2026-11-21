@@ -140,6 +140,9 @@ class MediaMtxClient implements PublisherDisconnector {
 - [x] [경계] `PublishAuthService.canPublish` — should deny when the channel id in the path is too long for a number
 - [x] [경계] `MediaMtxClient.disconnect` — should kick nothing when no connection publishes to that path
 - [x] [경계] `OriginValidationFilter` — should reject a POST without Origin when the path only starts with /internal but is not under /internal/
+- [x] [경계] `PublishAuthService.canPublish` — should pass an 18-digit channel id in the path to the key check when the path is live followed by the id
+- [x] [경계] `PublishAuthService.canPublish` — should deny without calling the key check when the channel id in the path has 19 digits
+- [x] [경계] `PublishAuthIntegration` — should return 401 when the path is live followed by a 19-digit number larger than the long range
 
 ### 예외
 
@@ -191,7 +194,7 @@ AC 5·6·7. Green 뒤, AC 검증 전에 `docker compose up --build -d`로 전체
 | AC | 커버하는 시나리오 |
 | --- | --- |
 | 1. 채널 7과 그 키로 `publish`·`live/7`·`key={키}` 확인 요청 → 200 | `[정상] StreamKeyService.matches — should return true when the key hashes to the saved hash of the channel`<br>`[정상] PublishAuthService.canPublish — should allow when action is publish, path is live and the channel id, and the query key matches`<br>`[경계] PublishAuthService.canPublish — should find the key among other query parameters`<br>`[정상] OriginValidationFilter — should pass a POST without Origin or Referer when the path is under /internal/`<br>`[정상] PublishAuthIntegration — should return 200 for a publish check without Origin or login when the key of the channel matches` |
-| 2. 키가 다르거나·없거나·채널이 없거나·경로가 `live/{숫자}`가 아니면 401 | `[예외] StreamKeyService.matches — should return false when the key differs from the saved one`<br>`[예외] StreamKeyService.matches — should return false when the channel does not exist`<br>`[경계] StreamKeyService.matches — should return false when the channel has no key`<br>`[예외] PublishAuthService.canPublish — should deny when the key does not match`<br>`[예외] PublishAuthService.canPublish — should deny when the query has no key`<br>`[경계] PublishAuthService.canPublish — should deny when the query is empty`<br>`[예외] PublishAuthService.canPublish — should deny when the path is not live followed by a number`<br>`[경계] PublishAuthService.canPublish — should deny when the channel id in the path is too long for a number`<br>`[예외] PublishAuthIntegration — should return 401 when the key differs from the channel key`<br>`[예외] PublishAuthIntegration — should return 401 when the query has no key`<br>`[예외] PublishAuthIntegration — should return 401 when the channel does not exist`<br>`[예외] PublishAuthIntegration — should return 401 when the path is not live followed by a number` |
+| 2. 키가 다르거나·없거나·채널이 없거나·경로가 `live/{숫자}`가 아니면 401 | `[예외] StreamKeyService.matches — should return false when the key differs from the saved one`<br>`[예외] StreamKeyService.matches — should return false when the channel does not exist`<br>`[경계] StreamKeyService.matches — should return false when the channel has no key`<br>`[예외] PublishAuthService.canPublish — should deny when the key does not match`<br>`[예외] PublishAuthService.canPublish — should deny when the query has no key`<br>`[경계] PublishAuthService.canPublish — should deny when the query is empty`<br>`[예외] PublishAuthService.canPublish — should deny when the path is not live followed by a number`<br>`[경계] PublishAuthService.canPublish — should deny when the channel id in the path is too long for a number`<br>`[예외] PublishAuthIntegration — should return 401 when the key differs from the channel key`<br>`[예외] PublishAuthIntegration — should return 401 when the query has no key`<br>`[예외] PublishAuthIntegration — should return 401 when the channel does not exist`<br>`[예외] PublishAuthIntegration — should return 401 when the path is not live followed by a number`<br>`[경계] PublishAuthService.canPublish — should pass an 18-digit channel id in the path to the key check when the path is live followed by the id` (갭 처리)<br>`[경계] PublishAuthService.canPublish — should deny without calling the key check when the channel id in the path has 19 digits` (갭 처리)<br>`[경계] PublishAuthIntegration — should return 401 when the path is live followed by a 19-digit number larger than the long range` (갭 처리) |
 | 3. 재발급 저장을 마친 **다음** MediaMTX API로 `live/{채널ID}` 송출 연결을 끊는다 | `[정상] StreamKeyService.issue — should disconnect the channel's publisher after saving the new key`<br>`[정상] MediaMtxClient.disconnect — should kick the connection publishing to live and the channel id`<br>`[정상] StreamKeyReissueIntegration — should ask MediaMTX to disconnect only after the new key hash is committed when a streamer reissues the key` |
 | 4. 송출 중인 연결이 없거나 MediaMTX API가 실패해도 재발급은 성공 | `[경계] MediaMtxClient.disconnect — should kick nothing when no connection publishes to that path`<br>`[예외] MediaMtxClient.disconnect — should throw when the MediaMTX API responds with an error`<br>`[예외] StreamKeyService.issue — should still return the new key when disconnecting the publisher fails`<br>`[예외] StreamKeyReissueIntegration — should return 200 with a new key when the MediaMTX API is unreachable` |
 | 5. 로컬 compose: 맞는 키 송출 → 재발급 → 끊기고 이전 키로 다시 붙으면 거부 | 수동 확인 |
@@ -205,4 +208,90 @@ AC 5·6·7. Green 뒤, AC 검증 전에 `docker compose up --build -d`로 전체
 | `[예외] PublishAuthService.canPublish — should deny when the action is not publish` | PRD "Spring은 publish만 판단". 설정이 빠졌을 때 열어 주지 않게 |
 | `[경계] OriginValidationFilter — should reject a POST without Origin when the path only starts with /internal but is not under /internal/` | 출처 검사 예외가 `/internal/` 밖으로 새지 않는지 |
 
-**커버리지:** AC 7개 / 시나리오 27개 / 미커버 0개 (AC 5·6은 수동 확인만, AC 7은 설정 테스트 + 수동 확인)
+**커버리지:** AC 7개 / 시나리오 30개(AC 검증 갭 처리 3개 포함) / 미커버 0개 (AC 5·6은 수동 확인만, AC 7은 설정 테스트 + 수동 확인)
+
+---
+
+## AC 검증
+
+> `harness:ac-verifier` (2026-11-21, HEAD 9e1f378). 변이 최대 3번·20분·스크래치 복사본·클래스 단위 테스트로 제한해 띄웠다. 아래는 검증자 출력 원문이다(제목 수준만 한 단계 낮췄다). 구현자는 맨 아래 `### 구현자 이견`에만 쓴다.
+
+### 이슈 #10 AC 검증 결과 (브랜치 feat/channel/issue-10, HEAD 9e1f378)
+
+**요약: AC 7개 중 ✅ 6 / ⚠️ 1 / ❌ 0.** AC 5·6은 다시 재현하지 않았습니다. compose를 띄우지 말라는 제약 때문이고, 판정 근거는 시나리오 문서에 남은 기록입니다.
+
+기준선으로 이슈 관련 7개 클래스를 돌렸고 53개가 모두 통과했습니다(실패 0, 오류 0). 변이는 3번 돌렸고 2개는 테스트가 잡았으며 1개는 살아남았습니다. 저장소 작업 트리는 그대로이고, `git -C C:/live-streaming-project status --short`의 출력은 비어 있었습니다.
+
+#### AC별 판정
+
+| AC | 판정 | 근거 테스트 (@DisplayName, 파일:줄) | 구현 (파일:줄) | 판단 이유 |
+|---|---|---|---|---|
+| 1. `publish`·`live/7`·`key={키}` → 200 | ✅ | `should return 200 for a publish check without Origin or login when the key of the channel matches` (PublishAuthIntegrationTest.java:58-63, 클래스 파일 기준 85-91행)<br>`should allow when action is publish, path is live and the channel id, and the query key matches` (PublishAuthServiceTest.java:75-79)<br>`should find the key among other query parameters` (:81-85)<br>`should return true when the key hashes to the saved hash of the channel` (StreamKeyServiceTest.java:180-186)<br>`should pass a POST without Origin or Referer when the path is under /internal/` (OriginValidationFilterTest, 이번 diff로 추가된 테스트) | PublishAuthController.java:20-24, PublishAuthService.java:23-33, StreamKeyService.java:53-60, SecurityConfig.java:54, OriginValidationFilter `shouldNotFilter` | 통합 테스트는 MediaMTX 1.21이 보내는 JSON 그대로, Origin과 세션 없이 보안 필터 전체를 거쳐 200을 확인합니다. 채널과 키는 실제 흐름(가입→신청→승인→발급)으로 만듭니다. 채널 id가 7이 아니라 실제로 생긴 id이지만 의도는 같습니다. |
+| 2. 키가 다름·없음, 채널 없음, 경로가 `live/{숫자}` 아님 → 401 | ⚠️ | 통합 테스트(PublishAuthIntegrationTest.java): `should return 401 when the key differs from the channel key` (:93-100), `...when the query has no key` (:102-108), `...when the channel does not exist` (:110-117), `...when the path is not live followed by a number` (:119-125, `720/`만 확인)<br>단위 테스트(PublishAuthServiceTest.java): `should deny when the path is not live followed by a number` (:116-121, 경로 7종), `...the query is empty` (:88-94, null·""·`key=`), `...the channel id in the path is too long for a number` (:96-100, 20자리), `...the query has no key`, `...the key does not match`<br>StreamKeyServiceTest의 matches 관련 테스트 3개(:188-210) | PublishAuthService.java:13 (`live/(\d{1,18})`), :27-32, :36-46; StreamKeyService.java:53-60 | AC에 적힌 네 조건은 모두 통합 테스트와 단위 테스트 양쪽에서 확인됩니다. 다만 경로 숫자 길이의 경계(18자리와 19자리)를 고정한 테스트가 없습니다. 변이 2(`{1,19}`)가 살아남았습니다. 이 변이가 들어가면 `live/9999999999999999999`(19자리, Long 범위 초과) 요청에서 `Long.parseLong`이 NumberFormatException을 던집니다. GlobalExceptionHandler에는 이 예외의 처리기가 없으므로 401이 아니라 500이 나갈 것으로 봅니다. 이 500 응답은 실제로 확인하지 않았습니다. 이런 요청은 "채널이 없음"에 해당하므로 AC 2의 401 동작이 경계에서 고정되어 있지 않습니다. 현재 구현은 18자리까지만 받아서 401을 줍니다. |
+| 3. 저장을 마친 **다음** `live/{채널ID}` 송출 연결 끊기 | ✅ | `should ask MediaMTX to disconnect only after the new key hash is committed when a streamer reissues the key` (StreamKeyReissueIntegrationTest.java:244-273)<br>`should disconnect the channel's publisher after saving the new key` (StreamKeyServiceTest.java:132-142, InOrder)<br>`should kick the connection publishing to live and the channel id` (MediaMtxClientTest.java:180-193, `live/70`과 `live/7` 혼동도 확인) | StreamKeyService.java:43-44 (UPDATE 다음 disconnect, `@Transactional` 없음); MediaMtxClient.java:22-31 | 통합 테스트의 가짜 MediaMTX는 목록 요청을 받는 순간 다른 DB 연결로 해시를 읽습니다. 커밋 순서를 진짜 DB로 확인하는 셈입니다. `issue()`에 `@Transactional`을 거는 변이 3을 이 테스트가 잡았습니다(목록 요청 시점에 이전 해시가 보임). |
+| 4. 연결이 없거나 API가 실패해도 재발급 성공 | ✅ | `should kick nothing when no connection publishes to that path` (MediaMtxClientTest.java:195-207)<br>`should throw when the MediaMTX API responds with an error` (:209-215, `HttpServerErrorException`으로 구체적 타입 단언)<br>`should still return the new key when disconnecting the publisher fails` (StreamKeyServiceTest.java:144-153)<br>`should return 200 with a new key when the MediaMTX API is unreachable` (StreamKeyReissueIntegrationTest.java:275-289, 연결 거부 상황에서 200과 새 해시 확인) | StreamKeyService.java:64-70 (`catch (RuntimeException)`), MediaMtxClient.java:26-31 | 연결이 없는 경우도 확인됩니다. 통합 테스트 :244의 가짜 MediaMTX가 `items: []`를 돌려줘도 재발급이 200입니다. 실패 경우는 단위 테스트(예외)와 통합 테스트(연결 거부)가 둘 다 봅니다. 시간 초과 경우는 테스트가 없습니다. 다만 AC 문구는 "실패"이고, 시간 초과도 RestClientException이라 같은 catch로 처리됩니다(코드로 확인, 실행하지 않음). |
+| 5. compose와 ffmpeg: 송출 → 재발급 → 끊김 → 이전 키 거부 | ✅ (기록 근거, 재현하지 않음) | 자동 테스트 없음(AC 대조표대로 수동 확인). 기록: docs/result/scenarios/issue-10.md:169, :173-175 | mediamtx.yml:21 (`api: yes`), :27-28 (`authMethod: http`, `authHTTPAddress`); compose.yml:19 (`MEDIAMTX_API_URL`), :24 (aliases `api`) | 기록에는 재발급과 같은 초에 `closed: terminated`가 찍혔고, 이전 키로 다시 붙을 때 `server replied with code 401`이 나왔습니다. 기록 시점(4a9614a)과 HEAD 사이의 diff는 이 문서 18줄뿐이라 코드는 같습니다. "PR에 남긴다"는 아직 PR 생성 전이므로 create-pr 단계에서 챙겨야 합니다. |
+| 6. compose: 같은 채널 두 번째 송출 거부, 첫 송출 유지 | ✅ (기록 근거, 재현하지 않음) | 자동 테스트 없음. 기록: issue-10.md:176 | mediamtx.yml:38 (`overridePublisher: false`) | 기록에는 두 번째 연결이 `someone is already publishing to path 'live/21'`로 닫혔고, 첫 연결은 유지되어 HLS가 200 그대로였다고 되어 있습니다. PR 기록도 AC 5와 마찬가지로 아직 남지 않았습니다. |
+| 7. nginx가 바깥의 `/internal/` 요청을 Spring에 넘기지 않음(404) | ✅ | `should answer /internal/ with 404 without passing it to Spring` (NginxInternalPathTest.java:25-34, 설정 텍스트에서 블록 내용이 정확히 `return 404;`인지 확인)<br>수동 기록: issue-10.md:177 (GET·POST, `/api/../internal`, `/api/%2e%2e/internal` 4개 모두 404, `upstream=-`, api 로그 0줄) | infra/nginx/nginx.conf:41-43 | 자동 테스트는 nginx를 실제로 띄우지 않는 설정 확인입니다. 실제 동작 근거는 수동 기록이 대신합니다. 참고로 슬래시 없는 `/internal`은 `location /`의 SPA로 가서 200 index.html이 나옵니다. 이 경우도 Spring에는 닿지 않으므로 AC 위반은 아닙니다. |
+
+#### 변이 결과 (스크래치 복사본에서 3번 실행)
+
+스크래치 복사본 위치는 `C:\Users\USER\AppData\Local\Temp\claude\1cbb40fc7d76b7b0\d434e676-b23e-4cde-8b32-82990af677dd\scratchpad\mut`이고 `git archive HEAD`로 만들었습니다.
+
+1. **MediaMtxClient.java:27의 `"publish".equals(state) &&` 제거**: 잡힘. `MediaMtxClientTest` 3개 중 `should kick nothing when no connection publishes to that path`가 실패했습니다.
+2. **PublishAuthService.java:13의 `\d{1,18}`을 `\d{1,19}`로 변경**: **살아남음.** `PublishAuthServiceTest` 19개가 모두 통과했습니다(XML 기준 tests=19, failures=0). 이 변이가 AC 2를 ⚠️로 판정한 근거입니다.
+3. **StreamKeyService.issue()에 `@Transactional` 추가**: 잡힘. `StreamKeyReissueIntegrationTest` 2개 중 커밋 순서 테스트가 실패했습니다(기대한 해시는 새 키의 SHA-256, 실제로 보인 것은 이전 해시).
+
+#### 갭을 메울 시나리오 제안 (AC 2)
+
+- [ ] [경계] `PublishAuthService.canPublish` — should pass an 18-digit channel id in the path to the key check when the path is live followed by the id
+- [ ] [경계] `PublishAuthService.canPublish` — should deny without calling the key check when the channel id in the path has 19 digits
+- [ ] [경계] `PublishAuthIntegration` — should return 401 when the path is live followed by a 19-digit number larger than the long range
+
+#### 가짜 테스트
+
+없습니다. 모든 테스트에 단언이 있고, 예외 단언은 구체적인 타입(`HttpServerErrorException`, `BusinessException` + 에러 코드)으로 합니다. 비동기 호출은 쓰이지 않습니다. 약한 점은 두 가지입니다.
+
+- PublishAuthIntegrationTest의 401 테스트 4개는 따로 보면, `/internal/**` permitAll이 빠져서 Spring Security가 401을 주는 경우에도 통과할 수 있습니다. 같은 클래스의 200 테스트(:85-91)가 그 경우를 잡으므로 짝으로 보면 문제는 없습니다.
+- `PublishAuthServiceTest`의 허용 테스트는 목(mock)의 true를 돌려받지만, 목이 `(7L, KEY)`에만 true를 주므로 경로·키 파싱 결과를 실제로 검사합니다. 목 반환값을 그대로 단언하는 경우가 아닙니다.
+
+#### 실행한 명령 목록
+
+1. `cat .claude/harness.json && gh issue view 10 && git diff --stat origin/main...HEAD`: 설정 확인(scenariosDir 등), AC 7개 확인, 21개 파일 변경 확인.
+2. `cat docs/result/scenarios/issue-10.md`: 시나리오 27개, AC 대조표, 수동 확인 기록 확인.
+3. `git diff origin/main...HEAD -- backend/src/main compose.yml infra backend/src/test/resources`: 구현과 설정 diff 확인.
+4. `cat infra/nginx/nginx.conf` 및 broadcast 단위 테스트 3개 `cat -n`: nginx 설정과 단위 테스트 본문 확인.
+5. 통합 테스트 2개 `cat -n`: 통합 테스트 본문 확인.
+6. `cat -n StreamKeyServiceTest.java` 및 OriginValidationFilterTest diff: 테스트 본문 확인.
+7. PRD와 스파이크에서 관련 결정 grep: 재발급 순서(I·J), overridePublisher, `/internal/` 결정 확인.
+8. (저장소) `./gradlew test`에 7개 클래스를 `--tests`로 지정해 실행: BUILD SUCCESSFUL(54초).
+9. `git archive HEAD | tar -x -C <scratch>/mut`: 스크래치 복사본 생성.
+10. 변이 1 sed 적용 후 `./gradlew test --tests "MediaMtxClientTest"`(스크래치): 3개 중 1개 실패, 잡힘.
+11. 변이 1 되돌림(`git show HEAD:...`), 변이 2 적용 후 `--tests "PublishAuthServiceTest"`: BUILD SUCCESSFUL, 살아남음.
+12. 테스트 결과 XML grep(스크래치): `PublishAuthService.canPublish tests="19" failures="0"`로 테스트가 실제로 돌았음을 확인.
+13. 기준선 테스트 결과 XML grep(저장소): MediaMtxClient 3, nginx 1, PublishAuthIntegration 5, PublishAuthService 19, StreamKeyReissueIntegration 2, StreamKeyService find 3 / issue 8 / matches 4, OriginValidationFilter 8로 모두 failures=0, errors=0.
+14. 변이 2 되돌림, 변이 3 적용 후 되돌린 파일 두 개가 저장소와 같은지 `diff -q`: 차이 없음.
+15. `./gradlew test --tests "StreamKeyReissueIntegrationTest"`(스크래치): 2개 중 1개 실패, 잡힘(1분 7초).
+16. 실패 메시지 grep 및 `git -C C:/live-streaming-project status --short`: 기대값과 다른 해시가 보였고, status 출력은 비어 있음.
+17. GlobalExceptionHandler의 `@ExceptionHandler` grep: BusinessException, RetryLaterException, MethodArgumentNotValid, HttpMessageNotReadable만 있고 NumberFormatException 처리기는 없음.
+18. `git diff --stat 4a9614a HEAD` 및 줄 번호 grep: 수동 기록 이후 바뀐 것은 issue-10.md 18줄뿐임을 확인하고, 각 근거의 줄 번호를 수집.
+
+#### 관련 파일
+
+- C:\live-streaming-project\backend\src\main\java\com\livestream\broadcast\PublishAuthService.java (13행이 변이가 살아남은 곳)
+- C:\live-streaming-project\backend\src\test\java\com\livestream\broadcast\PublishAuthServiceTest.java (96-100행은 20자리 경로만 확인)
+- C:\live-streaming-project\docs\result\scenarios\issue-10.md (169-177행이 AC 5·6·7의 수동 기록)
+
+구현과 테스트는 고치지 않았습니다. 스크래치 복사본은 임시 폴더에 그대로 남아 있습니다.
+
+### 구현자 이견
+
+없음. 검증자가 짚은 사실(변이 2 생존, 19자리에서 `Long.parseLong`이 `NumberFormatException`)은 코드와 맞다.
+
+### 갭 처리
+
+사전 승인에 따라 메움. 검증자가 제안한 AC 2 시나리오 3개를 문구 그대로 `## 테스트 시나리오`의 경계 절과 AC 대조표 2행에 더하고 Red → Green으로 메웠다.
+
+새 테스트 3개는 구현이 이미 18자리까지만 받아서 바로 통과했다(커밋 36f9884). 그래서 저장소에 변이를 넣어 실패를 확인하고 `git checkout --`으로 되돌렸다.
+- 경로 정규식을 `{1,19}`로 → `PublishAuthServiceTest`·`PublishAuthIntegrationTest` 27개 중 19자리 단위 테스트와 19자리 통합 테스트 2개만 실패.
+- 경로 정규식을 `{1,17}`로 → `PublishAuthServiceTest` 21개 중 18자리 테스트 1개만 실패.
