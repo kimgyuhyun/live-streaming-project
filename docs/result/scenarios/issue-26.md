@@ -141,6 +141,22 @@ AC 4·5. Green 뒤에 확인하고 결과를 아래 "확인 결과"와 PR에 남
 - AC 4: 내부망의 다른 컨테이너(nginx)에서 자격 없이 `wget http://mediamtx:9997/v3/rtmpconns/list` → 401. 틀린 비밀번호도 401. 덧붙여 Spring 자격으로는 200
 - AC 5: 송출 중 키 재발급 → 송출이 끊긴다. 대조가 돈다(api 로그에 대조 실패 경고가 없고, 송출 중 방송이 진행 중으로 남는다)
 
+**확인 결과 (2026-11-23, Green 뒤, HEAD a16804c):** oracle·redis는 이미 떠 있던 것을 그대로 두고, 멈춰 있던 api-1·api-2·mediamtx·nginx만 `docker compose up --build -d`로 띄웠다. 내부 비밀번호는 셸 환경변수로 임의의 난수(32자)를 넣었다(`.env`는 고치지 않았다). 마이그레이션은 V1~V6이 이미 적용돼 있어 새로 적용된 것이 없다. #10 수동 확인과 같이 테스트 계정 둘을 API로 가입시키고 하나만 SQL로 `OPERATOR`로 바꿔(로컬 개발 DB) 신청 → 승인 → 키 발급으로 채널 61과 키(43자)를 받았다. 키·비밀번호는 스크래치 파일에만 두고 문서에 옮기지 않았다.
+
+| AC | 한 것 | 관찰 |
+| --- | --- | --- |
+| 4 | nginx 컨테이너(같은 내부망)에서 `wget http://mediamtx:9997/v3/rtmpconns/list` 자격 없이 | `HTTP/1.1 401 Unauthorized` ✅ |
+| 4 | 같은 요청에 `spring:wrong-password` | 401 ✅ |
+| 4 | 덧붙여: 자격 없이 `/v3/paths/list`, `POST /v3/rtmpconns/kick/x` | 둘 다 401 ✅ |
+| 4 | 덧붙여: Spring과 같은 자격(`spring:{내부 비밀번호}`) | 200 — 자격이 맞으면 열린다 ✅ |
+| 5 | 맞는 키로 ffmpeg 송출 | MediaMTX `is publishing to path 'live/61'`, HLS 200, 채널 `live: true` ✅ |
+| 5 | 1분 대조: 송출 중에 DB의 진행 중 방송에 종료 시각을 직접 찍어(훅 없이 어긋나게) 둠 | 06:52:00 `live: false` → 13초 뒤 `live: true`. 대조가 인증된 API(`/v3/paths/list`)로 송출 중인 경로를 읽어 방송을 다시 시작했다 ✅ |
+| 5 | 송출 중 `POST /api/studio/stream-key`(재발급) | 200, 새 키 ≠ 이전 키. 같은 초에 MediaMTX `[conn …:49472] closed: terminated`, ffmpeg 종료, HLS 404 ✅ |
+| 5 | 이전 키로 다시 송출 | ffmpeg `Server error: authentication failed`, MediaMTX `failed to authenticate: server replied with code 401`, 채널 `live: false` ✅ |
+| 5 | api-1·api-2 로그 | `방송 상태 대조 실패` 0줄, `송출 연결을 끊지 못했다` 0줄 ✅ |
+| 6 | api-1·api-2·mediamtx·nginx 로그 전체에서 내부 비밀번호 문자열 | 0줄. `key=` 0줄, `authorization` 0줄 ✅ |
+| 덧붙여 | `docker compose port mediamtx 9997` | `no port 9997/tcp` — 호스트에 열려 있지 않다 ✅ |
+
 **Red 기록 (2026-11-23):** 시나리오 18개(매개변수 포함 테스트 27건)가 모두 실패했다 — `canCallApi` stub의 `UnsupportedOperationException`(단위 15건, api 확인 통합 6건), 단언 실패(toString 1, Basic 헤더 2, 설정 1, 재발급·대조 통합 2). 컨트롤러는 Red에서 `action: api`를 stub으로 넘기게만 바꿨다 — 그러지 않으면 api 확인 401 테스트가 기존 동작(`canPublish`가 api를 거부)으로 통과해 버린다. 전체 실행 때 `NginxChannelCacheTest`의 1초 만료 테스트 1건이 시각 경계로 한 번 실패했고, 단독 재실행 3번 중 2번(--rerun-tasks) 통과, main에서도 통과 — 이 이슈와 무관한 시각 의존 테스트다.
 
 **Green 기록:** 전체 백엔드 377건·프론트 28건 통과. 커버리지 명령은 설정에 없다(측정하지 않음).
