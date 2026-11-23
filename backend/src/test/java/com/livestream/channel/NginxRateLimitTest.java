@@ -7,6 +7,9 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -194,12 +197,14 @@ class NginxRateLimitTest {
         @Test
         @DisplayName("should count requests by the X-Forwarded-For address when they come from the edge range")
         void countsByForwardedForFromEdge() throws Exception {
-            // 같은 edge에서 온 사용자 A가 한도를 넘겨도
-            burst(edgeClient, "198.51.100.2", "/api/channels/0021", 60);
+            // 같은 edge에서 온 사용자 A가 한도를 넘긴 바로 다음에 사용자 B가 보낸다.
+            // curl 한 번으로 잇는다 — exec를 따로 띄우면 그 사이에 토큰이 다시 차 A와 B를 함께 세도 통과한다
+            List<String> forwardedFors = new ArrayList<>(Collections.nCopies(60, "198.51.100.2"));
+            forwardedFors.add("198.51.100.3");
 
-            List<Integer> statuses = burst(edgeClient, "198.51.100.3", "/api/channels/0021", 1);
+            List<Integer> statuses = sendAll(edgeClient, "GET", "/api/channels/0021", forwardedFors);
 
-            assertThat(statuses).containsOnly(200);
+            assertThat(statuses.getLast()).isEqualTo(200);
         }
 
         @Test
@@ -255,12 +260,24 @@ class NginxRateLimitTest {
         @Test
         @DisplayName("should keep answering another IP with 200 when one IP goes over the limit")
         void keepsOtherIpsAnswered() throws Exception {
-            // outside 망의 클라이언트(자기 주소로 센다)가 한도를 넘겨도
-            sendAll(outsideClient, "GET", "/api/channels/0021", Collections.nCopies(60, null));
+            // outside 망의 클라이언트(자기 주소로 센다)가 한도를 넘겨 계속 보내는 동안 다른 IP가 보낸다.
+            // 다 보낸 뒤에 보내면 그 사이에 토큰이 다시 차 두 IP를 함께 세도 통과한다
+            ExecutorService pool = Executors.newSingleThreadExecutor();
+            try {
+                // 429는 금방 나와 건수로 보내면 다른 IP가 보내기 전에 끝난다. 3초 동안 계속 보낸다
+                String url = ENTRY + "/api/channels/0021";
+                String flooding = "end=$(($(date +%s) + 3)); while [ $(date +%s) -lt $end ]; do "
+                        + "curl -s -o /dev/null " + url + " -o /dev/null " + url + " -o /dev/null " + url + "; done";
+                Future<ExecResult> flood = pool.submit(() -> outsideClient.execInContainer("sh", "-c", flooding));
+                Thread.sleep(1000);
 
-            List<Integer> statuses = burst(edgeClient, "198.51.100.10", "/api/channels/0021", 1);
+                List<Integer> statuses = burst(edgeClient, "198.51.100.10", "/api/channels/0021", 1);
+                flood.get();
 
-            assertThat(statuses).containsOnly(200);
+                assertThat(statuses).containsOnly(200);
+            } finally {
+                pool.shutdown();
+            }
         }
 
         @Test

@@ -191,3 +191,9 @@ AC에 없는데 둔 것 (이슈의 "정할 것"에서 온다):
 
 - `rate=5r/s`가 사는 것은 받아들인다. 5초에 50건이면 버스트 40 + 5초 동안 다시 차는 25건으로 모두 받는다. 이 테스트가 지키는 것은 AC 2("NAT 뒤 여럿의 폴링은 정상")이지 정확한 초당 한도가 아니다.
 - 다른 IP 테스트는 위 본문 테스트와 같은 구조(한도를 넘긴 뒤 `docker exec`를 새로 띄워 다른 IP로 한 건)라 그 사이에 토큰이 차 키가 상수여도 통과한다. `X-Forwarded-For`별로 센다 테스트도 같은 구조다(변이 3에서는 다른 테스트들이 같은 버킷을 비워 둔 덕에 실패했다).
+
+### 약한 테스트 두 개를 고쳤다 (변이 확인 뒤, 사용자에게 묻고 추천안대로)
+
+- `should count requests by the X-Forwarded-For address when they come from the edge range` — 사용자 A 60건과 사용자 B 1건을 curl 한 번으로 잇고 마지막 응답을 본다. 키 상수·키 `$realip_remote_addr` 변이 모두에서 실패
+- `should keep answering another IP with 200 when one IP goes over the limit` — outside 클라이언트가 3초 동안 계속 보내는 사이(1초 뒤)에 edge에서 다른 IP로 한 건. 처음에는 1,000건으로 보냈는데 429가 빨라 다른 IP가 보내기 전에 끝나 키 상수 변이가 살았다. 시간으로 바꾼 뒤 키 상수 변이에서 실패
+- 문장·단언의 뜻은 그대로. 고친 뒤 Green 설정에서 두 번 통과, 전체 백엔드 401건 통과, `check-scenarios` 불일치 0
