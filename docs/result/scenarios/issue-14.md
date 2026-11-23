@@ -186,6 +186,23 @@ AC 1·2·5·6. Green 뒤에 확인하고 결과를 아래 "확인 결과"와 PR�
 - 기존 코드 변경: `ChannelResponse`에 필드가 늘어 기존 테스트의 생성자 호출 7곳에 `false`를 더했고, `StreamerApplicationReviewIntegrationTest`의 익명 `ChannelMapper`에 `markDemo` 위임을 더했다(컴파일).
 - 통합 테스트 파일(`ChannelIntegrationTest`)은 컨테이너 기동 때문에 다 쓰고 파일 단위로 한 번 돌렸다. 나머지는 파일마다 돌렸다.
 
+**Green 기록 (2026-11-23):** 백엔드 전체(`./gradlew test`)·프론트 Vitest 31건·`tsc -b`·lint 통과. 커버리지 명령은 설정에 없다(측정하지 않음). 백엔드는 조각(조회 → `markDemo`+SQL+V7 → 컨트롤러)마다 해당 테스트 파일을 돌리고, 백엔드 구현이 끝난 뒤 전체를 한 번 돌렸다(전체 스위트 2분 반).
+
+**시그니처에서 바뀐 것 (Green 중):**
+- 영상에 채널 번호를 넣지 않는다. MediaMTX 이미지에 폰트가 없어 ffmpeg `drawtext`를 쓸 수 없다. 대신 `testsrc` 패턴이 폰트 없이 흐르는 초를 그린다. 채널 이름은 채널 페이지에 있다.
+- 영상 생성은 `-threads 1`. 기본(코어 수만큼 스레드)이면 컨테이너 메모리 제한 128MB를 넘어 ffmpeg가 죽었다(첫 확인에서 발견). 스레드 하나면 128MB 안에서 30초 영상을 18초에 만든다(710KB). 죽은 임시 파일이 남으면 다음 기동에서 ffmpeg가 덮어쓸지 묻고 끝나 버려서 `-y`를 더했다.
+
+**확인 결과 (2026-11-23, 로컬 compose, `feat` 커밋 + 시뮬레이터 수정):** 개발 DB(데모 계정 없음)에 V7이 적용됐고, `.env`에 운영자·데모 비밀번호를 난수로 넣어 운영자 계정을 앱 시작 때 만들었다. 볼륨을 지워야 해서 빈 DB로는 하지 않았다 — 데모 계정이 없는 상태라 스크립트는 가입부터 모든 단계를 밟았다. 키·비밀번호는 적지 않는다.
+
+| AC | 한 것 | 관찰 |
+| --- | --- | --- |
+| 1 | `node --env-file=.env demo/setup.mjs` | 종료 코드 0. `demo1~3@demo.local` 역할 `STREAMER`, 채널 62·63·64(`demo = 1`, 키 있음). `demo/streams.txt` 3줄(키 43자), `git check-ignore` 통과, `git status` 깨끗 ✅ |
+| 2 | `docker compose --profile demo up -d demo` | 영상 생성 뒤 3개 채널 모두 `live: true`, HLS 재생 목록 응답. 브라우저에서 채널 62·63·64 영상이 재생 중(`paused: false`, `readyState: 4`) ✅ |
+| 3 | 브라우저로 채널 62·63·64 | "데모 채널" 표시 ✅ |
+| 5 | 시뮬레이터가 도는 중에 준비 스크립트를 다시 실행 | 종료 코드 0, `streams.txt` 바뀜. MediaMTX가 세 송출을 `closed: terminated`로 끊고, 시뮬레이터가 4초 안에 새 키로 다시 송출(`is publishing to path 'live/6x'`). 3개 모두 다시 `live: true`, 채널마다 방송 기록 2개(진행 중 1). 시뮬레이터 컨테이너 재시작 0회 ✅ |
+| 6 | README "데모 방송" 절 | ffmpeg `testsrc`로 직접 만든 영상, 외부 영상 없음 ✅ |
+| 키 노출 | demo·mediamtx·api-1·api-2·nginx 로그 전체에서 지금 키 3개 검색 | 0건. `key=` 문자열 자체가 0건(시뮬레이터가 가린다). 스크립트 출력은 채널 번호뿐 ✅ |
+
 ---
 
 ## AC 대조
