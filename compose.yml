@@ -17,6 +17,9 @@ x-api: &api
     APP_OBS_SERVER: ${APP_OBS_SERVER:-rtmp://localhost/live}
     # 재발급 때 송출 연결을 끊는 MediaMTX API. 내부망에서만 열린다(mediamtx에 9997 포트를 열지 않는다)
     MEDIAMTX_API_URL: http://mediamtx:9997
+    # MediaMTX API를 부를 때 싣는 내부 비밀번호. MediaMTX가 API 호출마다 키 확인 엔드포인트로 되물어 Spring이 맞춰 본다.
+    # 같은 내부망의 다른 컨테이너는 이 값을 모르므로 API를 부를 수 없다(#26). mediamtx에는 넣지 않는다
+    MEDIAMTX_API_PASSWORD: ${MEDIAMTX_API_PASSWORD:?.env에 MEDIAMTX_API_PASSWORD가 필요합니다}
     JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=60
   # MediaMTX가 키 확인을 보낼 내부 이름. api-1·api-2가 같은 이름을 나눠 가져 한 대가 죽어도 다른 대가 받는다(PRD channel)
   networks:

@@ -6,7 +6,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-// MediaMTX API(1.21, 내부 :9997). 호스트 포트로 열지 않는다 — 연결 목록의 query에 키가 그대로 있다(PRD channel)
+// MediaMTX API(1.21, 내부 :9997). 호스트 포트로 열지 않는다 — 연결 목록의 query에 키가 그대로 있다(PRD channel).
+// 모든 요청에 내부 비밀번호를 Basic 인증으로 싣는다. MediaMTX가 그 값을 키 확인 엔드포인트(action: api)로 물어본다(#26)
 @Component
 class MediaMtxClient implements PublisherDisconnector {
 
@@ -14,7 +15,9 @@ class MediaMtxClient implements PublisherDisconnector {
 
     MediaMtxClient(RestClient.Builder builder, @Value("${app.mediamtx.api-url}") String apiUrl,
                    @Value("${app.mediamtx.api-password:}") String apiPassword) {
-        this.restClient = builder.baseUrl(apiUrl).build();
+        this.restClient = builder.baseUrl(apiUrl)
+                .defaultHeaders(headers -> headers.setBasicAuth(MediaMtxApiAuthService.INTERNAL_USER, apiPassword))
+                .build();
     }
 
     // live/{채널ID}로 송출 중인 RTMP 연결을 끊는다(스파이크 1절 E·F). 없으면 아무것도 하지 않는다.

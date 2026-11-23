@@ -86,10 +86,10 @@
 | 결정 | 내용 | 근거 |
 | --- | --- | --- |
 | 송출 주소 | `rtmp://{서버}/live/{채널ID}?key={스트림키}`. OBS: 서버 `rtmp://{서버}/live`, 스트림 키 `{채널ID}?key={스트림키}` | 로컬 검증 A~C, OBS로 확인. 키가 경로가 아니라 query라 시청 주소에 노출되지 않는다 |
-| 키 확인 연동 | MediaMTX가 송출 시작 때 Spring에 HTTP로 묻는다(`authMethod: http`). Spring은 `action: publish`만 판단하고, 시청(`read`)·API 호출은 MediaMTX 설정에서 인증 대상에서 뺀다 | 로컬 검증 C·G |
+| 키 확인 연동 | MediaMTX가 송출 시작·API 호출 때 Spring에 HTTP로 묻는다(`authMethod: http`). Spring은 `action: publish`(스트림 키)와 `action: api`(내부 비밀번호)만 판단하고, 시청(`read`)은 MediaMTX 설정에서 인증 대상에서 뺀다 | 로컬 검증 C·G. API 호출을 인증에 넣은 것은 #26(#10 보안 점검 🟡 1) |
 | 키 확인이 응답하지 않으면 | 송출을 거부한다. 진행 중인 방송은 영향 없다 | 로컬 검증 H |
 | 재발급 순서 | DB에서 이전 키를 바꾼 **다음** MediaMTX API로 그 채널의 송출 연결을 끊는다 | 로컬 검증 I·J — 반대로 하면 OBS가 2초 만에 이전 키로 다시 붙는다 |
-| MediaMTX API | Spring만 내부망으로 부른다. 호스트 포트로 열지 않는다 | 연결 목록 응답의 `query`에 키가 그대로 보인다 |
+| MediaMTX API | Spring만 내부망으로 부른다. 호스트 포트로 열지 않는다. Spring은 환경변수의 내부 비밀번호를 Basic 인증(사용자 `spring`)으로 싣고, MediaMTX가 그 값을 키 확인 엔드포인트로 물어 Spring이 맞춰 본다 | 연결 목록 응답의 `query`에 키가 그대로 보인다. 같은 내부망의 다른 컨테이너(nginx 등)가 뚫려도 키를 읽거나 송출을 끊지 못하게(#26). 네트워크 분리는 nginx가 HLS 때문에 mediamtx와 같은 망에 있어야 해서 쓸 수 없다 |
 | 화질 | 원본 하나. 720p와 자동 전환은 하지 않는다(720p는 서버 측정 뒤 결정, 확정 사양 미해결 1) | 로컬 검증 U~Z |
 
 ### 작은 결정 (비교 없이 정함)

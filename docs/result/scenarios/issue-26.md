@@ -101,7 +101,7 @@ class PublishAuthController {
 
 - MediaMTX `authInternalUsers`(MediaMTX 설정 파일에 비밀번호를 두는 방식) — 결정된 방식(Spring 판단)과 다르다.
 - 네트워크 분리 — 위 결정에서 뺐다.
-- `MediaMtxAuthRequest.toString`에서 `query`(스트림 키) 가리기 — AC는 내부 비밀번호만 말한다. 보안 점검에 적는다.
+- (Green에서 바꿈) `MediaMtxAuthRequest.toString`은 `password`와 함께 `query`(스트림 키)도 싣지 않는다. 확정 사양 "스트림 키는 로그에 나오지 않는다"와 같은 이유이고 같은 줄이라 함께 뺐다. 테스트는 AC 6의 비밀번호만 박는다.
 
 ---
 
@@ -109,30 +109,30 @@ class PublishAuthController {
 
 ### 정상
 
-- [ ] [정상] `MediaMtxApiAuthService.canCallApi` — should allow when the action is api and the user and password are the internal ones
-- [ ] [정상] `PublishAuthIntegration` — should return 200 for an api check without Origin or login when the user and password are the internal ones
-- [ ] [정상] `MediaMtxClient.disconnect` — should send the internal user and password as basic auth when listing and kicking connections
-- [ ] [정상] `MediaMtxClient.findAvailablePaths` — should send the internal user and password as basic auth when listing paths
-- [ ] [정상] `StreamKeyReissueIntegration` — should send the internal password as basic auth to the MediaMTX API when a streamer reissues the key
-- [ ] [정상] `BroadcastIntegration` — should send the internal password as basic auth to the MediaMTX API when reconciling
-- [ ] [정상] `mediamtx.yml` — should not exclude the api action from the http auth
-- [ ] [정상] `PublishAuthIntegration` — should answer an api check with an empty body whether it is allowed or not
+- [x] [정상] `MediaMtxApiAuthService.canCallApi` — should allow when the action is api and the user and password are the internal ones
+- [x] [정상] `PublishAuthIntegration` — should return 200 for an api check without Origin or login when the user and password are the internal ones
+- [x] [정상] `MediaMtxClient.disconnect` — should send the internal user and password as basic auth when listing and kicking connections
+- [x] [정상] `MediaMtxClient.findAvailablePaths` — should send the internal user and password as basic auth when listing paths
+- [x] [정상] `StreamKeyReissueIntegration` — should send the internal password as basic auth to the MediaMTX API when a streamer reissues the key
+- [x] [정상] `BroadcastIntegration` — should send the internal password as basic auth to the MediaMTX API when reconciling
+- [x] [정상] `mediamtx.yml` — should not exclude the api action from the http auth
+- [x] [정상] `PublishAuthIntegration` — should answer an api check with an empty body whether it is allowed or not
 
 ### 경계
 
-- [ ] [경계] `MediaMtxApiAuthService.canCallApi` — should deny when the password is the internal password followed by one more character
-- [ ] [경계] `MediaMtxApiAuthService.canCallApi` — should deny even an empty password when no internal password is set
+- [x] [경계] `MediaMtxApiAuthService.canCallApi` — should deny when the password is the internal password followed by one more character
+- [x] [경계] `MediaMtxApiAuthService.canCallApi` — should deny even an empty password when no internal password is set
 
 ### 예외
 
-- [ ] [예외] `MediaMtxApiAuthService.canCallApi` — should deny when the password differs from the internal password
-- [ ] [예외] `MediaMtxApiAuthService.canCallApi` — should deny when the password is empty
-- [ ] [예외] `MediaMtxApiAuthService.canCallApi` — should deny when the user is not the internal user
-- [ ] [예외] `MediaMtxApiAuthService.canCallApi` — should deny a check whose action is not api even with the internal user and password
-- [ ] [예외] `PublishAuthIntegration` — should return 401 for an api check with a wrong password
-- [ ] [예외] `PublishAuthIntegration` — should return 401 for an api check without a user or password
-- [ ] [예외] `MediaMtxAuthRequest.toString` — should not include the password when the request is turned into text
-- [ ] [예외] `PublishAuthIntegration` — should not write the internal password to the log while handling an api check
+- [x] [예외] `MediaMtxApiAuthService.canCallApi` — should deny when the password differs from the internal password
+- [x] [예외] `MediaMtxApiAuthService.canCallApi` — should deny when the password is empty
+- [x] [예외] `MediaMtxApiAuthService.canCallApi` — should deny when the user is not the internal user
+- [x] [예외] `MediaMtxApiAuthService.canCallApi` — should deny a check whose action is not api even with the internal user and password
+- [x] [예외] `PublishAuthIntegration` — should return 401 for an api check with a wrong password
+- [x] [예외] `PublishAuthIntegration` — should return 401 for an api check without a user or password
+- [x] [예외] `MediaMtxAuthRequest.toString` — should not include the password when the request is turned into text
+- [x] [예외] `PublishAuthIntegration` — should not write the internal password to the log while handling an api check
 
 ### 수동 확인 (로컬 compose — 시나리오 수에 넣지 않는다)
 
@@ -140,6 +140,10 @@ AC 4·5. Green 뒤에 확인하고 결과를 아래 "확인 결과"와 PR에 남
 
 - AC 4: 내부망의 다른 컨테이너(nginx)에서 자격 없이 `wget http://mediamtx:9997/v3/rtmpconns/list` → 401. 틀린 비밀번호도 401. 덧붙여 Spring 자격으로는 200
 - AC 5: 송출 중 키 재발급 → 송출이 끊긴다. 대조가 돈다(api 로그에 대조 실패 경고가 없고, 송출 중 방송이 진행 중으로 남는다)
+
+**Red 기록 (2026-11-23):** 시나리오 18개(매개변수 포함 테스트 27건)가 모두 실패했다 — `canCallApi` stub의 `UnsupportedOperationException`(단위 15건, api 확인 통합 6건), 단언 실패(toString 1, Basic 헤더 2, 설정 1, 재발급·대조 통합 2). 컨트롤러는 Red에서 `action: api`를 stub으로 넘기게만 바꿨다 — 그러지 않으면 api 확인 401 테스트가 기존 동작(`canPublish`가 api를 거부)으로 통과해 버린다. 전체 실행 때 `NginxChannelCacheTest`의 1초 만료 테스트 1건이 시각 경계로 한 번 실패했고, 단독 재실행 3번 중 2번(--rerun-tasks) 통과, main에서도 통과 — 이 이슈와 무관한 시각 의존 테스트다.
+
+**Green 기록:** 전체 백엔드 377건·프론트 28건 통과. 커버리지 명령은 설정에 없다(측정하지 않음).
 
 ---
 
