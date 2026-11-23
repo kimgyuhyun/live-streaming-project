@@ -133,8 +133,8 @@ server {
 
 | AC | 커버하는 시나리오 |
 | --- | --- |
-| 1. 한도를 넘으면 429, Spring에는 가지 않는다 | `should answer 429 when one IP sends 60 requests at once to the public API`<br>`should not pass rejected requests to Spring when one IP goes over the limit`<br>`should reject requests for a cached channel with 429 when one IP goes over the limit` |
-| 2. 한도 안의 요청(한 IP 뒤 여럿의 5초 폴링 포함)은 정상 | `should answer every request with 200 when 50 viewers behind one IP poll at 10 requests per second for 5 seconds`<br>`should answer every request with 200 when one IP sends 40 requests at once` |
+| 1. 한도를 넘으면 429, Spring에는 가지 않는다 | `should answer 429 when one IP sends 60 requests at once to the public API`<br>`should not pass rejected requests to Spring when one IP goes over the limit`<br>`should reject requests for a cached channel with 429 when one IP goes over the limit`<br>(AC 검증 갭) `should answer at most 45 of 60 requests with 200 when one IP sends them at once`<br>`should answer at most 45 of 60 requests for a cached channel with 200 when one IP sends them at once`<br>`should reject requests with 429 when one IP that used its burst keeps sending 20 requests per second for 3 seconds`<br>`should reject requests with 429 when one IP that used its burst keeps sending 13 requests per second for 3 seconds` |
+| 2. 한도 안의 요청(한 IP 뒤 여럿의 5초 폴링 포함)은 정상 | `should answer every request with 200 when 50 viewers behind one IP poll at 10 requests per second for 5 seconds`<br>`should answer every request with 200 when one IP sends 40 requests at once`<br>(AC 검증 갭) `should answer every request with 200 when one IP that used its burst keeps polling at 8 requests per second for 5 seconds`<br>`should answer every request for a cached channel with 200 when one IP sends 40 requests at once` |
 | 3. 다른 IP는 영향받지 않는다 | `should keep answering another IP with 200 when one IP goes over the limit` |
 | 4. edge 대역의 `X-Forwarded-For`로 세고, 그 밖의 것은 믿지 않는다 | `should count requests by the X-Forwarded-For address when they come from the edge range`<br>`should ignore X-Forwarded-For sent from outside the edge range` |
 | 5. 프론트가 429 본문(`code`·`message`)을 읽어 문구를 보인다 | `should answer the rate limit 429 with a JSON body whose code is RATE_LIMITED`<br>`ChannelPage — should show the message from the error body when the channel request is rejected with 429` |
@@ -144,7 +144,7 @@ AC에 없는데 둔 것 (이슈의 "정할 것"에서 온다):
 - `should not limit HLS requests when one IP sends more than the limit` — 셀 범위 결정(`/hls/`는 세지 않는다)
 - `should pass the login block 429 from Spring through unchanged` — 로그인 시도 제한과 겹치지 않게 하는 결정
 
-**커버리지:** AC 6개 / 시나리오 12개(+ 수동 측정) / 미커버 0개 (AC 6은 수동)
+**커버리지:** AC 6개 / 시나리오 18개(처음 12 + AC 검증 갭 6, + 수동 측정) / 미커버 0개 (AC 6은 수동)
 
 ---
 
@@ -558,3 +558,154 @@ I did not change any code or tests and did not re-run k6. nginx.conf was restore
 - 전체: 백엔드 407건 통과(이 이슈 테스트 17 + 기존 390), `check-scenarios` 시나리오 18 · 더한 테스트 18 · 불일치 0.
 - **남기는 것 — 정확히 초당 10건(P1 `rate=9r/s`)은 자동 테스트로 묶지 않는다.** 검증자 계산대로 rate 9에서 초당 10건 폴링은 약 40초 뒤에야 막히므로, 묶으려면 테스트가 수십 초를 돌거나 9~10 사이 속도로 보내야 해 흔들린다. 측정(`docs/perf/issue-31/after/judge-summary.json`: 시청자 IP 20개가 각 초당 10건으로 90초, 429 0건)이 근거다. 검증자도 막는 사유가 아니라 측정이 받치는 참고로 봤다.
 - 검증자가 든 나머지 약한 단언(capsBurst의 `hasSize`·하한, `pacedAfterBurst` 버스트 전제, `isLessThan(60)`)은 고치지 않았다. 상한·하한·rate를 위 테스트들이 각각 묶고, 변이 확인에서 버스트가 실제로 소진되는 것(M3)이 드러났다.
+
+### 3차 검증 (AC 1·2)
+
+`harness:ac-verifier` 출력 원문(2026-11-24, HEAD b6e73de).
+
+# 이슈 #31 AC 1·2 3차 검증 (feat/channel/issue-31, HEAD b6e73de)
+
+**AC 1·2 모두 ✅ 충족이다.** 2차 검증이 남긴 세 빈틈(P3, P5, P2)은 새로 더한 세 테스트가 각각 실제로 잡는다. nginx.conf를 바꿔 돌려서 확인했다. 다만 시간으로 재는 테스트라 rate가 **9~12r/s 사이**로 바뀐 것은 자동 테스트가 잡지 못한다. 측정 전에 정한 값 10r/s 바로 주변이다. 아래쪽(9r/s)은 저장된 k6 결과가 받치지만, 위쪽(11~12r/s)은 테스트도 측정도 받치지 않는다. 판정을 낮출 사유는 아니라고 봤다. 근거는 아래에 적었다.
+
+검증한 파일:
+- `C:\live-streaming-project\backend\src\test\java\com\livestream\channel\NginxRateLimitTest.java`
+- `C:\live-streaming-project\infra\nginx\nginx.conf`
+- `C:\live-streaming-project\docs\result\scenarios\issue-31.md`
+
+코드·테스트·문서는 고치지 않았고 k6도 다시 돌리지 않았다. nginx.conf는 변이마다 `git checkout`으로 되돌렸고, 마지막 `git status`는 "nothing to commit, working tree clean"이었다.
+
+## 기준 (이슈 #31 코멘트 "측정 전에 정한 값")
+- 한도는 IP당 `rate=10r/s`, `burst=40 nodelay`다.
+- `/api/` 전체를 세고, 캐시 HIT도 센다.
+- 정상 시청자는 IP 하나 뒤 50명이 각자 5초에 한 번 묻는다. 합치면 IP당 초당 10건이다.
+
+## 구현 (nginx.conf, 읽어서 확인)
+- :17 `limit_req_zone $binary_remote_addr zone=api_per_ip:10m rate=10r/s;`
+- :18 `limit_req_status 429;`
+- :66 `/api/` location에 `limit_req zone=api_per_ip burst=40 nodelay;`
+- :79 캐시 location(`~ ^/api/channels/[1-9][0-9]*$`)에 같은 한 줄
+- :48–52 429 응답 본문 `RATE_LIMITED`
+- `git log -- infra/nginx/nginx.conf`로 보면 마지막 변경은 084ac23이다. 측정 기록 커밋 d978008보다 앞이라, k6 결과는 지금 설정으로 잰 것이다.
+
+## 원래 설정 실행 결과
+- `./gradlew test --tests "NginxRateLimitTest*" --rerun`을 두 번 돌렸고 둘 다 `tests="17" failures="0" errors="0"`, gradle exit=0이었다.
+- 13r/s 테스트는 버스트 60건과 이어지는 39건에 3.04초가 걸렸다.
+- 8r/s 테스트는 4.936초, 20r/s 테스트는 3.035초였다.
+
+## 변이 결과 (매번 NginxRateLimitTest 17건 전체를 돌림)
+
+| # | nginx.conf 변경 | 결과 | 실패한 테스트와 메시지 |
+|---|---|---|---|
+| 기준 1·2 | 없음 | 17/17 통과 (두 번) | – |
+| P3 | :79만 `burst=55` | **잡힘** (1건 실패) | `…for a cached channel with 200 when one IP sends them at once` — "actual: 56L … ≤ 45L" |
+| C45 | :79만 `burst=45` | 잡힘 (1건) | 같은 테스트 — "46L … ≤ 45L" |
+| C44 | :79만 `burst=44` | 살아남음 (17/17) | – |
+| P5 | :79만 `burst=10` | **잡힘** (1건) | `…for a cached channel with 200 when one IP sends 40 requests at once` — 200 11건 뒤에 429 |
+| C36 / C37 / C38 | :79만 `burst=36` / `37` / `38` | 셋 다 잡힘 (각 1건) | 같은 테스트 |
+| C-none | :79의 limit_req 줄 삭제 | 잡힘 (2건) | cached 45 상한 테스트("60L ≤ 45L"), `limitsCachedChannel` |
+| C-delay | :79에서 `nodelay`만 삭제 | 잡힘 (2건) | 위와 같은 두 테스트("60L ≤ 45L") |
+| P2 | `rate=18r/s` | **잡힘** (1건) | `…keeps sending 13 requests per second for 3 seconds` — 전부 200 |
+| R13 | `rate=13r/s` | 잡힘 (1건) | 같은 테스트 — 전부 200 |
+| R12 | `rate=12r/s` | **살아남음** (두 번 돌려 둘 다 17/17) | – |
+| R11 | `rate=11r/s` | 살아남음 (17/17) | – |
+| P1 | `rate=9r/s` | 살아남음 (17/17) | – |
+
+**테스트가 묶어 두는 범위:**
+- 캐시 location 버스트: 39~44 (38 이하와 45 이상은 잡힌다)
+- `/api/` location 버스트: 39~43 (2차 검증 기록 기준)
+- rate: 약 9~12r/s 사이의 값은 통과한다. 13 이상과 5 이하는 잡힌다.
+
+이름이 "13 requests per second"인 테스트가 실제로 잡는 경계는 12~13r/s 사이다. rate=12가 두 번 살아남았다. 이름이 말하는 것보다 조금 느슨하다.
+
+---
+
+### AC 1 — Given 한 IP가 한도를 넘게 공개 API를 부르면, When nginx를 거치면, Then 넘친 요청은 429이고 Spring에는 가지 않는다
+
+✅ 충족
+
+**테스트 (NginxRateLimitTest.java):**
+- `should answer at most 45 of 60 requests for a cached channel with 200 when one IP sends them at once` (:259–266). 새로 더한 것이다. P3, C45, C-none, C-delay를 잡는다.
+- `should reject requests with 429 when one IP that used its burst keeps sending 13 requests per second for 3 seconds` (:277–284). 새로 더한 것이다. P2와 R13을 잡는다.
+- `should answer at most 45 of 60 requests with 200 when one IP sends them at once` (:241–248). `/api/` location의 버스트 상한이다.
+- `should reject requests with 429 when one IP that used its burst keeps sending 20 requests per second for 3 seconds` (:250–257).
+- `should answer 429 when one IP sends 60 requests at once to the public API` (:302–308).
+- `should reject requests for a cached channel with 429 when one IP goes over the limit` (:294–300).
+- `should not pass rejected requests to Spring when one IP goes over the limit` (:310–318). 가짜 Spring 로그를 사용자 IP별로 세서 `springCalls == 200건 수`를 단언한다. 그래서 "429는 Spring에 가지 않는다"를 실제로 본다.
+
+**근거:**
+- 버스트 상한이 두 location 모두에서 묶였다. 캐시 location 45 이상과 `/api/` 55는 실패한다.
+- rate 상한은 약 12r/s까지 묶였다.
+- 구현은 :17, :18, :66, :79에서 측정 전에 정한 값과 같다.
+
+**남은 것 (판정을 낮추지 않은 이유와 함께):**
+- rate가 11~12r/s로 바뀐 것은 어떤 테스트도 잡지 않는다(R11, R12 생존). 초당 10건을 조금 넘게 오래 보내는 IP가 429를 받는지는 자동 테스트로 확인되지 않는다.
+- k6 남용 시나리오는 1,200req/s로 훨씬 높아 이 구간을 가리지 못한다. 그래서 이 구간에는 측정 근거도 없다.
+- 그래도 구현 값 10r/s는 파일에서 직접 확인했다. 이 구간을 묶으려면 9~10r/s 근처 속도로 수십 초 보내야 해서 테스트가 흔들린다. 그래서 판정을 낮추지 않고 참고로 남긴다.
+
+### AC 2 — Given 한도 안의 요청(한 IP 뒤 시청자 여럿의 5초 폴링 포함), When nginx를 거치면, Then 모두 정상 응답이다
+
+✅ 충족
+
+**테스트:**
+- `should answer every request for a cached channel with 200 when one IP sends 40 requests at once` (:268–275). 새로 더한 것이다. `hasSize(40).containsOnly(200)`로 단언하고, P5와 C36~C38을 잡는다.
+- `should answer every request with 200 when one IP sends 40 requests at once` (:286–292).
+- `should answer every request with 200 when 50 viewers behind one IP poll at 10 requests per second for 5 seconds` (:197–209).
+- `should answer every request with 200 when one IP that used its burst keeps polling at 8 requests per second for 5 seconds` (:232–239). 2차 검증에서 rate=5를 잡은 것을 확인했다.
+
+**근거:**
+- 시청자가 가장 많이 묻는 캐시 경로에서도 40건 버스트가 전부 200임이 묶였다(하한 39).
+- 버스트를 다 쓴 뒤 초당 8건으로 계속 묻는 요청도 전부 200임이 묶였다.
+
+**정확히 초당 10건(P1 `rate=9r/s` 생존):** 저장된 측정이 받친다. 직접 읽어 확인했다.
+- 파일은 `docs/perf/issue-31/after/judge-summary.json`이다.
+- `responses_429{role:viewer,phase:main}` count 0
+- `http_req_failed{role:viewer,phase:main}` rate 0, 요청 12,012건. IP 20개로 나누면 60초 동안 IP당 초당 10건이다.
+- `http_req_duration` p95 1.00ms
+- 계산으로 보면(돌리지 않음) rate가 9면 초당 10건 폴링은 약 40초 뒤부터 막힌다. 60초 본 측정이면 429가 나와야 하므로, 이 측정은 rate=9와 10을 가려낸다.
+- 다만 자동 테스트가 아니라 측정 기록이 받치는 것이다.
+
+---
+
+## 남은 약한 단언 (가짜 테스트는 없음)
+
+1. **:247 `capsBurst`와 :265 `capsBurstForCachedChannel`** — "200 건수 ≤ 45"만 본다. 응답 건수(`hasSize(60)`)도, 나머지가 429인지도, 하한도 보지 않는다.
+   - 입구가 전부 `000`이나 502를 내도 이 두 테스트는 통과한다.
+   - 같은 조건의 `contains(429)` 테스트(:299, :307)가 일부를 막아 준다.
+   - 조이는 방법: `assertThat(statuses).hasSize(60).containsOnly(200, 429)`를 더하고 200 건수를 `isBetween(40L, 45L)`로 단언한다.
+2. **:283 `limitsSlightlyFasterRateAfterBurst`** — 이름은 "13 requests per second"이지만 실제로 잡는 경계는 12~13r/s 사이다(R12가 두 번 생존).
+   - :280 주석의 "시간 편차는 보내는 속도를 늦출 뿐"이라는 설명대로, 실제 송신 속도가 공칭 13r/s보다 낮다.
+   - 단언 자체가 틀린 것은 아니다.
+3. **:140–150 `pacedAfterBurst`** — 앞쪽 60건 버스트의 출력을 버린다. 그래서 "버스트를 다 썼다"는 전제를 단언하지 않는다.
+   - 2차 검증에서는 그대로였고 이번에도 바뀌지 않았다.
+   - 조이는 방법: 버스트의 상태 코드도 모아 그 안에 429가 있는지 단언한다.
+4. **:317 `.isLessThan(60)`** — 바뀌지 않았다. 앞의 `isEqualTo(answered)`가 강해 영향은 작다.
+5. 문서 쪽: `docs/result/scenarios/issue-31.md`의 `## AC 대조` 표(:136–137)에 1·2차 갭 처리로 더한 테스트 6건이 들어 있지 않다. 시나리오 목록(:101, :107–111)에는 있다. 판정에는 영향이 없다.
+
+## 갭에 대한 추가 시나리오 제안 (선택)
+- [ ] [경계] `nginx rate limit` — should answer only 200 or 429 for all 60 requests when one IP sends them at once
+  - 위 1번을 시나리오로 만든 것이다. 응답 누락과 5xx를 막는다.
+- rate 11~12r/s 구간은 시간으로 재는 자동 테스트로는 흔들리지 않게 묶기 어렵다. 제안하지 않고 참고로만 둔다.
+
+## 실행한 명령
+1. `cat .claude/harness.json && git log --oneline -3 && git status --short` → scenariosDir 확인, HEAD b6e73de, 작업 트리 깨끗함
+2. `gh issue view 31 && gh issue view 31 --comments` → AC 6개, 측정 전에 정한 값(10r/s, burst 40 nodelay, 캐시 HIT도 셈) 확인
+3. `cat -n infra/nginx/nginx.conf` 와 `grep -n "^##\|^###" docs/result/scenarios/issue-31.md` → :17, :66, :79 값과 문서 절 위치
+4. `cat -n …/NginxRateLimitTest.java` → 17개 테스트, 새 테스트는 :259–284
+5. Read issue-31.md :90–149, :415–561 → 시나리오 목록, AC 대조, 2차 검증과 2차 갭 처리 원문
+6. `ls scratchpad; cat mutate.sh; docker ps` → 이전 도우미 확인, Docker 실행 중
+7. 도우미 `C:\Users\USER\AppData\Local\Temp\claude\1cbb40fc7d76b7b0\3d4df148-973e-4d87-a592-bc3636da0b77\scratchpad\mutate3.sh` 작성. 하는 일: sed 변이 → gradle `NginxRateLimitTest*` `--rerun` → JUnit XML에서 실패 추출 → `git checkout -- infra/nginx/nginx.conf` → 되돌려졌는지 확인
+8. 기준 1회차(테스트별 시간 포함) → 17/17, restored
+9. P3, P5, P2 → 각각 1건 실패(위 표), restored, `git status --short` 비어 있음
+10. R13, R12, R11, P1 → R13만 1건 실패, 나머지는 17/17, restored, status 비어 있음
+11. R12(2회차), C44, C36, C-none, C-delay → R12와 C44는 17/17, C36은 1건, C-none과 C-delay는 각 2건 실패, restored
+12. C38, C37, C45 → 각각 1건 실패, restored
+13. 기준 2회차 + `git status && git log --oneline -1` → 17/17, "nothing to commit, working tree clean", HEAD b6e73de
+14. `ls docs/perf/issue-31/after/` 와 judge-summary.json에서 viewer main 지표를 grep/sed로 읽음 → viewer main 429 0건, http_req_failed rate 0 (12,012건), p95 1.00ms
+15. `git log --oneline -4 -- infra/nginx/nginx.conf` 와 judge-summary의 커밋 이력 확인 → nginx.conf 마지막 변경 084ac23은 측정 기록 커밋 d978008보다 앞
+
+### 3차 판정 뒤 정리
+
+- AC 6개 전부 ✅(AC 3~6은 1차, AC 1·2는 3차). 리팩토링으로 넘어간다.
+- 남은 rate 9~12r/s 구간은 검증자와 같이 참고로 남긴다. 아래쪽(9)은 측정이 받치고, 위쪽(11~12)은 자동 테스트도 측정도 받치지 않는다. 초당 10~12건을 오래 보내는 IP는 드물게 통과할 수 있다는 뜻이 아니라, 설정 값이 11~12로 잘못 바뀌어도 테스트가 모른다는 뜻이다. 값은 `nginx.conf`:17에 한 곳뿐이고 이슈 코멘트에 남아 있다.
+- 선택 제안(60건 모두 200 또는 429)은 더하지 않았다. 같은 조건의 `contains(429)` 테스트들과 함께 보면 입구가 전부 5xx를 내는 경우는 이미 실패한다.
+- 검증자가 짚은 AC 대조표 누락은 표에 채웠다.
