@@ -18,19 +18,20 @@ srt: no
 moq: no
 metrics: no
 
-# 재발급 때 Spring이 송출 연결을 끊는 데 쓴다. compose에서 포트를 열지 않는다 —
+# 재발급 때 Spring이 송출 연결을 끊고, 1분마다 송출 중인 경로를 대조하는 데 쓴다. compose에서 포트를 열지 않는다 —
 # 연결 목록 응답의 query에 스트림 키가 그대로 있다(PRD channel).
+# 내부망에서도 Spring만 부를 수 있다: API 호출도 아래 키 확인(authMethod: http)을 거치고,
+# Spring은 자기가 싣는 내부 비밀번호(MEDIAMTX_API_PASSWORD, Basic 인증)만 허용한다(#26)
 api: yes
 apiAddress: :9997
 
-# 송출 시작 때 Spring에 키를 묻는다. 2xx면 허용, 그 밖(응답 없음 포함)은 거부.
-# api는 compose의 네트워크 별칭(api-1·api-2). Spring은 publish만 판단하므로 나머지 action은 인증에서 뺀다
-# (1.21 기본값은 빈 목록이라 API 호출·시청까지 Spring으로 간다).
+# 송출 시작·API 호출 때 Spring에 묻는다. 2xx면 허용, 그 밖(응답 없음 포함)은 거부.
+# api는 compose의 네트워크 별칭(api-1·api-2). Spring은 publish(스트림 키)와 api(내부 비밀번호)만 판단하므로
+# 나머지 action은 인증에서 뺀다(1.21 기본값은 빈 목록이라 시청까지 Spring으로 간다).
 authMethod: http
 authHTTPAddress: http://api:8080/internal/mediamtx/auth
 authHTTPExclude:
   - action: read
-  - action: api
   - action: metrics
   - action: pprof
   - action: playback

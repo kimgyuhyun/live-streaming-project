@@ -51,6 +51,9 @@ app:
   # MediaMTX API(재발급 때 송출 연결 끊기). 도커 내부망에서만 열린다(PRD channel). compose는 http://mediamtx:9997
   mediamtx:
     api-url: ${MEDIAMTX_API_URL:http://localhost:9997}
+    # Spring이 MediaMTX API를 부를 때 싣는 내부 비밀번호(Basic 인증, 사용자 spring). MediaMTX가 키 확인 엔드포인트로
+    # 되물으면 이 값과 맞춰 본다. 비어 있으면 API 호출을 모두 거부한다(#26)
+    api-password: ${MEDIAMTX_API_PASSWORD:}
 
 # nginx가 /api/ 만 Spring으로 넘기므로 actuator도 그 아래에 둔다. 기본 노출은 health 하나뿐이다.
 management:

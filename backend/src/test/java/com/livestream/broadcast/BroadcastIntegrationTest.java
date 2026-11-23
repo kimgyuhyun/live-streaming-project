@@ -15,6 +15,7 @@ import com.livestream.member.SignUpRequest;
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -22,10 +23,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -60,6 +63,10 @@ class BroadcastIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    // 테스트 설정(src/test/resources/config/application.yml)의 내부 비밀번호
+    @Value("${app.mediamtx.api-password}")
+    private String internalPassword;
 
     private static String unique() {
         return String.valueOf(ThreadLocalRandom.current().nextInt(100_000, 1_000_000));
@@ -286,6 +293,31 @@ class BroadcastIntegrationTest {
             pool.shutdown();
 
             assertThat(thrown.get()).isZero();
+        }
+
+        @Test
+        @DisplayName("should send the internal password as basic auth to the MediaMTX API when reconciling")
+        void reconcileSendsBasicAuth() throws Exception {
+            AtomicReference<String> authorization = new AtomicReference<>();
+            byte[] body = "{\"pageCount\":0,\"itemCount\":0,\"items\":[]}".getBytes(StandardCharsets.UTF_8);
+            HttpServer fakeMediaMtx = HttpServer.create(new InetSocketAddress("localhost", FAKE_MEDIAMTX_PORT), 0);
+            fakeMediaMtx.createContext("/v3/paths/list", exchange -> {
+                authorization.set(exchange.getRequestHeaders().getFirst("Authorization"));
+                exchange.getResponseHeaders().add("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, body.length);
+                exchange.getResponseBody().write(body);
+                exchange.close();
+            });
+            fakeMediaMtx.start();
+            try {
+                broadcastService.reconcile();
+            } finally {
+                fakeMediaMtx.stop(0);
+            }
+
+            String expected = "Basic " + Base64.getEncoder().encodeToString(
+                    (MediaMtxApiAuthService.INTERNAL_USER + ":" + internalPassword).getBytes(StandardCharsets.UTF_8));
+            assertThat(authorization.get()).isEqualTo(expected);
         }
     }
 }
