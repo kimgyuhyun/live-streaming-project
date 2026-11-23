@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'react-router'
 import { fetchChannel } from '../api/channels.ts'
-import { ApiError } from '../api/client.ts'
+import { ApiError, errorMessage } from '../api/client.ts'
 import { pollInterval, useBroadcastView } from './broadcastView.ts'
 import { PlayerArea } from './LivePlayer.tsx'
 
@@ -21,7 +21,8 @@ function ChannelPage() {
   // 폴링 한 번 실패로 보던 영상을 지우지 않는다. 받은 채널이 있으면 그것으로 계속 그린다
   if (channel.isError && channel.data === undefined) {
     const notFound = channel.error instanceof ApiError && channel.error.status === 404
-    return <p>{notFound ? '채널을 찾을 수 없습니다' : '잠시 후 다시 시도해 주세요'}</p>
+    // 그 밖의 오류는 본문의 message(nginx 요청 수 제한 429 등, #31). 본문이 없으면 errorMessage가 일반 문구를 준다
+    return <p>{notFound ? '채널을 찾을 수 없습니다' : errorMessage(channel.error)}</p>
   }
 
   return (
