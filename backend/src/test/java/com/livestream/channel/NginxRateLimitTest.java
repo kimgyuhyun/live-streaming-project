@@ -257,6 +257,33 @@ class NginxRateLimitTest {
         }
 
         @Test
+        @DisplayName("should answer at most 45 of 60 requests for a cached channel with 200 when one IP sends them at once")
+        void capsBurstForCachedChannel() throws Exception {
+            // 캐시 location(/api/channels/{id})도 같은 버스트 상한을 갖는다(AC 1, 2차 AC 검증 갭)
+            List<Integer> statuses = burst(edgeClient, "198.51.100.15", "/api/channels/21", 60);
+
+            assertThat(statuses.stream().filter(status -> status == 200).count()).isLessThanOrEqualTo(45);
+        }
+
+        @Test
+        @DisplayName("should answer every request for a cached channel with 200 when one IP sends 40 requests at once")
+        void allowsBurstOfFortyForCachedChannel() throws Exception {
+            // 시청자가 가장 많이 묻는 캐시 경로에서도 페이지를 열 때 몰리는 40건은 막지 않는다(AC 2, 2차 AC 검증 갭)
+            List<Integer> statuses = burst(edgeClient, "198.51.100.16", "/api/channels/21", 40);
+
+            assertThat(statuses).hasSize(40).containsOnly(200);
+        }
+
+        @Test
+        @DisplayName("should reject requests with 429 when one IP that used its burst keeps sending 13 requests per second for 3 seconds")
+        void limitsSlightlyFasterRateAfterBurst() throws Exception {
+            // 초당 10건을 조금 넘는 지속 요청도 막힌다. 시간 편차는 실제로 보내는 속도를 늦출 뿐이라 원래 설정에서는 429가 더 늦게 날 뿐이다
+            List<Integer> statuses = pacedAfterBurst("198.51.100.17", 39, "0.077");
+
+            assertThat(statuses).contains(429);
+        }
+
+        @Test
         @DisplayName("should answer every request with 200 when one IP sends 40 requests at once")
         void allowsBurstOfForty() throws Exception {
             List<Integer> statuses = burst(edgeClient, "198.51.100.5", "/api/channels/0021", 40);

@@ -106,6 +106,9 @@ server {
 - [x] [경계] `nginx rate limit` — should reject requests for a cached channel with 429 when one IP goes over the limit
 - [x] [경계] `nginx rate limit` — should answer at most 45 of 60 requests with 200 when one IP sends them at once
 - [x] [경계] `nginx rate limit` — should reject requests with 429 when one IP that used its burst keeps sending 20 requests per second for 3 seconds
+- [x] [경계] `nginx rate limit` — should answer at most 45 of 60 requests for a cached channel with 200 when one IP sends them at once
+- [x] [경계] `nginx rate limit` — should answer every request for a cached channel with 200 when one IP sends 40 requests at once
+- [x] [경계] `nginx rate limit` — should reject requests with 429 when one IP that used its burst keeps sending 13 requests per second for 3 seconds
 
 ### 예외
 
@@ -431,3 +434,127 @@ AC에 없는데 둔 것 (이슈의 "정할 것"에서 온다):
 - 전체: 백엔드 404건 통과(이 이슈 테스트 14 + 기존 390), `check-scenarios` 시나리오 15 · 더한 테스트 15 · 불일치 0.
 - 검증자의 나머지 약한 단언(`contains(429)`·`isLessThan(60)`·RATE_LIMITED 본문의 message·홍수 쪽 전제)은 위 세 시나리오가 상한과 rate를 묶으므로 더 조이지 않았다. AC 5는 ✅ 판정이고 프론트가 본문이 깨져도 같은 뜻의 기본 문구를 보인다.
 - 측정 스크립트 결함(검증자 참고 2): `dropped_iterations`에 시나리오 태그가 붙지 않아 요약 표의 dropped 칸이 늘 0이었다. 시나리오 이름별 기준을 걸고 요약에서 더하도록 `perf/rate-limit.js`를 고쳤다. `k6 inspect`로 옵션만 확인했고 측정을 다시 돌리지는 않았다. 이미 남긴 결과의 처리량 칸(VU 부족으로 못 보낸 것)은 원시 JSON의 태그 없는 `dropped_iterations`(before/judge 12,862 · before/steps 28,726 · after/steps 1,111)와 맞는다.
+
+### 2차 검증 (AC 1·2)
+
+`harness:ac-verifier` 출력 원문(2026-11-24, HEAD 02dde96). 이번 출력은 영어로 왔다.
+
+# Issue #31 re-check of AC 1 and AC 2 (branch feat/channel/issue-31, HEAD 02dde96)
+
+**Summary: AC 1 is ⚠️ and AC 2 is ⚠️.** Both gaps are much narrower than in round 1.
+- The three new tests each catch the mutation they were written for (burst=55, rate=50r/s, rate=5r/s). I confirmed all three by changing the config and running the tests.
+- What's left is one gap in the **cached-channel location** (`/api/channels/{id}`, nginx.conf:77–96). That location has its own `burst=40` (nginx.conf:79), but the tests never tie it down in either direction. The new burst tests only hit `/api/channels/0021`, which lands in the plain `/api/` location (nginx.conf:64–71).
+- The implementation itself is correct: nginx.conf:17 has `rate=10r/s`, and :66 and :79 have `burst=40 nodelay`.
+
+Test files: `C:\live-streaming-project\backend\src\test\java\com\livestream\channel\NginxRateLimitTest.java` and `C:\live-streaming-project\infra\nginx\nginx.conf`.
+
+## Mutation results (each run is the full NginxRateLimitTest, 14 tests)
+
+| # | Change to nginx.conf | Result | Test that failed |
+|---|---|---|---|
+| Baseline | none | 14/14 passed | – |
+| M1 | burst=55 (:66 and :79) | **caught**, 1 failed | `at most 45 of 60` ("Expecting actual: 56L to be less than or equal to: 45L") |
+| M2 | rate=50r/s (:17) | **caught**, 1 failed | `keeps sending 20 requests per second for 3 seconds` (all 200) |
+| M3 | rate=5r/s (:17) | **caught**, 1 failed | `keeps polling at 8 requests per second` ([429, 200, 200, 429, …]) |
+| P1 | rate=9r/s | survives, 14/14 | – |
+| P2 | rate=18r/s | survives, 14/14 | – |
+| P3 | burst=55 **only at :79** (cached location) | **survives**, 14/14 | – |
+| P4 | burst=43 (both) | survives, 14/14 | – |
+| P5 | burst=10 **only at :79** | **survives**, 14/14 | – |
+| P6 | remove nodelay at :66 | caught, 6 failed | capsBurst, rejectsOverLimit, keepsRejectedFromSpring, limitsSteadyRate, RATE_LIMITED body, ignores XFF |
+
+From the JUnit times on the baseline run, the 8 r/s test took 4.947s for 40 requests (about 8.1 r/s actual). The 20 r/s test took 3.03s for 60 requests (about 19.8 r/s actual). So the tests hold the rate between about 8 and about 19.8 r/s. The burst on the `/api/` location is held between about 39 and 43.
+
+---
+
+### AC 1 — Given one IP calls the public API over the limit, When it goes through nginx, Then the overflow gets 429 and does not reach Spring
+
+⚠️ Partly met. The original gap is closed for the `/api/` location and for rate. The cached-channel location is still open.
+
+**Tests (NginxRateLimitTest.java):**
+- `should answer at most 45 of 60 requests with 200 when one IP sends them at once` (:241–248): caps the burst from above. Caught M1.
+- `should reject requests with 429 when one IP that used its burst keeps sending 20 requests per second for 3 seconds` (:250–257): caps the rate from above. Caught M2.
+- `should not pass rejected requests to Spring when one IP goes over the limit` (:283–291): `springCalls(ip) == answered`. It counts the fake Spring's log per user IP, so "429 does not go to Spring" is checked for real.
+- Also `should answer 429 when one IP sends 60 requests at once` (:275–281) and `should reject requests for a cached channel with 429` (:267–273).
+
+**Implementation:** nginx.conf:17 (`rate=10r/s`), :18 (`limit_req_status 429`), :66 and :79 (`burst=40 nodelay`), :48–52 (429 body).
+
+**What's left:**
+1. **The burst cap in the cached-channel location is not tied down.** P3 (`burst=55` at :79 only) passes all 14 tests. The only test on that path (:270–272) still asserts just `contains(429)`. This is the main polling path, and the issue comment decided "캐시 HIT도 센다".
+2. The rate cap is loose. P2 (`rate=18r/s`) survives, so an IP sending 10–18 r/s for a long time isn't caught by any test.
+
+### AC 2 — Given requests within the limit (including 5-second polling by several viewers behind one IP), When they go through nginx, Then all get a normal response
+
+⚠️ Partly met. Steady polling after the burst is used up is now tied down, but the burst on the cached path and the exact 10 r/s point are not.
+
+**Tests:**
+- `should answer every request with 200 when one IP that used its burst keeps polling at 8 requests per second for 5 seconds` (:232–239): `hasSize(40).containsOnly(200)`. Caught M3 (rate=5r/s), which survived in Green.
+- Also `50 viewers behind one IP poll at 10 requests per second for 5 seconds` (:197–209) and `40 requests at once` (:259–265).
+
+**What's left:**
+1. **The cached-channel location's lower burst bound is not tied down.** P5 (`burst=10` at :79 only) passes all 14 tests.
+   - The 40-at-once test uses `/api/channels/0021`, which goes to the `/api/` location.
+   - The 50-viewer test hits `/api/channels/21`, but at 10 r/s from a fresh bucket it barely uses the burst.
+   - So "a page opening with a burst of 40 or fewer on the cached path gets 200" isn't checked.
+2. The 50 viewers per IP (10 r/s) decided in the issue comment isn't tied down automatically. P1 (`rate=9r/s`) survives.
+   - My calculation (not run): with rate 9, steady 10 r/s builds up 1 excess per second, so 429 would start after about 40 seconds.
+   - The k6 after/judge-summary.json (each viewer IP at 10 req/s for 90 seconds, 0 429s), as read in round 1, covers this case. I did not re-run k6, per instructions.
+   - An automated check would have to run for tens of seconds or send between 9 and 10 r/s, which would be flaky. So I treat this as a note backed by the measurement, not a blocker.
+
+---
+
+## Proposed scenarios for the remaining gaps
+
+- [ ] [Boundary] `nginx rate limit` — should answer at most 45 of 60 requests for a cached channel with 200 when one IP sends them at once
+  - AC 1. Same as capsBurst but on `/api/channels/21`. Catches P3 (burst=55 only at :79).
+- [ ] [Boundary] `nginx rate limit` — should answer every request for a cached channel with 200 when one IP sends 40 requests at once
+  - AC 2. Same as allowsBurstOfForty but on `/api/channels/21`. Catches P5 (burst=10 only at :79).
+- (Optional) [Boundary] `nginx rate limit` — should reject requests with 429 when one IP that used its burst keeps sending 13 requests per second for 3 seconds
+  - Narrows the 20 r/s cap toward 13.
+  - Timing jitter only adds 429s with the real setting, so this direction doesn't flake.
+  - Catches rate values from about 13 to 18 (P2).
+
+## Remaining weak assertions (no fake tests: no tests without assertions, no unconditional passes)
+
+1. **:247 capsBurst.** It only checks "number of 200s ≤ 45", with no `hasSize(60)` and no lower bound.
+   - If nginx returned no responses, or the responses were `000` or 5xx, the test would still pass.
+   - Fix: add `hasSize(60)`, bound the 200 count with `isBetween(40, 45)`, and assert the rest are only 429.
+2. **:272 limitsCachedChannel `contains(429)`.** It passes with even one 429 out of 60. This is what lets P3 survive.
+   - Fix: apply the same count bound as point 1 (or the first proposed scenario above).
+3. **:256 limitsSteadyRateAfterBurst `contains(429)`.** The idea works (one 429 shows the rate is below the send rate), but at 20 r/s the window is wide (P2).
+4. **:140–150 pacedAfterBurst.** The 60-request burst at the start throws away its output, so nothing asserts that the burst was actually used up.
+   - M3 being caught shows it does get used up in practice, but the precondition isn't asserted.
+   - Fix: also collect the burst's status codes and assert that 429 is among them.
+5. **:290 `.isLessThan(60)`.** Unchanged from round 1. The `isEqualTo(answered)` part is strong, so this matters little.
+
+## Commands run
+
+1. `cat .claude/harness.json && gh issue view 31 && git log --oneline -3 && git status` → scenariosDir confirmed, 6 ACs read, HEAD 02dde96, tree clean
+2. `cat -n infra/nginx/nginx.conf && cat -n .../NginxRateLimitTest.java && gh issue view 31 --comments | tail -60` → :17 rate=10r/s, :66 and :79 burst=40 nodelay; 14 tests; comment confirms the decided values (10r/s, burst 40, cache HITs are counted)
+3. `grep -n "^## \|^### " docs/result/scenarios/issue-31.md` → section line numbers
+4. `sed -n 94,147p; 253,300p; 366,470p docs/result/scenarios/issue-31.md` → scenarios, AC matrix, round-1 verdict, and gap handling (3 tests added, 42 widened to 45)
+5. `git show --stat HEAD; git diff main...HEAD --stat; docker ps` → HEAD changes 3 files; compose nginx containers are running
+6. `grep -A12 "^  nginx:" compose.yml; cat infra/nginx/Dockerfile` → nginx.conf is copied at image build time, so changing it doesn't affect the running container
+7. `cd backend && JAVA_HOME=... ./gradlew test --tests "NginxRateLimitTest*" --rerun` + JUnit XML grep → BUILD SUCCESSFUL, tests=14 failures=0; times 4.947s (8 r/s) and 3.03s (20 r/s)
+8. Wrote the mutation helper in the scratchpad: `C:\Users\USER\AppData\Local\Temp\claude\1cbb40fc7d76b7b0\3d4df148-973e-4d87-a592-bc3636da0b77\scratchpad\mutate.sh` (sed change → gradle run → collect XML failures → `git checkout -- infra/nginx/nginx.conf` → check restored)
+9. M1, M2, M3 → each had 1 failure (outputs in the table above), each `restored`; `git status --short` showed nothing
+10. P1–P4 → all 14/14 passed (survived), each `restored`; `git status --short` showed nothing
+11. P5 and P6 → P5 14/14 passed (survived), P6 6 failures; each `restored`
+12. `git status && git diff --stat && git log --oneline -1` → "nothing to commit, working tree clean", HEAD 02dde96
+
+I did not change any code or tests and did not re-run k6. nginx.conf was restored after every mutation, and the final `git status` is clean.
+
+### 2차 갭 처리 (같은 결정의 연장: 갭을 메운다)
+
+2차 검증이 남긴 빈틈 중 검증자 제안 세 개를 시나리오로 더했다(위 `## 테스트 시나리오`, 모두 `[x]`).
+
+| 더한 시나리오 | 덮는 AC | 잡는 변이(2차 검증 번호) |
+| --- | --- | --- |
+| `should answer at most 45 of 60 requests for a cached channel with 200 when one IP sends them at once` | AC 1, 캐시 location 상한 | 캐시 location만 `burst=55`(P3) |
+| `should answer every request for a cached channel with 200 when one IP sends 40 requests at once` | AC 2, 캐시 location 하한 | 캐시 location만 `burst=10`(P5) |
+| `should reject requests with 429 when one IP that used its burst keeps sending 13 requests per second for 3 seconds` | AC 1, rate 상한 | `rate=18r/s`(P2) |
+
+- 세 변이에서 각각 그 테스트만 실패했고, 원래 설정에서 두 번 통과했다. 변이는 Green 사본에서 만들고 사본으로 되돌렸다.
+- 전체: 백엔드 407건 통과(이 이슈 테스트 17 + 기존 390), `check-scenarios` 시나리오 18 · 더한 테스트 18 · 불일치 0.
+- **남기는 것 — 정확히 초당 10건(P1 `rate=9r/s`)은 자동 테스트로 묶지 않는다.** 검증자 계산대로 rate 9에서 초당 10건 폴링은 약 40초 뒤에야 막히므로, 묶으려면 테스트가 수십 초를 돌거나 9~10 사이 속도로 보내야 해 흔들린다. 측정(`docs/perf/issue-31/after/judge-summary.json`: 시청자 IP 20개가 각 초당 10건으로 90초, 429 0건)이 근거다. 검증자도 막는 사유가 아니라 측정이 받치는 참고로 봤다.
+- 검증자가 든 나머지 약한 단언(capsBurst의 `hasSize`·하한, `pacedAfterBurst` 버스트 전제, `isLessThan(60)`)은 고치지 않았다. 상한·하한·rate를 위 테스트들이 각각 묶고, 변이 확인에서 버스트가 실제로 소진되는 것(M3)이 드러났다.
