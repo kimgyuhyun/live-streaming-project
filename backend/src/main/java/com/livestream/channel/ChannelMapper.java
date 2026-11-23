@@ -19,5 +19,8 @@ public interface ChannelMapper {
 
     void updateTitle(@Param("id") long id, @Param("title") String title);
 
+    // channel.demo = 1. 이미 1이어도 그대로(#14)
+    void markDemo(long id);
+
     void updateStreamKey(@Param("id") long id, @Param("hash") String hash, @Param("prefix") String prefix);
 }

@@ -128,6 +128,20 @@ class ChannelIntegrationTest {
         return mockMvc.perform(get("/api/channels/{channelId}", channelId));
     }
 
+    // 운영자 계정은 앱 시작 때 환경변수로 만든다(#5). 여기서는 회원을 만들어 역할만 바꾼다
+    private Cookie operatorCookie() throws Exception {
+        String email = newEmail();
+        long memberId = signUp(email);
+        jdbcTemplate.update("UPDATE member SET role = 'OPERATOR' WHERE id = ?", memberId);
+        return loggedIn(email);
+    }
+
+    private ResultActions markDemo(long channelId, Cookie session) throws Exception {
+        var request = put("/api/operator/channels/{channelId}/demo", channelId)
+                .header(HttpHeaders.ORIGIN, ALLOWED_ORIGIN);
+        return mockMvc.perform(session == null ? request : request.cookie(session));
+    }
+
     @Nested
     @DisplayName("ChannelIntegration")
     class Integration {
@@ -335,6 +349,75 @@ class ChannelIntegrationTest {
             setTitle(loggedIn(email), "오늘은 노래")
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+        }
+    }
+
+    // 데모 채널 표시(#14). 준비 스크립트가 운영자로 부른다
+    @Nested
+    @DisplayName("ChannelOperatorController.markDemo")
+    class MarkDemo {
+
+        @Test
+        @DisplayName("should show the channel as demo to a visitor after an operator marks it")
+        void showsDemoToVisitor() throws Exception {
+            long channelId = streamerChannel(newEmail());
+
+            markDemo(channelId, operatorCookie()).andExpect(status().isOk());
+
+            channelPage(channelId).andExpect(jsonPath("$.demo").value(true));
+        }
+
+        @Test
+        @DisplayName("should report a newly approved channel as not demo")
+        void newChannelIsNotDemo() throws Exception {
+            long channelId = streamerChannel(newEmail());
+
+            channelPage(channelId).andExpect(jsonPath("$.demo").value(false));
+        }
+
+        @Test
+        @DisplayName("should keep the channel demo when an operator marks it twice")
+        void marksTwice() throws Exception {
+            long channelId = streamerChannel(newEmail());
+            Cookie operator = operatorCookie();
+            markDemo(channelId, operator).andExpect(status().isOk());
+
+            markDemo(channelId, operator)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.demo").value(true));
+        }
+
+        @Test
+        @DisplayName("should return 403 when a member who is not an operator marks a channel as demo")
+        void forbidsMember() throws Exception {
+            long channelId = streamerChannel(newEmail());
+            String memberEmail = newEmail();
+            signUp(memberEmail);
+
+            markDemo(channelId, loggedIn(memberEmail))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+        }
+
+        @Test
+        @DisplayName("should return 403 when the streamer who owns the channel marks it as demo")
+        void forbidsOwner() throws Exception {
+            String ownerEmail = newEmail();
+            long channelId = streamerChannel(ownerEmail);
+
+            markDemo(channelId, loggedIn(ownerEmail))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+        }
+
+        @Test
+        @DisplayName("should return 401 when a visitor who is not logged in marks a channel as demo")
+        void rejectsVisitor() throws Exception {
+            long channelId = streamerChannel(newEmail());
+
+            markDemo(channelId, null)
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
         }
     }
 }

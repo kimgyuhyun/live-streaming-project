@@ -177,6 +177,15 @@ AC 1·2·5·6. Green 뒤에 확인하고 결과를 아래 "확인 결과"와 PR�
 - AC 6: README의 출처 문구
 - 키 노출: `docker compose logs demo mediamtx api-1 api-2`에서 키 문자열 0줄, 스크립트 출력에 키·비밀번호 없음
 
+**Red 기록 (2026-11-23):** 시나리오 15개 → 테스트 15개(`check-scenarios.mjs` 불일치 0). 전체 백엔드 389건 중 7건, 프론트 31건 중 2건이 실패했고 모두 이번 테스트다. 기존 테스트는 전부 통과.
+
+- 좋은 실패 9건: stub의 `UnsupportedOperationException`(서비스 `markDemo` 2, 컨트롤러 2, 통합 2), 단언 실패(서비스 `find`의 demo 1 — stub이 `toResponse`에 `false`를 넘긴다, 프론트 표시 2).
+- 구현 없이 통과한 6건 — 변이로 실패를 확인하고 되돌렸다.
+  - "데모가 아니다" 3건(서비스 `find`, 통합 새 채널, 프론트): `toResponse`가 `true`를 넘기게 / `ChannelPage`가 항상 "데모 채널"을 그리게 바꾸면 각각 실패.
+  - 403 2건·401 1건(통합): 기존 `SecurityConfig`의 `/api/operator/**` 규칙이 이미 막는다. 이 규칙을 `permitAll()`로 바꾸면 세 건 모두 실패. 데모 표시 API가 운영자 경로 아래에 있다는 것을 지키는 테스트다.
+- 기존 코드 변경: `ChannelResponse`에 필드가 늘어 기존 테스트의 생성자 호출 7곳에 `false`를 더했고, `StreamerApplicationReviewIntegrationTest`의 익명 `ChannelMapper`에 `markDemo` 위임을 더했다(컴파일).
+- 통합 테스트 파일(`ChannelIntegrationTest`)은 컨테이너 기동 때문에 다 쓰고 파일 단위로 한 번 돌렸다. 나머지는 파일마다 돌렸다.
+
 ---
 
 ## AC 대조

@@ -14,6 +14,8 @@ public class Channel {
     private boolean live;
     // 방송 제목. 정한 적 없으면 null
     private String title;
+    // 운영자가 데모 표시를 붙였으면 true(#14)
+    private boolean demo;
 
     public Channel() {
     }
@@ -86,5 +88,13 @@ public class Channel {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public boolean isDemo() {
+        return demo;
+    }
+
+    public void setDemo(boolean demo) {
+        this.demo = demo;
     }
 }

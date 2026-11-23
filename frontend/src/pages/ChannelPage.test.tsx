@@ -25,8 +25,8 @@ vi.mock('hls.js', () => ({
 
 const fetchChannelMock = vi.mocked(fetchChannel)
 
-function channel(live: boolean): ChannelResponse {
-  return { id: 7, name: '하늘', description: '', live, title: '오늘은 노래' }
+function channel(live: boolean, demo = false): ChannelResponse {
+  return { id: 7, name: '하늘', description: '', live, title: '오늘은 노래', demo }
 }
 
 function renderPage() {
@@ -131,5 +131,31 @@ describe('ChannelPage', () => {
     await vi.advanceTimersByTimeAsync(0)
 
     expect(container.querySelector('video')).not.toBeNull()
+  })
+
+  it('should show the demo channel label when a visitor opens a demo channel', async () => {
+    fetchChannelMock.mockResolvedValue(channel(true, true))
+
+    renderPage()
+
+    expect(await screen.findByText('데모 채널')).not.toBeNull()
+  })
+
+  it('should not show the demo channel label when a visitor opens a channel that is not a demo', async () => {
+    fetchChannelMock.mockResolvedValue(channel(true, false))
+
+    renderPage()
+    await screen.findByText('오늘은 노래')
+
+    expect(screen.queryByText('데모 채널')).toBeNull()
+  })
+
+  it('should show the demo channel label when the demo channel is offline', async () => {
+    fetchChannelMock.mockResolvedValue(channel(false, true))
+
+    renderPage()
+    await screen.findByText('오프라인')
+
+    expect(screen.queryByText('데모 채널')).not.toBeNull()
   })
 })

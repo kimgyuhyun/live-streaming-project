@@ -45,6 +45,11 @@ public class ChannelService {
         return toResponse(channel);
     }
 
+    // 운영자가 채널에 데모 표시를 붙인다(PRD channel C3). 이미 데모 채널이어도 같은 응답
+    public ChannelResponse markDemo(long channelId) {
+        throw new UnsupportedOperationException("not implemented");
+    }
+
     private Channel findChannel(long channelId) {
         return channelMapper.findById(channelId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHANNEL_NOT_FOUND));
@@ -55,6 +60,6 @@ public class ChannelService {
     private static ChannelResponse toResponse(Channel channel) {
         return new ChannelResponse(channel.getId(), channel.getName(),
                 Objects.requireNonNullElse(channel.getDescription(), ""), channel.isLive(),
-                Objects.requireNonNullElse(channel.getTitle(), channel.getName() + "의 방송"));
+                Objects.requireNonNullElse(channel.getTitle(), channel.getName() + "의 방송"), false);
     }
 }
