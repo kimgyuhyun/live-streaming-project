@@ -227,6 +227,16 @@ class ChannelServiceTest {
         }
 
         @Test
+        @DisplayName("should save the demo mark to the channel when an operator marks it")
+        void savesDemoMark() {
+            given(channelMapper.findById(CHANNEL_ID)).willReturn(Optional.of(savedChannel("소개")));
+
+            channelService.markDemo(CHANNEL_ID);
+
+            verify(channelMapper).markDemo(CHANNEL_ID);
+        }
+
+        @Test
         @DisplayName("should throw CHANNEL_NOT_FOUND when the channel does not exist")
         void rejectsMissingChannel() {
             given(channelMapper.findById(CHANNEL_ID)).willReturn(Optional.empty());
