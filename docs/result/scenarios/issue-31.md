@@ -238,3 +238,172 @@ AC에 없는데 둔 것 (이슈의 "정할 것"에서 온다):
 - **Spring·DB 부하가 남용량과 무관해졌다.** 제한 뒤 api CPU 2~7%, oracle 3~4%로 남용 400~3,200 모두 같다. 제한 전에는 남용 1,200에서 api가 한도(96%)에 닿았다.
 - **제한 뒤에도 남용 3,200에서 시청자 p95가 102ms로 늘었다.** 그때 nginx CPU 평균은 19%(한도 25%), k6 컨테이너는 92%였다. 2초 표본 평균이라 nginx가 순간적으로 CPU 한도에 닿았는지, 같은 도커 VM에서 도는 부하 발생기(k6)가 밀렸는지 이 측정으로는 가를 수 없다. 남용 1,600까지는 p95 1.3ms라 판정 지점(1,200)과 그 두 배까지는 영향이 없다. 3,200 너머는 nginx CPU 한도·부하 발생기 분리와 함께 별도로 본다(이슈 본문의 "nginx CPU 천장이 드러나면 별도 이슈").
 - 제한 전 남용 3,200은 VU 부족으로 2,263 req/s만 냈다(dropped). 같은 표에서 처리량 칸을 함께 봐야 한다.
+
+### 브라우저 확인 (2026-11-24, 측정 뒤 로컬 compose, 제한 설정)
+
+- 호스트에서 curl로 몰아 보내는 방식은 curl을 띄우는 틈(약 0.35초)에 토큰이 차 채널 조회가 통과했다(429 824건 사이로 `/api/channels/21` 200)
+- 페이지 안에서 4초 동안 10ms마다 5건씩 `fetch('/api/channels/0021')`(1,020건)을 보내며 앱 안 이동으로 `/channels/41`을 열자 "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요"만 보였다 ✅
+- 함께 본 것: nginx가 막은 요청마다 error 로그에 한 줄(`limiting requests`)을 남긴다(위 curl 확인에서 825줄). 남용이 초당 수천 건이면 접근 로그와 같은 양이 error 로그에도 쌓인다 — 보안 점검에서 분류한다
+
+---
+
+## AC 검증
+
+`harness:ac-verifier` 출력 원문(2026-11-24). 구현자는 이 표를 고치지 않는다.
+
+# 이슈 #31 AC 검증 (브랜치 feat/channel/issue-31, HEAD d978008)
+
+**요약: AC 6개 중 ✅ 4개, ⚠️ 2개, ❌ 0개.** 자동 테스트는 백엔드 11개, 프론트 11개를 이번에 직접 돌렸고 모두 통과했다. 측정은 다시 돌리지 않고, 저장된 k6 원시 JSON과 자원 CSV를 직접 읽어 판정했다.
+
+구현은 nginx.conf:17·18·48–52·66·79에 이슈 코멘트에서 정한 값(10r/s, burst 40 nodelay)이 그대로 들어가 있다. 두 ⚠️는 구현이 틀려서가 아니다. 테스트가 정한 한도 값을 위아래로 묶지 못해서다.
+
+---
+
+### AC 1 — 한도를 넘으면 429이고 Spring에는 가지 않는다
+
+⚠️ 부분 충족 (구현은 맞다. 경계를 위쪽에서 묶지 못한다)
+- **테스트** (모두 `backend/src/test/java/com/livestream/channel/NginxRateLimitTest.java`):
+  - `should answer 429 when one IP sends 60 requests at once to the public API` (:235)
+  - `should not pass rejected requests to Spring when one IP goes over the limit` (:243)
+  - `should reject requests for a cached channel with 429 when one IP goes over the limit` (:227)
+  - `should answer every request with 200 when one IP sends 40 requests at once` (:219, 아래쪽 경계)
+- **구현:** `C:\live-streaming-project\infra\nginx\nginx.conf`
+  - :17 `limit_req_zone $binary_remote_addr zone=api_per_ip:10m rate=10r/s`
+  - :66은 `/api/`, :79는 캐시 location의 `limit_req ... burst=40 nodelay`
+  - :48–52는 `error_page 429 = @rate_limited`. 캐시 location은 자기 `error_page`가 없어 server 수준 설정을 물려받는다
+- **강한 부분:** :249의 `springCalls(ip) == answered`는 가짜 Spring 로그를 사용자 IP별로 센다. 그래서 "429 받은 요청은 Spring에 가지 않았다"를 실제로 확인한다.
+- **빈틈:** 429 단언이 `contains(429)` 하나뿐이다(:231, :239). 60건 중 한 건만 429여도 통과한다. 40건 테스트는 burst ≥ 약 39만 보장한다.
+  - 그래서 다음 설정도 현재 테스트를 모두 통과할 것으로 추론한다(실행해 확인하지는 않았다): `burst=55`(60건 중 약 3건만 429), `rate=50r/s`.
+  - 즉 "41번째부터 429"라는 위쪽 경계와 정한 rate 값이 테스트로 묶여 있지 않다.
+
+### AC 2 — 한도 안의 요청(한 IP 뒤 여럿의 5초 폴링 포함)은 모두 정상
+
+⚠️ 부분 충족 (측정은 지속 폴링 정상을 보여 준다. 자동 테스트는 버스트에 가려진다)
+- **테스트:**
+  - `should answer every request with 200 when 50 viewers behind one IP poll at 10 requests per second for 5 seconds` (:184–195). 0.1초 간격 50건, 모두 200
+  - 40건 한꺼번에 테스트 (:219)
+- **빈틈:** 5초 동안 50건은 버스트 40 + 재충전만으로 받아진다.
+  - 계산하면 1 + 40 + 5r ≥ 50이라 rate가 약 2r/s만 돼도 통과한다.
+  - 시나리오 문서 :184·192도 `rate=5r/s` 변이가 살아남았다고 스스로 적었다.
+  - 이 AC가 말하는 상황은 **지속되는** NAT 뒤 폴링이다. 버스트가 바닥난 뒤의 정상 상태는 자동 테스트가 보지 않는다.
+- **보완 근거 (측정, 수동):** `C:\live-streaming-project\docs\perf\issue-31\after\judge-summary.json`
+  - 시청자 IP 20개가 각각 10 req/s로 90초(워밍업 30 + 본 측정 60) 보냈다.
+  - `responses_429{role:viewer,phase:warmup}` 0건(6,012건 중), `{phase:main}` 0건(12,012건 중), `http_req_failed{role:viewer,phase:main}` rate 0.
+  - 구현과 측정은 맞다. 하지만 회귀를 막는 자동 테스트가 없어 ⚠️로 둔다.
+
+### AC 3 — 서로 다른 IP는 영향받지 않는다
+
+✅ 충족
+- **테스트:**
+  - `should keep answering another IP with 200 when one IP goes over the limit` (:261–281). outside 클라이언트가 3초 동안 계속 보내는 도중(1초 뒤)에 edge에서 다른 IP로 한 건을 보내고 200을 확인한다.
+  - `should count requests by the X-Forwarded-For address when they come from the edge range` (:198–208). A가 60건을 보낸 직후 같은 curl 실행에서 B가 1건을 보내고, 마지막 응답이 200인지 본다.
+- **구현:** nginx.conf:17. 키가 `$binary_remote_addr`이다.
+- **근거:** 두 테스트 모두 같은 curl 실행 또는 진행 중인 홍수 안에서 다른 IP를 보낸다. 그래서 키 상수 변이를 잡는다(시나리오 문서 :195–199의 변이 기록과도 맞다).
+- **측정:** after/judge에서 남용 IP가 429 71,360건을 받는 동안 시청자 429는 0건, p95 1.0ms였다.
+- **약한 점:** :269–275에서 홍수를 보낸 쪽이 실제로 429를 받고 있었는지(전제 조건)를 단언하지 않는다. 출력을 `/dev/null`로 버린다. 홍수가 아무 이유로든 실패해도 테스트는 통과한다. 키 상수 변이에서 실패했다는 기록이 간접 증거일 뿐이다.
+
+### AC 4 — edge 대역의 X-Forwarded-For로 세고, 그 밖의 출처는 믿지 않는다
+
+✅ 충족
+- **테스트:**
+  - `should count requests by the X-Forwarded-For address when they come from the edge range` (:198). 10.250.0.0/24 서브넷 망을 만드는 코드는 :68–71.
+  - `should ignore X-Forwarded-For sent from outside the edge range` (:284–295). outside 망에서 요청마다 다른 XFF 60개를 보내 429가 나온다. XFF를 믿었다면 전부 200이었을 것이다.
+- **구현:** nginx.conf:11–12(`set_real_ip_from 10.250.0.0/24`, `real_ip_header X-Forwarded-For`, 기존 설정)와 :17의 `$binary_remote_addr`.
+- **근거:**
+  - `$realip_remote_addr` 변이가 실패했다(시나리오 :187).
+  - 가짜 Spring 로그에 사용자 IP가 찍히는 것을 :249가 이용한다.
+  - 측정에서도 k6를 perf-edge(10.250.0.0/24) 망에 두었을 때(`perf/compose.perf.yml`) 시청자 IP 20개와 남용 IP가 따로 세어졌다.
+- 실제 Caddy를 거친 확인은 이슈에서 범위 밖으로 뺐다(배포 단계, 시나리오 :90).
+
+### AC 5 — 429 본문(code·message)을 읽어 "잠시 후 다시 시도" 문구를 보인다
+
+✅ 충족
+- **테스트:**
+  - `should answer the rate limit 429 with a JSON body whose code is RATE_LIMITED` (NginxRateLimitTest.java:253–258). 같은 curl 실행의 61번째 응답 본문을 본다.
+  - `ChannelPage — should show the message from the error body when the channel request is rejected with 429` (`C:\live-streaming-project\frontend\src\pages\ChannelPage.test.tsx:163`)
+- **구현:**
+  - nginx.conf:49–52: `return 429 '{"code":"RATE_LIMITED","message":"요청이 너무 많습니다. 잠시 후 다시 시도해 주세요"}'`
+  - `C:\live-streaming-project\frontend\src\pages\ChannelPage.tsx:25`: 404가 아니면 `errorMessage(channel.error)`
+  - `frontend/src/api/client.ts:21–33`(본문 JSON 파싱 → `ApiError.body`)과 :38–44(`message` 꺼내기)
+- **근거:**
+  - 프론트 테스트는 기본 문구와 다른 전체 문자열을 `findByText`로 정확히 맞춘다. 그래서 고정 문구로는 통과하지 못한다(Red에서 실패한 기록 :154).
+  - 브라우저 수동 확인도 있다(시나리오 :242–246).
+- **약한 점:**
+  - nginx 쪽 단언이 `contains("\"code\":\"RATE_LIMITED\"")`뿐이다. `message` 필드도, JSON으로 파싱되는지도, 상태 코드 429도 확인하지 않는다.
+  - nginx 본문 → `api()` 파싱 → `ApiError` 경로를 잇는 자동 테스트가 없다. `frontend/src/api/`에 테스트 파일이 없고, 프론트 테스트는 `ApiError`를 손으로 만든다.
+  - 다만 본문이 깨져도 `errorMessage`의 기본 문구 "잠시 후 다시 시도해 주세요"가 보인다. 그래서 AC 문장의 결과 자체는 유지된다.
+- **참고:** 프론트는 `code`를 분기에 쓰지 않고 `message`만 보인다. RATE_LIMITED와 MEMBER_LOGIN_BLOCKED는 메시지 내용으로 구분된다. AC 위반으로 보지는 않는다.
+
+### AC 6 — 제한 전후를 같은 조건으로 재고 결과가 저장소에 남으며, 제한 뒤 합격 기준을 넘는다
+
+✅ 충족
+- **시나리오:** `C:\live-streaming-project\perf\rate-limit.js`. 합격 기준이 thresholds로 :84–85에 박혀 있다(`p(95)<=50`, `rate==0`).
+- **도구 버전:** `perf/compose.perf.yml:20` `grafana/k6:2.1.0`. 시나리오 문서 :205에도 적혀 있다.
+- **대상 커밋:** 문서 :206에 있다. `514d101`과 `959882b`가 실제로 있는 커밋인 것을 확인했다.
+- **원시 결과와 자원 지표:** `docs/perf/issue-31/{before,after}/{baseline,judge,steps}-summary.json`과 `-stats.csv` 12개 파일이 모두 있다.
+- **판정 (`after/judge-summary.json`):**
+  - `http_req_failed{role:viewer,phase:main}` rate 0 (fails 12,012, passes 0)
+  - `responses_429{role:viewer,phase:main}` 0
+  - `http_req_duration{role:viewer,phase:main}` p95 1.0027ms
+  - 두 threshold 모두 `"ok":true`
+  - 남용 72,000건(= 1,200 req/s × 60s) 중 429는 71,360건
+- **문서 표 대조:** 판정표와 계단표의 수치를 JSON과 맞춰 봤고 일치한다.
+  - 제한 전 남용 처리량 59,139/60 = 986 req/s
+  - 3,200 계단: 제한 전 67,901/30 = 2,263, 제한 후 94,892/30 = 3,163
+  - 시청자 p95: 417.9 → 1.3, 1,119.6 → 102.0
+- **참고 (판정에는 영향 없음):**
+  1. 합격 기준은 제한 전에도 통과했다(before/judge 시청자 p95 27.25ms, `"ok":true`). 기준이 제한 효과를 가르지 못한다. 문서 :223이 스스로 밝혔다. 제한 효과는 p99(485 → 7.1ms)와 api CPU(96% → 5–7%)에서 드러난다.
+  2. **측정 스크립트 결함:** `rate-limit.js:73`의 `dropped_iterations{role,phase}` 하위 지표는 모든 파일에서 0이다. 하지만 태그 없는 `dropped_iterations`는 before/judge 12,862건, before/steps 28,726건, after/steps 1,111건이다. 시나리오 태그가 dropped_iterations에 붙지 않아 생긴 문제로 보인다. 문서의 "VU 부족으로 못 보냄" 주장은 태그 없는 값이 뒷받침한다. 하지만 스크립트 요약 표의 dropped 칸은 항상 0을 찍어 오해를 낳는다.
+  3. 남용자 `http_req_duration` min이 음수다(before/judge −360ms, after/judge −591ms). 도커 VM 시계가 튄 것으로 보이며, 지연 수치의 신뢰도에 대한 주의 사항이다. 시청자 min은 양수였다.
+  4. "Spring까지 간 1,880건"(문서 :225)은 nginx 접근 로그를 센 값이다. 그 원시 로그는 저장소에 없다.
+  5. `docs/result/scenarios/issue-31.md`의 브라우저 확인 절(:242–246)은 아직 커밋되지 않았다(`git status`에서 modified).
+
+---
+
+## 빈틈을 메울 시나리오 제안
+
+- [ ] [경계] `nginx rate limit` — should answer no more than 42 of 60 requests with 200 when one IP sends them at once
+  - AC 1. 버스트 위쪽 경계를 묶는다. 200 개수를 41~42로 단언한다.
+- [ ] [경계] `nginx rate limit` — should reject requests with 429 when one IP that used its burst keeps sending 20 requests per second for 3 seconds
+  - AC 1. rate 위쪽 경계를 묶는다.
+- [ ] [정상] `nginx rate limit` — should answer every request with 200 when one IP that used its burst keeps polling at 8 requests per second for 5 seconds
+  - AC 2. 버스트를 먼저 비운 뒤의 지속 폴링을 본다. rate 5r/s 변이를 잡는다.
+- [ ] [예외] `nginx rate limit` — should answer the rate limit 429 with a JSON body whose message tells the user to try again later
+  - AC 5. 본문을 JSON으로 파싱해 `message`까지 단언한다.
+
+## 가짜 테스트 / 약한 단언
+
+조건 없이 통과하는 가짜 테스트는 없다. `await` 누락, 단언 없음, 목 값을 그대로 단언하는 경우도 없다. 약한 단언은 다음 넷이다.
+
+1. **NginxRateLimitTest.java:231, :239의 `assertThat(statuses).contains(429)`**
+   - 문제: 429가 한 건만 있어도 통과한다.
+   - 조이는 법: 200 개수를 `isBetween(41, 42)`로, 429 개수를 `isGreaterThanOrEqualTo(18)`로 단언한다.
+2. **:249의 `.isLessThan(60)`**
+   - 문제: `isEqualTo(answered)` 부분은 강하다. 하지만 `< 60`은 거의 아무것도 묶지 않는다.
+   - 조이는 법: `answered`를 41~42로 단언한다.
+3. **:257의 `contains("\"code\":\"RATE_LIMITED\"")`**
+   - 문제: message 필드, JSON 형식, 상태 코드 429를 확인하지 않는다.
+   - 조이는 법: `-w '%{http_code}'`로 429를 함께 받고, 본문을 JSON으로 파싱해 code와 message를 모두 단언한다.
+4. **:269–275의 홍수 출력을 버림**
+   - 문제: 넘친 IP가 실제로 제한받고 있었다는 전제를 단언하지 않는다.
+   - 조이는 법: 홍수 쪽 상태 코드를 모아 429가 있는지 함께 확인한다.
+
+## 실행한 명령
+
+1. `cat .claude/harness.json && gh issue view 31 --comments` → harness.json의 scenariosDir 확인. 이 호출은 코멘트(측정 전에 정한 값)만 보여 줬다.
+2. `gh api rate_limit --jq .resources.core; gh issue view 31` → 남은 호출 5000/5000. 이슈 본문의 AC 6개를 확인했다.
+3. `cat -n infra/nginx/nginx.conf && git status && git diff --stat main...HEAD && git diff` → 구현 줄 번호 확인. 브랜치 변경 19개 파일. 작업 트리에는 issue-31.md만 수정돼 있다.
+4. Read `docs/result/scenarios/issue-31.md` → AC 대조표, 변이 기록, 측정표를 확인했다.
+5. Read `NginxRateLimitTest.java` → 테스트 11개의 본문과 단언을 확인했다.
+6. `git diff main...HEAD -- frontend/ infra/ && cat -n ChannelPage.tsx && cat -n api/client.ts` → `errorMessage` 사용과 `api()` 파싱 경로를 확인했다.
+7. `JAVA_HOME=... ./gradlew test --tests "NginxRateLimitTest*"` (백그라운드) → BUILD SUCCESSFUL. JUnit XML 기준 tests=11, failures=0, errors=0.
+8. `cat -n perf/rate-limit.js perf/compose.perf.yml && ls -la docs/perf/issue-31/{before,after} && ls perf/` → 스크립트, k6 2.1.0, 결과 파일 12개, sample-stats.sh가 있다.
+9. node로 `{before,after}/{judge,baseline}-summary.json` 추출 → after 시청자 main은 fail 0, 429 0, p95 1.00ms, thresholds ok. before 시청자 main p95 27.25ms, p99 485ms. 남용자 min이 음수인 것을 발견했다.
+10. node로 `{before,after}/steps-summary.json` 추출, `after/judge-stats.csv` 헤더 확인, `perf/sample-stats.sh` 읽기, `git log -1 514d101`·`959882b` → 계단 수치가 문서와 일치하고 두 커밋이 있다.
+11. node로 태그 없는 dropped_iterations 확인, awk로 judge-stats.csv CPU 평균 계산 → 태그 붙은 dropped는 항상 0, 태그 없는 값은 12,862, 28,726, 1,111. after/judge 전체 구간 평균은 api 약 6%, nginx 12%.
+12. Gradle 출력 파일 읽기와 JUnit XML grep → 테스트 11개의 이름과 시간 확인, 모두 통과.
+13. `npx vitest run ChannelPage.test.tsx` → 1개 파일, 테스트 11개 통과.
+14. `ls frontend/src/api/; grep client.test.ts; grep -rn errorMessage` → api 폴더에 테스트 파일이 없다. `errorMessage`는 Login, MyPage, SignUp, ChannelPage에서 쓴다.
+15. `grep -n` ChannelPage.test.tsx와 compose.perf.yml → 새 테스트는 :163, k6 이미지는 :20.
+
+코드와 테스트는 고치지 않았고, 측정도 다시 돌리지 않았다.
