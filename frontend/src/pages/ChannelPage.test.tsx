@@ -3,6 +3,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fetchChannel, type ChannelResponse } from '../api/channels.ts'
+import { ApiError } from '../api/client.ts'
 import { LIVE_POLL_INTERVAL_MS } from './broadcastView.ts'
 import ChannelPage from './ChannelPage.tsx'
 
@@ -157,5 +158,16 @@ describe('ChannelPage', () => {
     await screen.findByText('오프라인')
 
     expect(screen.queryByText('데모 채널')).not.toBeNull()
+  })
+
+  it('should show the message from the error body when the channel request is rejected with 429', async () => {
+    // nginx가 IP당 요청 수를 넘기면 이 본문으로 429를 준다(#31)
+    fetchChannelMock.mockRejectedValue(
+      new ApiError(429, { code: 'RATE_LIMITED', message: '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요' }),
+    )
+
+    renderPage()
+
+    expect(await screen.findByText('요청이 너무 많습니다. 잠시 후 다시 시도해 주세요')).not.toBeNull()
   })
 })

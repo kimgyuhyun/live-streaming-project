@@ -139,3 +139,28 @@ AC에 없는데 둔 것 (이슈의 "정할 것"에서 온다):
 - `should pass the login block 429 from Spring through unchanged` — 로그인 시도 제한과 겹치지 않게 하는 결정
 
 **커버리지:** AC 6개 / 시나리오 12개(+ 수동 측정) / 미커버 0개 (AC 6은 수동)
+
+---
+
+## Red 기록 (2026-11-24)
+
+- 테스트 12개를 더했다: `NginxRateLimitTest` 11개(컨테이너를 띄우는 파일이라 다 쓰고 파일 단위로 한 번 돌렸다), `ChannelPage.test.tsx` 1개. stub는 없다(구현은 `nginx.conf`와 `ChannelPage.tsx`의 한 줄).
+- `check-scenarios.mjs 31 main`: 시나리오 12 · 더한 테스트 12 · 불일치 0
+- 전체: 백엔드 401건 중 5건 실패(이번에 더한 것만), 프론트 32건 중 1건 실패(이번에 더한 것)
+- **좋은 실패 6건** — 모두 단언에서 실패
+  - 429·캐시 채널 429·외부 `X-Forwarded-For` 무시: 응답이 전부 200
+  - Spring에 가지 않음: Spring까지 간 수 60(60 미만이어야 한다)
+  - `RATE_LIMITED` 본문: 가짜 Spring의 200 본문
+  - `ChannelPage`: 고정 문구만 있고 본문의 message가 없다
+- **구현 없이 통과한 6건** — 지금은 제한이 없어 "막지 않는다"를 말하는 테스트는 당연히 통과한다. Green 뒤 설정 변이로 실패하는지 확인한다(#14·#29와 같은 처리)
+
+| 테스트 | Green 뒤 넣을 변이 |
+| --- | --- |
+| 50명 폴링 초당 10건 → 모두 200 | `rate=5r/s` |
+| 40건 한꺼번에 → 모두 200 | `burst=20` |
+| edge에서 온 요청은 `X-Forwarded-For`별로 센다 | 키를 `$realip_remote_addr`(edge 주소)로 |
+| HLS는 세지 않는다 | `limit_req`를 server 수준으로 |
+| 다른 IP는 계속 200 | 키를 상수로 |
+| Spring의 로그인 차단 429는 그대로 | `proxy_intercept_errors on` |
+
+- 덧붙여 확인한 것: 가짜 Spring 로그의 `X-Forwarded-For`가 테스트가 보낸 사용자 IP로 찍혔다(Spring까지 간 수 60을 그 IP로 셌다). edge 대역 흉내(10.250.0.0/24 망)와 기존 `set_real_ip_from`이 의도대로 맞물린다.
