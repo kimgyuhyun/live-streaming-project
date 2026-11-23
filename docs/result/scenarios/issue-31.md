@@ -709,3 +709,36 @@ I did not change any code or tests and did not re-run k6. nginx.conf was restore
 - 남은 rate 9~12r/s 구간은 검증자와 같이 참고로 남긴다. 아래쪽(9)은 측정이 받치고, 위쪽(11~12)은 자동 테스트도 측정도 받치지 않는다. 초당 10~12건을 오래 보내는 IP는 드물게 통과할 수 있다는 뜻이 아니라, 설정 값이 11~12로 잘못 바뀌어도 테스트가 모른다는 뜻이다. 값은 `nginx.conf`:17에 한 곳뿐이고 이슈 코멘트에 남아 있다.
 - 선택 제안(60건 모두 200 또는 429)은 더하지 않았다. 같은 조건의 `contains(429)` 테스트들과 함께 보면 입구가 전부 5xx를 내는 경우는 이미 실패한다.
 - 검증자가 짚은 AC 대조표 누락은 표에 채웠다.
+
+---
+
+## 리팩토링 (2026-11-24)
+
+대상(`srcGlobs` 안, 테스트 제외)은 `frontend/src/pages/ChannelPage.tsx` 하나다. import 하나와 한 줄을 바꿨을 뿐이라 점검 기준(중복·이름·단일 책임·복잡도·컨벤션)에 걸리는 것이 없어 고치지 않았다. `infra/nginx/nginx.conf`는 `srcGlobs` 밖이고, 그 안의 `limit_req` 한 줄이 두 location에 반복되지만 두 번이라 공통화하지 않는다. 기준선: 백엔드 407건·프론트 32건 통과.
+
+---
+
+## 보안 점검 (2026-11-24, HEAD 4ce624c)
+
+| 확인 | 결과 |
+| --- | --- |
+| 타입 | `gradlew compileJava compileTestJava` 성공, `tsc -b` 오류 0 |
+| 의존성 | `npm audit` 0건. 이 브랜치는 의존성을 바꾸지 않았다(새 이미지는 측정 전용 `grafana/k6:2.1.0`, 저장소 코드가 실행하지 않는다) |
+| 비밀값 | `backend/src/main`·`frontend/src`·`perf`·`infra`에서 비밀값 대입·알려진 접두사 0건. 브랜치가 커밋한 `.env` 없음. `docs/perf/issue-31` 원시 결과에 password·token·Authorization·Cookie 없음 |
+| 프론트 로그 | `console.log/info/debug` 0건 |
+
+### 🔴 즉시 수정 — 없음
+
+### 🟡 권장 (배포 단계에서 함께 다룬다)
+
+- **`infra/nginx/nginx.conf`:17–18 · `compose.yml`(로그 회전 없음) — 막힌 요청마다 error 로그가 한 줄씩 쌓인다.** `limit_req`는 거절할 때마다 error 수준으로 `limiting requests …` 한 줄을 남긴다(브라우저 확인에서 825줄). 남용이 초당 수천 건이면 접근 로그와 같은 양이 error 로그에도 쌓인다. 컨테이너 로그 드라이버는 `json-file`이고 `compose.yml`에 `max-size`가 없어 로그 파일이 끝없이 자란다 — 제한이 Spring을 지켜도 디스크가 찰 수 있다. 접근 로그가 요청마다 한 줄씩 쌓이는 것은 이 이슈 전부터 같다. 고치는 법: 서버 compose에 서비스별 `logging.options.max-size`·`max-file`을 둔다(배포 이슈). nginx `limit_req_log_level`만 낮추는 것은 이미지 기본 error_log 수준(notice)에서 그대로 찍혀 효과가 없다. #26 `MEDIAMTX_API_PASSWORD`, #14 `DEMO_PASSWORD`와 함께 배포 단계에서 다룬다.
+
+### ⚪ 무시 가능 (이유)
+
+- **`/ws` 핸드셰이크는 세지 않는다.** 이슈에서 범위 밖으로 정했다(시그니처 "만들지 않는 것"). 연결을 여는 것은 이 이슈 전부터 제한이 없었고, 채팅 쪽 도배 제한은 확정 사양이 따로 다룬다.
+- **edge 대역의 `X-Forwarded-For`를 믿는 것.** 기존 설정(`set_real_ip_from 10.250.0.0/24`)이고 `real_ip_recursive`가 꺼져 있어 맨 끝 주소, 즉 Caddy가 본 접속 주소를 쓴다. edge 밖에서 보낸 값은 무시하는 것을 테스트가 본다.
+- **제한 영역 10MB.** 사용자 IP 약 16만 개를 담는다. 가득 차면 nginx가 오래된 항목부터 지운다. nginx 컨테이너 메모리 한도 64MB 안이다.
+- **`perf/compose.perf.yml`가 `docs/perf`를 k6 컨테이너에 쓰기로 마운트.** 로컬 측정 전용이고 profile `perf`라 평소 `up`에는 뜨지 않는다.
+- **`NginxRateLimitTest`가 10.250.0.0/24 망을 만든다.** 같은 대역의 망(측정용 `perf-edge` 등)이 떠 있으면 테스트가 망 생성에서 실패한다. 보안 문제가 아니라 테스트 환경 조건이라 `perf/compose.perf.yml` 머리 주석에 측정 뒤 망을 지운다고 적었다.
+
+예외 대장(`securityExceptions`)은 비어 있다. 반복될 ⚪는 없다.
