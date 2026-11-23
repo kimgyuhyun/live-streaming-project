@@ -137,6 +137,17 @@ class NginxRateLimitTest {
         return sendAll(client, "GET", path, Collections.nCopies(n, forwardedFor));
     }
 
+    // 한 사용자 IP가 n건을 한꺼번에 보내고 같은 curl 실행에서 한 건을 더 보내 그 본문을 돌려준다.
+    // exec를 따로 띄우면 그 사이(100~300ms)에 토큰이 다시 차 마지막 요청이 통과한다
+    private static String bodyAfterBurst(GenericContainer<?> client, String forwardedFor, String path, int n) throws Exception {
+        List<String> command = new ArrayList<>(List.of("curl"));
+        for (int i = 0; i < n; i++) {
+            command.addAll(List.of("-s", "-o", "/dev/null", "-H", "X-Forwarded-For: " + forwardedFor, ENTRY + path, "--next"));
+        }
+        command.addAll(List.of("-s", "-H", "X-Forwarded-For: " + forwardedFor, ENTRY + path));
+        return client.execInContainer(command.toArray(String[]::new)).getStdout();
+    }
+
     // 응답 본문 하나
     private static String body(GenericContainer<?> client, String method, String forwardedFor, String path) throws Exception {
         return client.execInContainer("curl", "-s", "-X", method, "-H", "X-Forwarded-For: " + forwardedFor, ENTRY + path)
@@ -236,9 +247,7 @@ class NginxRateLimitTest {
         @Test
         @DisplayName("should answer the rate limit 429 with a JSON body whose code is RATE_LIMITED")
         void answersRateLimitedBody() throws Exception {
-            burst(edgeClient, "198.51.100.9", "/api/channels/0021", 60);
-
-            String body = body(edgeClient, "GET", "198.51.100.9", "/api/channels/0021");
+            String body = bodyAfterBurst(edgeClient, "198.51.100.9", "/api/channels/0021", 60);
 
             assertThat(body).contains("\"code\":\"RATE_LIMITED\"");
         }

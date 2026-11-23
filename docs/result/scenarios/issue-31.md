@@ -95,24 +95,24 @@ server {
 
 ### 정상
 
-- [ ] [정상] `nginx rate limit` — should answer every request with 200 when 50 viewers behind one IP poll at 10 requests per second for 5 seconds
-- [ ] [정상] `nginx rate limit` — should count requests by the X-Forwarded-For address when they come from the edge range
-- [ ] [정상] `nginx rate limit` — should not limit HLS requests when one IP sends more than the limit
+- [x] [정상] `nginx rate limit` — should answer every request with 200 when 50 viewers behind one IP poll at 10 requests per second for 5 seconds
+- [x] [정상] `nginx rate limit` — should count requests by the X-Forwarded-For address when they come from the edge range
+- [x] [정상] `nginx rate limit` — should not limit HLS requests when one IP sends more than the limit
 
 ### 경계
 
-- [ ] [경계] `nginx rate limit` — should answer every request with 200 when one IP sends 40 requests at once
-- [ ] [경계] `nginx rate limit` — should reject requests for a cached channel with 429 when one IP goes over the limit
+- [x] [경계] `nginx rate limit` — should answer every request with 200 when one IP sends 40 requests at once
+- [x] [경계] `nginx rate limit` — should reject requests for a cached channel with 429 when one IP goes over the limit
 
 ### 예외
 
-- [ ] [예외] `nginx rate limit` — should answer 429 when one IP sends 60 requests at once to the public API
-- [ ] [예외] `nginx rate limit` — should not pass rejected requests to Spring when one IP goes over the limit
-- [ ] [예외] `nginx rate limit` — should answer the rate limit 429 with a JSON body whose code is RATE_LIMITED
-- [ ] [예외] `nginx rate limit` — should keep answering another IP with 200 when one IP goes over the limit
-- [ ] [예외] `nginx rate limit` — should ignore X-Forwarded-For sent from outside the edge range
-- [ ] [예외] `nginx rate limit` — should pass the login block 429 from Spring through unchanged
-- [ ] [예외] `ChannelPage` — should show the message from the error body when the channel request is rejected with 429
+- [x] [예외] `nginx rate limit` — should answer 429 when one IP sends 60 requests at once to the public API
+- [x] [예외] `nginx rate limit` — should not pass rejected requests to Spring when one IP goes over the limit
+- [x] [예외] `nginx rate limit` — should answer the rate limit 429 with a JSON body whose code is RATE_LIMITED
+- [x] [예외] `nginx rate limit` — should keep answering another IP with 200 when one IP goes over the limit
+- [x] [예외] `nginx rate limit` — should ignore X-Forwarded-For sent from outside the edge range
+- [x] [예외] `nginx rate limit` — should pass the login block 429 from Spring through unchanged
+- [x] [예외] `ChannelPage` — should show the message from the error body when the channel request is rejected with 429
 
 ### 수동 확인·측정 (로컬 compose + k6 — 시나리오 수에 넣지 않는다)
 
@@ -164,3 +164,30 @@ AC에 없는데 둔 것 (이슈의 "정할 것"에서 온다):
 | Spring의 로그인 차단 429는 그대로 | `proxy_intercept_errors on` |
 
 - 덧붙여 확인한 것: 가짜 Spring 로그의 `X-Forwarded-For`가 테스트가 보낸 사용자 IP로 찍혔다(Spring까지 간 수 60을 그 IP로 셌다). edge 대역 흉내(10.250.0.0/24 망)와 기존 `set_real_ip_from`이 의도대로 맞물린다.
+
+---
+
+## Green 기록 (2026-11-24)
+
+- 구현: `infra/nginx/nginx.conf`(제한 영역, `/api/`·캐시 location의 `limit_req`, 429 JSON), `frontend/src/pages/ChannelPage.tsx`(404가 아닌 오류에 `errorMessage`)
+- 순서: `ChannelPage` → `/api/` 제한(429·Spring에 가지 않음·외부 `X-Forwarded-For` 무시 통과) → 캐시 location 제한(캐시 채널 429 통과) → 429 JSON
+- 전체: 백엔드 401건·프론트 32건 통과. 커버리지 명령은 비어 있어(`coverage`) 재지 않았다. 구현이 nginx 설정이라 줄 커버리지로 볼 것도 없다
+- **테스트를 한 번 고쳤다(사용자 승인).** `should answer the rate limit 429 with a JSON body whose code is RATE_LIMITED`가 60건을 보낸 뒤 `docker exec`를 새로 띄워 본문을 받았는데, 그 사이(100~300ms)에 초당 10건 토큰이 다시 차 마지막 요청이 200이었다. 본문 요청을 같은 curl 실행의 61번째로 옮겼다(`bodyAfterBurst`). 문장·단언은 그대로. 고친 테스트를 제한 전 nginx로 돌려 실패하는 것을 다시 확인했다
+- **#29 캐시 테스트 간헐 실패 1회.** 캐시 location에 `limit_req`를 넣은 뒤 한 번, `should return a fresh answer from Spring when the same channel is requested after 1 second`가 2.1초 뒤에도 같은 본문을 받았다. 이어서 단독 3회·`Nginx*` 묶음 3회·전체 1회는 모두 통과했다. 두 테스트 클래스는 컨테이너를 따로 띄우고 그 테스트는 IP당 한도(초당 10건)에 닿을 만큼 보내지 않으므로 제한과 무관한 시각 문제로 본다(캐시 시각이 초 단위라 1초 캐시가 1~2초 남고, 테스트는 2.1초를 기다린다). 다시 나오면 따로 본다
+
+### 변이 확인 (Red에서 구현 없이 통과한 6건)
+
+`nginx.conf`를 하나씩 바꿔 `NginxRateLimitTest`를 돌리고 Green 사본으로 되돌렸다.
+
+| 변이 | 실패한 테스트 |
+| --- | --- |
+| `rate=5r/s` | 없음 — 살아남음(아래) |
+| `rate=1r/s` | 50명 폴링 초당 10건 → 모두 200 |
+| `burst=20` | 40건 한꺼번에 → 모두 200 |
+| 키를 `$realip_remote_addr`(edge 주소)로 | edge에서 온 요청은 `X-Forwarded-For`별로 센다, 40건 한꺼번에 |
+| `limit_req`를 server 수준으로 | HLS는 세지 않는다 |
+| 키를 상수(`$server_name`)로 | 40건 한꺼번에 — **다른 IP는 계속 200은 살아남음**(아래) |
+| `proxy_intercept_errors on` | Spring의 로그인 차단 429는 그대로 |
+
+- `rate=5r/s`가 사는 것은 받아들인다. 5초에 50건이면 버스트 40 + 5초 동안 다시 차는 25건으로 모두 받는다. 이 테스트가 지키는 것은 AC 2("NAT 뒤 여럿의 폴링은 정상")이지 정확한 초당 한도가 아니다.
+- 다른 IP 테스트는 위 본문 테스트와 같은 구조(한도를 넘긴 뒤 `docker exec`를 새로 띄워 다른 IP로 한 건)라 그 사이에 토큰이 차 키가 상수여도 통과한다. `X-Forwarded-For`별로 센다 테스트도 같은 구조다(변이 3에서는 다른 테스트들이 같은 버킷을 비워 둔 덕에 실패했다).
