@@ -135,6 +135,20 @@ class NginxRateLimitTest {
         return result.getStdout().lines().map(Integer::valueOf).toList();
     }
 
+    // 한 사용자 IP가 먼저 60건을 한꺼번에 보내 버스트를 다 쓰고, 같은 셸에서 이어서 interval초마다 한 건씩 n건을 보낸다.
+    // 뒤쪽 n건의 상태 코드만 돌려준다. 각 요청은 interval만큼 기다린 뒤 보낸다(버스트 직후 바로 보내면 재충전 전이라 막힌다)
+    private static List<Integer> pacedAfterBurst(String forwardedFor, int n, String interval) throws Exception {
+        String url = ENTRY + "/api/channels/0021";
+        StringBuilder burst = new StringBuilder("curl -s");
+        for (int i = 0; i < 60; i++) {
+            burst.append(" -o /dev/null -H 'X-Forwarded-For: ").append(forwardedFor).append("' ").append(url);
+        }
+        String script = burst + "; for i in $(seq " + n + "); do sleep " + interval + "; "
+                + "curl -s -o /dev/null -w '%{http_code}\\n' -H 'X-Forwarded-For: " + forwardedFor + "' " + url + " & "
+                + "done; wait";
+        return edgeClient.execInContainer("sh", "-c", script).getStdout().lines().map(Integer::valueOf).toList();
+    }
+
     // 한 사용자 IP가 같은 경로로 n건을 한꺼번에 보낸다
     private static List<Integer> burst(GenericContainer<?> client, String forwardedFor, String path, int n) throws Exception {
         return sendAll(client, "GET", path, Collections.nCopies(n, forwardedFor));
@@ -213,6 +227,33 @@ class NginxRateLimitTest {
             List<Integer> statuses = burst(edgeClient, "198.51.100.4", "/hls/live/1/index.m3u8", 60);
 
             assertThat(statuses).hasSize(60).containsOnly(200);
+        }
+
+        @Test
+        @DisplayName("should answer every request with 200 when one IP that used its burst keeps polling at 8 requests per second for 5 seconds")
+        void allowsSteadyPollingAfterBurst() throws Exception {
+            // 버스트를 다 쓴 뒤에도 초당 10건 안쪽의 지속 폴링은 막지 않는다(AC 2, AC 검증 갭)
+            List<Integer> statuses = pacedAfterBurst("198.51.100.14", 40, "0.125");
+
+            assertThat(statuses).hasSize(40).containsOnly(200);
+        }
+
+        @Test
+        @DisplayName("should answer at most 45 of 60 requests with 200 when one IP sends them at once")
+        void capsBurst() throws Exception {
+            // 1건 + 버스트 40 = 41건. 보내는 동안 다시 차는 몫(초당 10건)을 넉넉히 더해 45건까지 본다(AC 1, AC 검증 갭)
+            List<Integer> statuses = burst(edgeClient, "198.51.100.12", "/api/channels/0021", 60);
+
+            assertThat(statuses.stream().filter(status -> status == 200).count()).isLessThanOrEqualTo(45);
+        }
+
+        @Test
+        @DisplayName("should reject requests with 429 when one IP that used its burst keeps sending 20 requests per second for 3 seconds")
+        void limitsSteadyRateAfterBurst() throws Exception {
+            // 초당 10건을 넘는 지속 요청은 버스트를 다 쓴 뒤 막힌다(AC 1, AC 검증 갭)
+            List<Integer> statuses = pacedAfterBurst("198.51.100.13", 60, "0.05");
+
+            assertThat(statuses).contains(429);
         }
 
         @Test

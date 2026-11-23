@@ -70,7 +70,11 @@ function record(t, role, phase) {
   t[`http_req_failed${tag}`] = ['rate>=0']
   t[`http_reqs${tag}`] = ['count>=0']
   t[`responses_429${tag}`] = ['count>=0']
-  t[`dropped_iterations${tag}`] = ['count>=0']
+}
+
+// dropped_iterations에는 시나리오에 단 태그(role·phase)가 붙지 않는다. 시나리오 이름으로 남겨 두고 요약에서 더한다
+function scenarioNames(role, phase) {
+  return Object.keys(options.scenarios).filter((name) => name.startsWith(`${phase}_${role}`))
 }
 
 function thresholds() {
@@ -91,6 +95,9 @@ export const options = {
   scenarios: scenarios(),
   thresholds: thresholds(),
   summaryTrendStats: ['avg', 'min', 'med', 'p(95)', 'p(99)', 'max'],
+}
+for (const name of Object.keys(options.scenarios)) {
+  options.thresholds[`dropped_iterations{scenario:${name}}`] = ['count>=0']
 }
 
 function pickChannel() {
@@ -130,7 +137,8 @@ function textSummary(data) {
       const reqs = m[`http_reqs${tag}`]?.values.count ?? 0
       const f = m[`http_req_failed${tag}`]?.values.rate ?? 0
       const limited = m[`responses_429${tag}`]?.values.count ?? 0
-      const dropped = m[`dropped_iterations${tag}`]?.values.count ?? 0
+      const dropped = scenarioNames(role, phase.name)
+        .reduce((sum, name) => sum + (m[`dropped_iterations{scenario:${name}}`]?.values.count ?? 0), 0)
       const v = d.values
       lines.push([phase.name, role, reqs, (reqs / phase.seconds).toFixed(1), v.med.toFixed(1), v['p(95)'].toFixed(1),
         v['p(99)'].toFixed(1), v.max.toFixed(1), (f * 100).toFixed(3) + '%', limited, dropped].join('  '))

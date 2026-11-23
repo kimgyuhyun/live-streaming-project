@@ -98,11 +98,14 @@ server {
 - [x] [정상] `nginx rate limit` — should answer every request with 200 when 50 viewers behind one IP poll at 10 requests per second for 5 seconds
 - [x] [정상] `nginx rate limit` — should count requests by the X-Forwarded-For address when they come from the edge range
 - [x] [정상] `nginx rate limit` — should not limit HLS requests when one IP sends more than the limit
+- [x] [정상] `nginx rate limit` — should answer every request with 200 when one IP that used its burst keeps polling at 8 requests per second for 5 seconds
 
 ### 경계
 
 - [x] [경계] `nginx rate limit` — should answer every request with 200 when one IP sends 40 requests at once
 - [x] [경계] `nginx rate limit` — should reject requests for a cached channel with 429 when one IP goes over the limit
+- [x] [경계] `nginx rate limit` — should answer at most 45 of 60 requests with 200 when one IP sends them at once
+- [x] [경계] `nginx rate limit` — should reject requests with 429 when one IP that used its burst keeps sending 20 requests per second for 3 seconds
 
 ### 예외
 
@@ -407,3 +410,24 @@ AC에 없는데 둔 것 (이슈의 "정할 것"에서 온다):
 15. `grep -n` ChannelPage.test.tsx와 compose.perf.yml → 새 테스트는 :163, k6 이미지는 :20.
 
 코드와 테스트는 고치지 않았고, 측정도 다시 돌리지 않았다.
+
+### 구현자 이견
+
+없음. 두 ⚠️ 모두 사실 확인이 맞다(`rate=5r/s`가 살아남은 것은 Green 기록에도 적었다).
+
+### 갭 처리 (사용자 결정: 갭을 메운다, 2026-11-24)
+
+검증자 제안 중 AC 1·2의 세 개를 시나리오로 더했다(위 `## 테스트 시나리오`, 모두 `[x]`). AC 대조에서 AC 1에 둘(버스트 상한·rate 상한), AC 2에 하나(버스트를 쓴 뒤의 지속 폴링)가 더해진다.
+
+| 더한 시나리오 | 덮는 AC | 잡는 변이 |
+| --- | --- | --- |
+| `should answer at most 45 of 60 requests with 200 when one IP sends them at once` | AC 1 상한 | `burst=55` |
+| `should reject requests with 429 when one IP that used its burst keeps sending 20 requests per second for 3 seconds` | AC 1 rate | `rate=50r/s` |
+| `should answer every request with 200 when one IP that used its burst keeps polling at 8 requests per second for 5 seconds` | AC 2 지속 폴링 | `rate=5r/s`(Green에서 살아남았던 변이) |
+
+- 검증자가 제안한 "42 이하"는 45로 넓혔다. 60건을 curl 한 번으로 보내는 동안에도 초당 10건씩 다시 차, 원래 설정에서 41~43건이 200이 될 수 있어 42면 흔들린다. 45로도 `burst=55` 변이(약 56건 이상 200)는 실패한다.
+- 지속 폴링 테스트는 각 요청 전에 0.125초를 먼저 기다린다. 버스트 직후 재충전 전에 보내면 원래 설정에서도 막힌다.
+- 이 세 테스트는 구현이 이미 있어 Red(구현 없이 실패)를 따로 볼 수 없다. 대신 노린 변이에서 각각 실패하고 Green 설정에서 두 번 통과하는 것을 확인했다(#14의 약한 단언 보강과 같은 처리).
+- 전체: 백엔드 404건 통과(이 이슈 테스트 14 + 기존 390), `check-scenarios` 시나리오 15 · 더한 테스트 15 · 불일치 0.
+- 검증자의 나머지 약한 단언(`contains(429)`·`isLessThan(60)`·RATE_LIMITED 본문의 message·홍수 쪽 전제)은 위 세 시나리오가 상한과 rate를 묶으므로 더 조이지 않았다. AC 5는 ✅ 판정이고 프론트가 본문이 깨져도 같은 뜻의 기본 문구를 보인다.
+- 측정 스크립트 결함(검증자 참고 2): `dropped_iterations`에 시나리오 태그가 붙지 않아 요약 표의 dropped 칸이 늘 0이었다. 시나리오 이름별 기준을 걸고 요약에서 더하도록 `perf/rate-limit.js`를 고쳤다. `k6 inspect`로 옵션만 확인했고 측정을 다시 돌리지는 않았다. 이미 남긴 결과의 처리량 칸(VU 부족으로 못 보낸 것)은 원시 JSON의 태그 없는 `dropped_iterations`(before/judge 12,862 · before/steps 28,726 · after/steps 1,111)와 맞는다.
