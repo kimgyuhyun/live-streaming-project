@@ -14,11 +14,13 @@ fi
 
 # 영상이 없으면 만든다: ffmpeg 테스트 패턴(흐르는 초가 그려진다) + 440Hz 소리, 30초.
 # 직접 만든 영상이라 출처 문제가 없다(확정 사양 10절). 이 자리에 직접 녹화한 파일을 두면 그것을 쓴다.
-# 키프레임을 2초 간격으로 고정한다. 송출은 다시 인코딩하지 않고(-c copy) MediaMTX가 HLS 조각을 키프레임 단위로 자른다
+# 키프레임을 2초 간격으로 고정한다. 송출은 다시 인코딩하지 않고(-c copy) MediaMTX가 HLS 조각을 키프레임 단위로 자른다.
+# 스레드 하나로 만든다. 기본(코어 수만큼)이면 컨테이너 메모리 제한(128MB)을 넘어 죽는다. 30초 영상에 20초쯤 걸린다.
+# 만들다 죽은 임시 파일이 남아 있으면 덮어쓴다(-y)
 if [ ! -f "$VIDEO" ]; then
-  ffmpeg -hide_banner -loglevel error \
+  ffmpeg -y -hide_banner -loglevel error \
     -f lavfi -i testsrc=size=1280x720:rate=30 -f lavfi -i sine=frequency=440:sample_rate=44100 \
-    -t 30 -c:v libx264 -preset veryfast -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
+    -t 30 -c:v libx264 -preset veryfast -threads 1 -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
     -c:a aac -b:a 64k "$VIDEO.tmp.mp4" && mv "$VIDEO.tmp.mp4" "$VIDEO" || exit 1
 fi
 
