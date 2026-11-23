@@ -45,16 +45,24 @@ public class ChannelService {
         return toResponse(channel);
     }
 
+    // 운영자가 채널에 데모 표시를 붙인다(PRD channel C3). 이미 데모 채널이어도 같은 응답
+    public ChannelResponse markDemo(long channelId) {
+        Channel channel = findChannel(channelId);
+        channelMapper.markDemo(channelId);
+        channel.setDemo(true);
+        return toResponse(channel);
+    }
+
     private Channel findChannel(long channelId) {
         return channelMapper.findById(channelId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHANNEL_NOT_FOUND));
     }
 
     // live는 진행 중 방송이 있는지(ChannelMapper가 broadcast에서 함께 읽는다). 빈 소개는 Oracle에서 NULL로 읽힌다.
-    // 제목을 정한 적 없으면 "{채널 이름}의 방송"(확정 사양 4절)
+    // 제목을 정한 적 없으면 "{채널 이름}의 방송"(확정 사양 4절). demo는 운영자가 붙인 데모 표시(#14)
     private static ChannelResponse toResponse(Channel channel) {
         return new ChannelResponse(channel.getId(), channel.getName(),
                 Objects.requireNonNullElse(channel.getDescription(), ""), channel.isLive(),
-                Objects.requireNonNullElse(channel.getTitle(), channel.getName() + "의 방송"));
+                Objects.requireNonNullElse(channel.getTitle(), channel.getName() + "의 방송"), channel.isDemo());
     }
 }

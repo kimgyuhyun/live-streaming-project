@@ -66,7 +66,7 @@ class ChannelControllerTest {
         given(channelService.update(eq(CHANNEL_ID), eq(MEMBER_ID), any(UpdateChannelRequest.class)))
                 .willAnswer(invocation -> {
                     UpdateChannelRequest request = invocation.getArgument(2);
-                    return new ChannelResponse(CHANNEL_ID, request.name(), request.description(), false, "방송채널의 방송");
+                    return new ChannelResponse(CHANNEL_ID, request.name(), request.description(), false, "방송채널의 방송", false);
                 });
     }
 
@@ -78,7 +78,7 @@ class ChannelControllerTest {
         @DisplayName("should return 200 with name, description and live false when service finds the channel")
         void returnsChannel() throws Exception {
             given(channelService.find(CHANNEL_ID))
-                    .willReturn(new ChannelResponse(CHANNEL_ID, "방송채널", "안녕하세요", false, "방송채널의 방송"));
+                    .willReturn(new ChannelResponse(CHANNEL_ID, "방송채널", "안녕하세요", false, "방송채널의 방송", false));
 
             mockMvc.perform(get("/api/channels/{channelId}", CHANNEL_ID))
                     .andExpect(status().isOk())
@@ -108,7 +108,7 @@ class ChannelControllerTest {
         @DisplayName("should return 200 with the channel of the logged-in streamer")
         void returnsMyChannel() throws Exception {
             given(channelService.findMine(MEMBER_ID))
-                    .willReturn(new ChannelResponse(CHANNEL_ID, "방송채널", "", false, "방송채널의 방송"));
+                    .willReturn(new ChannelResponse(CHANNEL_ID, "방송채널", "", false, "방송채널의 방송", false));
             logInAsStreamer();
 
             mockMvc.perform(get("/api/studio/channel"))
@@ -251,7 +251,7 @@ class ChannelControllerTest {
             given(channelService.updateTitle(eq(MEMBER_ID), any(UpdateTitleRequest.class)))
                     .willAnswer(invocation -> {
                         UpdateTitleRequest request = invocation.getArgument(1);
-                        return new ChannelResponse(CHANNEL_ID, "방송채널", "", false, request.title());
+                        return new ChannelResponse(CHANNEL_ID, "방송채널", "", false, request.title(), false);
                     });
         }
 

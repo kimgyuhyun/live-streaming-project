@@ -49,7 +49,7 @@ class ChannelServiceTest {
 
             ChannelResponse response = channelService.find(CHANNEL_ID);
 
-            assertThat(response).isEqualTo(new ChannelResponse(CHANNEL_ID, "방송채널", "안녕하세요", false, "방송채널의 방송"));
+            assertThat(response).isEqualTo(new ChannelResponse(CHANNEL_ID, "방송채널", "안녕하세요", false, "방송채널의 방송", false));
         }
 
         @Test
@@ -90,6 +90,24 @@ class ChannelServiceTest {
         }
 
         @Test
+        @DisplayName("should report the channel as demo when it is marked as demo")
+        void returnsDemo() {
+            Channel channel = savedChannel("소개");
+            channel.setDemo(true);
+            given(channelMapper.findById(CHANNEL_ID)).willReturn(Optional.of(channel));
+
+            assertThat(channelService.find(CHANNEL_ID).demo()).isTrue();
+        }
+
+        @Test
+        @DisplayName("should report the channel as not demo when it is not marked")
+        void returnsNotDemo() {
+            given(channelMapper.findById(CHANNEL_ID)).willReturn(Optional.of(savedChannel("소개")));
+
+            assertThat(channelService.find(CHANNEL_ID).demo()).isFalse();
+        }
+
+        @Test
         @DisplayName("should throw CHANNEL_NOT_FOUND when the channel does not exist")
         void rejectsMissingChannel() {
             given(channelMapper.findById(CHANNEL_ID)).willReturn(Optional.empty());
@@ -111,7 +129,7 @@ class ChannelServiceTest {
             given(channelMapper.findByMemberId(OWNER_ID)).willReturn(Optional.of(savedChannel("소개")));
 
             assertThat(channelService.findMine(OWNER_ID))
-                    .isEqualTo(new ChannelResponse(CHANNEL_ID, "방송채널", "소개", false, "방송채널의 방송"));
+                    .isEqualTo(new ChannelResponse(CHANNEL_ID, "방송채널", "소개", false, "방송채널의 방송", false));
         }
 
         @Test
@@ -139,7 +157,7 @@ class ChannelServiceTest {
                     new UpdateChannelRequest("새이름", "새 소개"));
 
             verify(channelMapper).update(CHANNEL_ID, "새이름", "새 소개");
-            assertThat(response).isEqualTo(new ChannelResponse(CHANNEL_ID, "새이름", "새 소개", false, "새이름의 방송"));
+            assertThat(response).isEqualTo(new ChannelResponse(CHANNEL_ID, "새이름", "새 소개", false, "새이름의 방송", false));
         }
 
         @Test
@@ -193,6 +211,41 @@ class ChannelServiceTest {
                     .extracting("code")
                     .isEqualTo(ErrorCode.CHANNEL_NOT_FOUND);
             verify(channelMapper, never()).updateTitle(anyLong(), anyString());
+        }
+    }
+
+    @Nested
+    @DisplayName("ChannelService.markDemo")
+    class MarkDemo {
+
+        @Test
+        @DisplayName("should return the channel as demo when an operator marks an existing channel")
+        void returnsDemoChannel() {
+            given(channelMapper.findById(CHANNEL_ID)).willReturn(Optional.of(savedChannel("소개")));
+
+            assertThat(channelService.markDemo(CHANNEL_ID).demo()).isTrue();
+        }
+
+        @Test
+        @DisplayName("should save the demo mark to the channel when an operator marks it")
+        void savesDemoMark() {
+            given(channelMapper.findById(CHANNEL_ID)).willReturn(Optional.of(savedChannel("소개")));
+
+            channelService.markDemo(CHANNEL_ID);
+
+            verify(channelMapper).markDemo(CHANNEL_ID);
+        }
+
+        @Test
+        @DisplayName("should throw CHANNEL_NOT_FOUND when the channel does not exist")
+        void rejectsMissingChannel() {
+            given(channelMapper.findById(CHANNEL_ID)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> channelService.markDemo(CHANNEL_ID))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("code")
+                    .isEqualTo(ErrorCode.CHANNEL_NOT_FOUND);
+            verify(channelMapper, never()).markDemo(anyLong());
         }
     }
 }

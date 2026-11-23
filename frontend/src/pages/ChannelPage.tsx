@@ -27,6 +27,8 @@ function ChannelPage() {
   return (
     <section>
       <h1>{channel.data.name}</h1>
+      {/* 운영자가 붙인 데모 표시(확정 사양 10절). 방송 중이든 아니든 보인다 */}
+      {channel.data.demo && <p>데모 채널</p>}
       {/* 방송 중이면 지금 방송의, 아니면 다음 방송의 제목. 텍스트로 넣어 React가 이스케이프한다 */}
       <h2>{channel.data.title}</h2>
       {view && <PlayerArea view={view} channelId={channelId} />}

@@ -1,12 +1,14 @@
 import { api } from './client.ts'
 
-// live는 방송 중 여부(진행 중 방송이 있으면 true). title은 방송 제목, 정한 적 없으면 "{name}의 방송"
+// live는 방송 중 여부(진행 중 방송이 있으면 true). title은 방송 제목, 정한 적 없으면 "{name}의 방송".
+// demo는 운영자가 데모 표시를 붙인 채널이면 true
 export interface ChannelResponse {
   id: number
   name: string
   description: string
   live: boolean
   title: string
+  demo: boolean
 }
 
 export interface UpdateChannelRequest {
