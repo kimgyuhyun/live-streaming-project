@@ -286,7 +286,7 @@ PRD: docs/result/prd/channel.md
 - [ ] Given 데모 채널, When 채널 페이지를 보면, Then "데모 채널" 표시가 보인다
 - [ ] Given 운영자가 아닌 회원, When 데모 표시를 붙이려 하면, Then 403이다
 - [ ] Given 돌고 있는 데모, When 준비 스크립트를 다시 돌리면, Then 키가 재발급되고 시뮬레이터가 새 키로 다시 송출해 3개 모두 다시 `방송 중`이 된다
-- [ ] Given 데모 영상 파일, When 출처를 보면, Then 직접 녹화한 것이거나 CC BY 영상이며 README에 출처가 적혀 있다
+- [ ] Given 데모 영상 파일, When 출처를 보면, Then 직접 만들었거나 녹화한 것이거나 CC BY 영상이며 README에 출처가 적혀 있다
 
 PRD: docs/result/prd/channel.md
 
