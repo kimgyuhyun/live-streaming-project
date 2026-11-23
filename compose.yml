@@ -84,6 +84,22 @@ services:
     cpus: 0.5
     restart: unless-stopped
 
+  # 데모 방송 시뮬레이터(#14, PRD channel C3). 평소 up에는 뜨지 않는다:
+  #   node --env-file=.env demo/setup.mjs  →  docker compose --profile demo up -d demo
+  # ffmpeg·sh가 들어 있는 MediaMTX 이미지를 그대로 쓴다. 송출은 다시 인코딩하지 않는다(-c copy)
+  demo:
+    image: bluenviron/mediamtx:1.21.4-ffmpeg
+    profiles: [demo]
+    entrypoint: ["/bin/sh", "/demo/simulator.sh"]
+    volumes:
+      # streams.txt(키)를 읽고, video.mp4가 없으면 여기에 만든다. 둘 다 git 제외
+      - ./demo:/demo
+    depends_on:
+      - mediamtx
+    mem_limit: 128m
+    cpus: 0.5
+    restart: unless-stopped
+
   nginx:
     build:
       context: .

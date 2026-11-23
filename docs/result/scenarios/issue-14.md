@@ -144,27 +144,27 @@ demo/simulator.sh    compose 서비스 demo 의 진입점
 
 ### 정상
 
-- [ ] [정상] `ChannelService.markDemo` — should return the channel as demo when an operator marks an existing channel
-- [ ] [정상] `ChannelService.find` — should report the channel as demo when it is marked as demo
-- [ ] [정상] `ChannelService.find` — should report the channel as not demo when it is not marked
-- [ ] [정상] `ChannelOperatorController.markDemo` — should return 200 with the channel when an operator marks it as demo
-- [ ] [정상] `ChannelIntegration` — should show the channel as demo to a visitor after an operator marks it
-- [ ] [정상] `ChannelIntegration` — should report a newly approved channel as not demo
-- [ ] [정상] `ChannelPage` — should show the demo channel label when a visitor opens a demo channel
-- [ ] [정상] `ChannelPage` — should not show the demo channel label when a visitor opens a channel that is not a demo
+- [x] [정상] `ChannelService.markDemo` — should return the channel as demo when an operator marks an existing channel
+- [x] [정상] `ChannelService.find` — should report the channel as demo when it is marked as demo
+- [x] [정상] `ChannelService.find` — should report the channel as not demo when it is not marked
+- [x] [정상] `ChannelOperatorController.markDemo` — should return 200 with the channel when an operator marks it as demo
+- [x] [정상] `ChannelIntegration` — should show the channel as demo to a visitor after an operator marks it
+- [x] [정상] `ChannelIntegration` — should report a newly approved channel as not demo
+- [x] [정상] `ChannelPage` — should show the demo channel label when a visitor opens a demo channel
+- [x] [정상] `ChannelPage` — should not show the demo channel label when a visitor opens a channel that is not a demo
 
 ### 경계
 
-- [ ] [경계] `ChannelIntegration` — should keep the channel demo when an operator marks it twice
-- [ ] [경계] `ChannelPage` — should show the demo channel label when the demo channel is offline
+- [x] [경계] `ChannelIntegration` — should keep the channel demo when an operator marks it twice
+- [x] [경계] `ChannelPage` — should show the demo channel label when the demo channel is offline
 
 ### 예외
 
-- [ ] [예외] `ChannelService.markDemo` — should throw CHANNEL_NOT_FOUND when the channel does not exist
-- [ ] [예외] `ChannelOperatorController.markDemo` — should return 403 when a member who is not an operator marks a channel as demo
-- [ ] [예외] `ChannelOperatorController.markDemo` — should return 403 when the streamer who owns the channel marks it as demo
-- [ ] [예외] `ChannelOperatorController.markDemo` — should return 401 when a visitor who is not logged in marks a channel as demo
-- [ ] [예외] `ChannelOperatorController.markDemo` — should return 404 with CHANNEL_NOT_FOUND when an operator marks a channel that does not exist
+- [x] [예외] `ChannelService.markDemo` — should throw CHANNEL_NOT_FOUND when the channel does not exist
+- [x] [예외] `ChannelOperatorController.markDemo` — should return 403 when a member who is not an operator marks a channel as demo
+- [x] [예외] `ChannelOperatorController.markDemo` — should return 403 when the streamer who owns the channel marks it as demo
+- [x] [예외] `ChannelOperatorController.markDemo` — should return 401 when a visitor who is not logged in marks a channel as demo
+- [x] [예외] `ChannelOperatorController.markDemo` — should return 404 with CHANNEL_NOT_FOUND when an operator marks a channel that does not exist
 
 ### 수동 확인 (로컬 compose — 시나리오 수에 넣지 않는다)
 

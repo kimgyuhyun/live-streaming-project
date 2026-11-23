@@ -19,6 +19,6 @@ class ChannelOperatorController {
     // 다시 불러도 같은 결과(PUT). 준비 스크립트를 다시 돌려도 된다
     @PutMapping("/{channelId}/demo")
     ChannelResponse markDemo(@PathVariable long channelId) {
-        throw new UnsupportedOperationException("not implemented");
+        return channelService.markDemo(channelId);
     }
 }

@@ -3,6 +3,11 @@
 .env.*
 !.env.example
 
+# 데모 방송(#14): 스트림 키 파일과 생성된 영상
+demo/streams.txt
+demo/video.mp4
+demo/video.mp4.tmp.mp4
+
 # Java / Gradle
 .gradle/
 build/
