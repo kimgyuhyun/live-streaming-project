@@ -12,7 +12,8 @@ class MediaMtxClient implements PublisherDisconnector {
 
     private final RestClient restClient;
 
-    MediaMtxClient(RestClient.Builder builder, @Value("${app.mediamtx.api-url}") String apiUrl) {
+    MediaMtxClient(RestClient.Builder builder, @Value("${app.mediamtx.api-url}") String apiUrl,
+                   @Value("${app.mediamtx.api-password:}") String apiPassword) {
         this.restClient = builder.baseUrl(apiUrl).build();
     }
 

@@ -4,6 +4,8 @@ app:
   # 그 밖의 테스트에서는 아무도 듣지 않아 연결이 거부된다(재발급은 그래도 성공해야 한다)
   mediamtx:
     api-url: http://localhost:19997
+    # MediaMTX API 확인(action: api)과 Spring이 싣는 Basic 인증의 내부 비밀번호(#26)
+    api-password: test-internal-password
   # 1분 대조(BroadcastReconciler)를 띄우지 않는다. 대조 테스트는 BroadcastService.reconcile()을 직접 부른다
   scheduling:
     enabled: false

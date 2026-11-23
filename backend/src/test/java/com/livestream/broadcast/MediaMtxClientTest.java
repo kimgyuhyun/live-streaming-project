@@ -2,15 +2,19 @@ package com.livestream.broadcast;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -22,6 +26,10 @@ class MediaMtxClientTest {
 
     private static final String API = "http://mediamtx.test:9997";
     private static final String LIST = API + "/v3/rtmpconns/list";
+    private static final String INTERNAL_PASSWORD = "internal-Pw_123";
+    // Basic 인증 값은 "사용자:비밀번호"의 Base64
+    private static final String BASIC_AUTH = "Basic " + Base64.getEncoder()
+            .encodeToString(("spring:" + INTERNAL_PASSWORD).getBytes(StandardCharsets.UTF_8));
 
     private MockRestServiceServer server;
     private MediaMtxClient client;
@@ -30,7 +38,7 @@ class MediaMtxClientTest {
     void setUp() {
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
-        client = new MediaMtxClient(builder, API);
+        client = new MediaMtxClient(builder, API, INTERNAL_PASSWORD);
     }
 
     // 1.21 응답 모양(스파이크 1절 E). 실제 응답에는 query에 키가 그대로 있다
@@ -68,6 +76,17 @@ class MediaMtxClientTest {
         }
 
         @Test
+        @DisplayName("should send the internal user and password as basic auth when listing paths")
+        void sendsBasicAuthWhenListingPaths() {
+            server.expect(requestTo(PATHS)).andExpect(header(HttpHeaders.AUTHORIZATION, BASIC_AUTH))
+                    .andRespond(withSuccess(connections(), MediaType.APPLICATION_JSON));
+
+            client.findAvailablePaths();
+
+            server.verify();
+        }
+
+        @Test
         @DisplayName("should leave out paths that are not available")
         void leavesOutUnavailablePaths() {
             server.expect(requestTo(PATHS))
@@ -98,6 +117,21 @@ class MediaMtxClientTest {
                             connection("other", "publish", "live/70"),
                             connection("target", "publish", "live/7")), MediaType.APPLICATION_JSON));
             server.expect(requestTo(API + "/v3/rtmpconns/kick/target")).andExpect(method(HttpMethod.POST))
+                    .andRespond(withSuccess());
+
+            client.disconnect(7);
+
+            server.verify();
+        }
+
+        @Test
+        @DisplayName("should send the internal user and password as basic auth when listing and kicking connections")
+        void sendsBasicAuthWhenListingAndKicking() {
+            server.expect(requestTo(LIST)).andExpect(header(HttpHeaders.AUTHORIZATION, BASIC_AUTH))
+                    .andRespond(withSuccess(connections(connection("target", "publish", "live/7")),
+                            MediaType.APPLICATION_JSON));
+            server.expect(requestTo(API + "/v3/rtmpconns/kick/target"))
+                    .andExpect(header(HttpHeaders.AUTHORIZATION, BASIC_AUTH))
                     .andRespond(withSuccess());
 
             client.disconnect(7);

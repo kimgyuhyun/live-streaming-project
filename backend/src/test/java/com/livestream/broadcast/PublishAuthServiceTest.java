@@ -33,7 +33,7 @@ class PublishAuthServiceTest {
     }
 
     private static MediaMtxAuthRequest publish(String path, String query) {
-        return new MediaMtxAuthRequest("publish", path, query);
+        return new MediaMtxAuthRequest("publish", path, query, null, null);
     }
 
     @Nested
@@ -121,7 +121,7 @@ class PublishAuthServiceTest {
         @ValueSource(strings = {"read", "playback", "api", ""})
         @DisplayName("should deny when the action is not publish")
         void deniesOtherActions(String action) {
-            assertThat(service.canPublish(new MediaMtxAuthRequest(action, "live/7", "key=" + KEY))).isFalse();
+            assertThat(service.canPublish(new MediaMtxAuthRequest(action, "live/7", "key=" + KEY, null, null))).isFalse();
         }
     }
 }

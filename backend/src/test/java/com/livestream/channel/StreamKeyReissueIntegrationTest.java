@@ -17,6 +17,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.HexFormat;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -63,6 +65,10 @@ class StreamKeyReissueIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    // 테스트 설정(src/test/resources/config/application.yml)의 내부 비밀번호
+    @Value("${app.mediamtx.api-password}")
+    private String internalPassword;
 
     private static String unique() {
         return String.valueOf(ThreadLocalRandom.current().nextInt(100_000, 1_000_000));
@@ -159,6 +165,37 @@ class StreamKeyReissueIntegrationTest {
             assertThat(jdbcTemplate.queryForObject(
                     "SELECT stream_key_hash FROM channel WHERE id = ?", String.class, channelId))
                     .isEqualTo(sha256Hex(newKey));
+        }
+
+        @Test
+        @DisplayName("should send the internal password as basic auth to the MediaMTX API when a streamer reissues the key")
+        void reissueSendsBasicAuth() throws Exception {
+            String email = "r" + unique() + "@example.com";
+            streamerChannel(email);
+            Cookie session = loggedIn(email);
+            issuedKey(session);
+
+            AtomicReference<String> authorization = new AtomicReference<>();
+            HttpServer fakeMediaMtx = HttpServer.create(new InetSocketAddress("localhost", FAKE_MEDIAMTX_PORT), 0);
+            fakeMediaMtx.createContext("/v3/rtmpconns/list", exchange -> {
+                authorization.set(exchange.getRequestHeaders().getFirst("Authorization"));
+                byte[] body = "{\"pageCount\":0,\"itemCount\":0,\"items\":[]}".getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().add("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, body.length);
+                exchange.getResponseBody().write(body);
+                exchange.close();
+            });
+            fakeMediaMtx.start();
+            try {
+                issuedKey(session);
+            } finally {
+                fakeMediaMtx.stop(0);
+            }
+
+            // 내부 사용자 이름은 MediaMtxApiAuthService.INTERNAL_USER(broadcast 패키지 안에서만 보인다)
+            String expected = "Basic " + Base64.getEncoder()
+                    .encodeToString(("spring:" + internalPassword).getBytes(StandardCharsets.UTF_8));
+            assertThat(authorization.get()).isEqualTo(expected);
         }
     }
 }
