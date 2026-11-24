@@ -13,7 +13,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 class OriginValidationFilterTest {
 
-    private static final String ALLOWED = "http://localhost:8080";
+    private static final String ALLOWED = "http://localhost:8000";
 
     private OriginValidationFilter filter;
     private MockHttpServletResponse response;

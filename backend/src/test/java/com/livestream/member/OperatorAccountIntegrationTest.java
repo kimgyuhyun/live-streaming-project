@@ -43,7 +43,7 @@ import org.springframework.test.web.servlet.ResultActions;
 @Import(TestcontainersConfiguration.class)
 class OperatorAccountIntegrationTest {
 
-    private static final String ALLOWED_ORIGIN = "http://localhost:8080";
+    private static final String ALLOWED_ORIGIN = "http://localhost:8000";
     private static final String OPERATOR_NICKNAME = "운영자";
     private static final String PASSWORD = "operator1234";
 

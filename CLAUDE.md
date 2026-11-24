@@ -45,7 +45,7 @@ OBS로 송출한 방송을 웹에서 실시간으로 보고 채팅하는 1인 �
 
 | 무엇 | 명령 |
 | --- | --- |
-| 전체 실행 | `cp .env.example .env` 후 `docker compose up --build` → http://localhost:8080 |
+| 전체 실행 | `cp .env.example .env` 후 `docker compose up --build` → http://localhost:8000 |
 | 인프라만 | `docker compose up oracle redis mediamtx` |
 | 백엔드 실행 | `cd backend && ./gradlew bootRun` (루트 `.env`를 읽는다) |
 | 백엔드 테스트 | `cd backend && ./gradlew test` (Testcontainers가 Oracle·Redis를 띄운다. Docker 필요) |

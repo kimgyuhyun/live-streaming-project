@@ -3,14 +3,14 @@
 // 받은 키를 demo/streams.txt(git 제외)에 "{채널ID} {키}" 한 줄씩 적는다. 시뮬레이터(demo/simulator.sh)가 이 파일을 읽는다.
 //
 // 실행: node --env-file=.env demo/setup.mjs [개수=3]
-// 필요한 환경변수: OPERATOR_EMAIL, OPERATOR_PASSWORD, DEMO_PASSWORD. 선택: DEMO_BASE_URL(기본 http://localhost:8080)
+// 필요한 환경변수: OPERATOR_EMAIL, OPERATOR_PASSWORD, DEMO_PASSWORD. 선택: DEMO_BASE_URL(기본 http://localhost:8000)
 // 다시 돌려도 된다. 이미 가입·승인된 데모 계정은 그 단계를 건너뛰고, 키는 항상 재발급한다.
 // 키·비밀번호는 출력하지 않는다(확정 사양 11절).
 
 import { writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-const BASE_URL = process.env.DEMO_BASE_URL ?? 'http://localhost:8080'
+const BASE_URL = process.env.DEMO_BASE_URL ?? 'http://localhost:8000'
 const STREAMS_FILE = fileURLToPath(new URL('./streams.txt', import.meta.url))
 
 function required(name) {

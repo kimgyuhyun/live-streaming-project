@@ -5,11 +5,11 @@
 //   k6 run -e MODE=target -e CHANNELS=21,1,41,42,43 perf/channel-poll.js   합격 판정(목표 부하)
 //   k6 run -e MODE=steps  -e CHANNELS=21,1,41,42,43 perf/channel-poll.js   포화 지점(계단)
 //   k6 run -e MODE=steps  -e STEPS=1600,2400,3200,4800 ... 계단 바꾸기(1600 너머 포화 지점)
-// CHANNELS의 첫 번째가 인기 채널이다. BASE_URL 기본값은 nginx(http://localhost:8080). OUT은 요약 JSON 경로.
+// CHANNELS의 첫 번째가 인기 채널이다. BASE_URL 기본값은 nginx(http://localhost:8000). OUT은 요약 JSON 경로.
 import http from 'k6/http'
 import { check } from 'k6'
 
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080'
+const BASE_URL = __ENV.BASE_URL || 'http://localhost:8000'
 const MODE = __ENV.MODE || 'target'
 const CHANNELS = (__ENV.CHANNELS || '').split(',').filter(Boolean).map(Number)
 if (CHANNELS.length === 0) throw new Error('CHANNELS가 필요하다 (예: -e CHANNELS=21,1,41,42,43)')
