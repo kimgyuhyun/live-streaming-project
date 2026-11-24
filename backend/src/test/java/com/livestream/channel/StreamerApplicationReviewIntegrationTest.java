@@ -55,7 +55,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Import(TestcontainersConfiguration.class)
 class StreamerApplicationReviewIntegrationTest {
 
-    private static final String ALLOWED_ORIGIN = "http://localhost:8080";
+    private static final String ALLOWED_ORIGIN = "http://localhost:8000";
     private static final String PASSWORD = "abcd1234";
     private static final String SESSION_COOKIE = "SESSION";
     private static final String OPERATOR_PATH = "/api/operator/streamer-applications";

@@ -44,7 +44,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 class StreamKeyReissueIntegrationTest {
 
     private static final int FAKE_MEDIAMTX_PORT = 19997;
-    private static final String ALLOWED_ORIGIN = "http://localhost:8080";
+    private static final String ALLOWED_ORIGIN = "http://localhost:8000";
     private static final String PASSWORD = "abcd1234";
     private static final String KEY_PATH = "/api/studio/stream-key";
 

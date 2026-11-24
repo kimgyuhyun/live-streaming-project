@@ -15,10 +15,10 @@ docker compose up --build
 
 | 주소 | 내용 |
 | --- | --- |
-| http://localhost:8080 | 웹 |
-| http://localhost:8080/api/actuator/health | 백엔드 상태 (DB·Redis 포함) |
+| http://localhost:8000 | 웹 |
+| http://localhost:8000/api/actuator/health | 백엔드 상태 (DB·Redis 포함) |
 | rtmp://localhost:1935/live/{이름} | 송출 (OBS 등) |
-| http://localhost:8080/hls/live/{이름}/index.m3u8 | 시청 (HLS) |
+| http://localhost:8000/hls/live/{이름}/index.m3u8 | 시청 (HLS) |
 
 처음 실행할 때 Oracle 이미지를 받느라 시간이 걸립니다.
 

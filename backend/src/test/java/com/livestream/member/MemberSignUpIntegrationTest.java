@@ -178,7 +178,7 @@ class MemberSignUpIntegrationTest {
             String body = objectMapper.writeValueAsString(new SignUpRequest(email, "abcd1234", "허용" + unique()));
 
             mockMvc.perform(post("/api/members")
-                            .header("Origin", "http://localhost:8080")
+                            .header("Origin", "http://localhost:8000")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isCreated());

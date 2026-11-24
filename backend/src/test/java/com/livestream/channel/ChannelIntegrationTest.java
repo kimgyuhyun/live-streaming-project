@@ -36,7 +36,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 @Import(TestcontainersConfiguration.class)
 class ChannelIntegrationTest {
 
-    private static final String ALLOWED_ORIGIN = "http://localhost:8080";
+    private static final String ALLOWED_ORIGIN = "http://localhost:8000";
     private static final String PASSWORD = "abcd1234";
     private static final String SESSION_COOKIE = "SESSION";
 

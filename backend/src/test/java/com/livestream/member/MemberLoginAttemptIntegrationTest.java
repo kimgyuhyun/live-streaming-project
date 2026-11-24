@@ -40,7 +40,7 @@ import org.springframework.test.web.servlet.ResultActions;
 @Import(TestcontainersConfiguration.class)
 class MemberLoginAttemptIntegrationTest {
 
-    private static final String ALLOWED_ORIGIN = "http://localhost:8080";
+    private static final String ALLOWED_ORIGIN = "http://localhost:8000";
     private static final String PASSWORD = "abcd1234";
     private static final String WRONG_PASSWORD = "wrong1234";
 

@@ -36,7 +36,7 @@ import org.springframework.test.web.servlet.ResultActions;
 @Import(TestcontainersConfiguration.class)
 class MemberLoginIntegrationTest {
 
-    private static final String ALLOWED_ORIGIN = "http://localhost:8080";
+    private static final String ALLOWED_ORIGIN = "http://localhost:8000";
     private static final String PASSWORD = "abcd1234";
     // Spring Session이 쓰는 쿠키 이름. 값은 세션 ID를 Base64로 감싼 것이다
     private static final String SESSION_COOKIE = "SESSION";
