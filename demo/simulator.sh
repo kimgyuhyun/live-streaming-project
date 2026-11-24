@@ -12,7 +12,9 @@ if [ ! -f "$STREAMS" ]; then
   exit 1
 fi
 
-# 영상이 없으면 만든다: ffmpeg 테스트 패턴(흐르는 초가 그려진다) + 440Hz 소리, 30초.
+# 영상이 없으면 만든다: 검은 바탕에 흐르는 초(흰 숫자) + 440Hz 소리, 30초.
+# 숫자는 ffmpeg 테스트 패턴(testsrc)이 오른쪽에 그리는 초 표시 상자(256x208, x=896 y=256)만 잘라 쓴다.
+# 이미지에 글꼴이 없어 drawtext를 쓸 수 없기 때문이다. 흰색만 남겨(한 자리일 때 상자 왼쪽에 보이는 색 띠를 지운다) 두 배로 키워 가운데 놓는다.
 # 직접 만든 영상이라 출처 문제가 없다(확정 사양 10절). 이 자리에 직접 녹화한 파일을 두면 그것을 쓴다.
 # 키프레임을 2초 간격으로 고정한다. 송출은 다시 인코딩하지 않고(-c copy) MediaMTX가 HLS 조각을 키프레임 단위로 자른다.
 # 스레드 하나로 만든다. 기본(코어 수만큼)이면 컨테이너 메모리 제한(128MB)을 넘어 죽는다. 30초 영상에 20초쯤 걸린다.
@@ -20,6 +22,7 @@ fi
 if [ ! -f "$VIDEO" ]; then
   ffmpeg -y -hide_banner -loglevel error \
     -f lavfi -i testsrc=size=1280x720:rate=30 -f lavfi -i sine=frequency=440:sample_rate=44100 \
+    -vf "crop=256:208:896:256,format=gray,lut=y='if(gt(val,220),255,0)',scale=512:416:flags=neighbor,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,format=yuv420p" \
     -t 30 -c:v libx264 -preset veryfast -threads 1 -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
     -c:a aac -b:a 64k "$VIDEO.tmp.mp4" && mv "$VIDEO.tmp.mp4" "$VIDEO" || exit 1
 fi
