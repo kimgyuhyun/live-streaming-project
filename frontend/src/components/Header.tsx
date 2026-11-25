@@ -118,7 +118,7 @@ function Header({ menuExpanded, onMenuClick }: Props) {
                 <div className={styles.menu}>
                   <p className={styles.menuName}>{me.data.nickname}</p>
                   <Link className={styles.menuItem} to="/me" onClick={() => setMenuOpen(false)}>
-                    마이페이지
+                    내 채널
                   </Link>
                   <button
                     className={styles.menuItem}
