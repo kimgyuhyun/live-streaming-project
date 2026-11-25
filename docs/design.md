@@ -16,6 +16,7 @@
 | --- | --- |
 | 스크롤해도 따라오는 헤더·사이드바 | 조립된 자리에 두고 `position: sticky` |
 | 잠깐 위에 덮이는 것: 드롭다운, 모달, 모바일 서랍 메뉴, 툴팁 | `position: absolute` / `fixed` |
+| 영상 위에 덮이는 것: 플레이어 컨트롤, LIVE 표시, 채팅 펼치기 버튼 | 영상 칸 안에서 `position: absolute` |
 
 ## 2. 화면 틀
 
@@ -28,6 +29,8 @@
 ```
 
 - 헤더·사이드바(푸터를 넣는다면 푸터도)는 `frontend/src/layouts/RootLayout.tsx`에 한 번만 둔다. 페이지는 메인 칸 안의 내용만 만든다. 페이지가 헤더·사이드바를 직접 넣거나 그 크기를 알 필요가 없어야 한다.
+- 메인 칸은 기본으로 안쪽 여백이 있다. 방송 화면처럼 여백 없이 칸을 다 써야 하는 페이지는 `router.tsx`의 그 경로에 `handle: { flush: true }`를 붙인다. 그런 페이지는 자기 안쪽 여백을 직접 정한다.
+- 방송 화면(`/channels/:id`)은 메인 칸 안에서 다시 왼쪽 칸(영상 + 방송 정보)과 오른쪽 채팅 칸(`--chat-width`)으로 나뉜다. 채팅을 접으면 왼쪽 칸이 너비를 다 쓴다.
 - 푸터는 넣는다면 한두 줄(서비스 이름, 포트폴리오 안내, 출처 표기). 방송 보기 화면에는 두지 않는다.
 
 ## 3. 색·크기는 변수로
@@ -45,6 +48,7 @@
 - 나머지는 CSS 모듈(`{컴포넌트}.module.css`)을 컴포넌트 옆에 둔다. 다른 화면에 번지지 않는다.
 - 모바일 우선: 기본 스타일을 좁은 화면 기준으로 쓰고, `@media (min-width: …)`로 넓은 화면을 덧붙인다.
 - 브레이크포인트는 768 / 1024 (필요하면 480 / 1280). 이 넷 밖의 값을 새로 만들지 않는다.
+- 사이드바·채팅을 여닫으면 너비가 바뀌는 칸 안의 목록(카드 그리드 등)은 화면 너비 대신 그 칸 너비로 정한다: 칸에 `container-type: inline-size`, 목록에 `@container (min-width: …)`.
 - 크기는 rem. 레이아웃 너비는 flex·grid·%·max-width로 잡고 고정 px 너비를 피한다.
 - `!important`나 인라인 `style`로 덮어쓰지 않는다.
 
@@ -56,7 +60,10 @@
 | --- | --- | --- |
 | 폼 입력칸·라벨·버튼·에러 문구 | `src/styles/form.module.css` | 로그인, 회원가입. 마이페이지·스튜디오 폼도 이것을 쓴다 |
 | 가운데 카드 틀 | `src/components/AuthCard.tsx` | 로그인, 회원가입 |
-| 선 아이콘 | `src/components/icons.tsx` | 헤더, 사이드바, 내 채널 |
+| 선 아이콘 | `src/components/icons.tsx` | 헤더, 사이드바, 내 채널, 방송 화면 |
+| 플레이어(컨트롤·스페이스바 재생/정지) | `src/pages/LivePlayer.tsx` | 방송 화면 |
+| 채팅 칸 | `src/components/ChatPanel.tsx` | 방송 화면 |
+| 동영상 카드 목록(더보기 → 전체보기) | `src/components/ChannelVideos.tsx` | 방송 화면. 지금은 예시 데이터(`src/pages/sampleVideos.ts`) |
 | 소셜 로그인 버튼 | `src/components/SocialLoginButtons.tsx` | 로그인 |
 | 이미지 아이콘 파일 | `src/assets/icons/` | 소셜 로그인 |
 

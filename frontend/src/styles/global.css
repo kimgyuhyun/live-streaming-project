@@ -26,6 +26,12 @@
 
   --color-danger: #ff6b6b;
 
+  /* 방송 화면: 영상 바탕, LIVE 표시, 영상 위에 덮이는 버튼 */
+  --color-player-bg: #000000;
+  --color-live: #ff3040;
+  --color-overlay: rgb(0 0 0 / 0.6);
+  --color-overlay-hover: rgb(255 255 255 / 0.15);
+
   --font-sans: system-ui, -apple-system, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
   --font-size-xs: 0.6875rem;
   --font-size-sm: 0.8125rem;
@@ -53,6 +59,7 @@
   --header-height: 3.75rem;
   --sidebar-width: 15rem;
   --sidebar-width-collapsed: 4.5rem;
+  --chat-width: 22rem;
 }
 
 body {
