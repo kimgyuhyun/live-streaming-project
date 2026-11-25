@@ -7,10 +7,12 @@
   color-scheme: dark;
 
   /* 바탕 → 카드 → 카드 위 요소 순으로 밝아진다 */
-  --color-bg: #0e0e10;
-  --color-surface: #18181b;
-  --color-surface-raised: #26262c;
-  --color-border: #3d3d45;
+  /* 바탕은 치지직 캡처에서 잰 값. 카드 색은 바탕과의 밝기 차이를 예전과 같게 둔다 */
+  --color-bg: #141517;
+  --color-surface: #1e1f22;
+  --color-surface-raised: #2c2d31;
+  /* 치지직 탭 아래 구분선 색 */
+  --color-border: #2e3033;
 
   --color-text: #efeff1;
   --color-text-muted: #adadb8;
