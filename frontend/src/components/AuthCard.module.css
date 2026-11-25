@@ -1,0 +1,46 @@
+.page {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6) var(--space-4);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+  max-width: 28rem;
+  padding: var(--space-6) var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  text-align: center;
+}
+
+.footer {
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.footer a {
+  color: var(--color-link);
+  font-weight: 600;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}
+
+@media (min-width: 768px) {
+  .page {
+    padding-top: var(--space-8);
+  }
+
+  .card {
+    padding: var(--space-6);
+  }
+}
