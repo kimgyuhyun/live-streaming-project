@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { formatCount, formatDate, formatDuration, SAMPLE_VIDEOS } from '../pages/sampleVideos.ts'
+import tip from '../styles/tooltip.module.css'
 import styles from './ChannelVideos.module.css'
 import { BroadcastIcon, ChevronDownIcon, ChevronRightIcon, RefreshIcon } from './icons.tsx'
 
@@ -60,9 +61,10 @@ function ChannelVideos() {
               </div>
               <span className={styles.duration}>{formatDuration(video.durationSeconds)}</span>
             </div>
-            <p className={styles.cardTitle} title={video.title}>
-              {video.title}
-            </p>
+            {/* 두 줄을 넘는 제목은 잘리므로 마우스를 올리면 전체 제목을 보인다 */}
+            <div className={`${tip.tooltip} ${tip.wrap} ${tip.alignStart}`} data-tooltip={video.title}>
+              <p className={styles.cardTitle}>{video.title}</p>
+            </div>
             <p className={styles.meta}>
               조회수 {video.views}회 · {formatDate(video.publishedAt)}
             </p>

@@ -46,14 +46,13 @@ function Sidebar({ collapsed, open, onClose }: Props) {
                 key={label}
                 to={to}
                 end
-                title={label}
                 className={({ isActive }) => `${styles.item} ${isActive ? styles.active : ''}`}
                 onClick={onClose}
               >
                 {content}
               </NavLink>
             ) : (
-              <button key={label} className={styles.item} type="button" title={label}>
+              <button key={label} className={styles.item} type="button">
                 {content}
               </button>
             )
