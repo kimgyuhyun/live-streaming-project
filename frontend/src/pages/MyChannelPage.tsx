@@ -6,7 +6,7 @@ import { BroadcastIcon, ChevronRightIcon, SettingsIcon, UserIcon, VideoIcon } fr
 import styles from './MyChannelPage.module.css'
 
 // 아직 올린 콘텐츠·팔로우·배너 기능이 없어 모든 탭이 빈 화면이다. 배너 설정하기는 모양만 있다
-const TABS = ['홈', '동영상', '클립', '커뮤니티', '정보']
+const TABS = ['홈', '동영상', '커뮤니티', '정보']
 
 function MyChannelPage() {
   // RootLayout과 같은 쿼리를 쓴다. 401이면 비로그인으로 본다
