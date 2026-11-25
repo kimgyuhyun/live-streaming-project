@@ -2,7 +2,6 @@ import Hls from 'hls.js'
 import { useCallback, useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react'
 import {
   ChatIcon,
-  ClipIcon,
   CoinIcon,
   FullscreenIcon,
   PauseIcon,
@@ -24,7 +23,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
 // hls.js로 재생한다(저지연 HLS. infra-validation 3절과 같은 lowLatencyMode).
 // hls.js를 못 쓰는 브라우저(MSE가 없는 iOS Safari)는 HLS를 직접 재생하므로 video.src에 넣는다.
 // 브라우저가 소리 있는 자동 재생을 막아 muted로 시작한다. 소리는 컨트롤의 소리 버튼으로 켠다.
-// 클립·설정·넓은 화면 버튼은 아직 기능이 없어 모양만 있다
+// 설정·넓은 화면 버튼은 아직 기능이 없어 모양만 있다
 export function HlsPlayer({ src }: { src: string }): ReactElement {
   const boxRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -157,9 +156,6 @@ export function HlsPlayer({ src }: { src: string }): ReactElement {
             실시간
           </button>
           <span className={styles.spacer} />
-          <button className={styles.button} type="button" aria-label="클립">
-            <ClipIcon className={styles.icon} />
-          </button>
           {document.pictureInPictureEnabled && (
             <button className={styles.button} type="button" aria-label="PIP 모드" onClick={togglePip}>
               <PipIcon className={styles.icon} />

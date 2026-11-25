@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react'
 import { NavLink } from 'react-router'
-import { BroadcastIcon, ClipIcon, GridIcon, HeartIcon } from './icons.tsx'
+import { BroadcastIcon, GridIcon, HeartIcon } from './icons.tsx'
 import styles from './Sidebar.module.css'
 
 type Item = {
@@ -13,7 +13,6 @@ type Item = {
 // 전체 방송(홈)만 이동한다. 나머지는 아직 기능이 없어 모양만 있다
 const ITEMS: Item[] = [
   { label: '전체 방송', shortLabel: '방송', Icon: BroadcastIcon, to: '/' },
-  { label: '인기 클립', shortLabel: '클립', Icon: ClipIcon },
   { label: '카테고리', shortLabel: '카테고리', Icon: GridIcon },
   { label: '팔로잉', shortLabel: '팔로잉', Icon: HeartIcon },
 ]
