@@ -1,4 +1,4 @@
-/* 모바일: 왼쪽(메뉴·로고)과 오른쪽(버튼)만. 768 이상: 가운데 검색창. 1024 이상: 카테고리 링크 */
+/* 모바일: 왼쪽(메뉴·로고)과 오른쪽(버튼)만. 768 이상: 가운데 검색창 */
 .header {
   position: sticky;
   top: 0;
@@ -25,28 +25,6 @@
   font-style: italic;
   letter-spacing: -0.04em;
   white-space: nowrap;
-}
-
-.nav {
-  display: none;
-  align-items: center;
-  gap: var(--space-5);
-  margin-left: var(--space-3);
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.navItem {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--color-text);
-  font-weight: inherit;
-  cursor: pointer;
-}
-
-.navItem:hover {
-  color: var(--color-link);
 }
 
 .search {
@@ -208,12 +186,6 @@
 
   .search,
   .wide {
-    display: flex;
-  }
-}
-
-@media (min-width: 1024px) {
-  .nav {
     display: flex;
   }
 }
