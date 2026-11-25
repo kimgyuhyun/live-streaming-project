@@ -267,6 +267,22 @@ export function RefreshIcon(props: IconProps) {
   )
 }
 
+export function ChevronLeftIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="m15 6-6 6 6 6" />
+    </Svg>
+  )
+}
+
+export function CheckIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="m5 12 5 5 9-10" />
+    </Svg>
+  )
+}
+
 export function ChevronDownIcon(props: IconProps) {
   return (
     <Svg {...props}>

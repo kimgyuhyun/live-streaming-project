@@ -30,7 +30,8 @@
   --color-player-bg: #000000;
   --color-live: #ff3040;
   --color-overlay: rgb(0 0 0 / 0.6);
-  --color-overlay-hover: rgb(255 255 255 / 0.15);
+  /* 영상 위 버튼에 마우스를 올렸을 때. --color-surface-raised(#2c2d31)를 조금 비치게 */
+  --color-overlay-hover: rgb(44 45 49 / 0.9);
 
   --font-sans: system-ui, -apple-system, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
   --font-size-xs: 0.6875rem;

@@ -58,8 +58,33 @@
 
 .box:hover .controls,
 .box:focus-within .controls,
-.paused .controls {
+.paused .controls,
+.menuOpen .controls {
   opacity: 1;
+}
+
+/* 라디오 모드: 화면을 가린다. 클릭은 아래 영상으로 넘겨 재생·정지가 그대로 된다 */
+.radio {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  background: var(--color-player-bg);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.radioIcon {
+  width: 3rem;
+  height: 3rem;
+}
+
+/* 설정 메뉴는 이 자리를 기준으로 위로 뜬다 */
+.settings {
+  position: relative;
 }
 
 /* 생방송이라 늘 끝까지 찬 진행 줄 */
@@ -181,5 +206,12 @@
 @media (min-width: 1024px) {
   .player {
     max-height: calc(100vh - var(--header-height) - 10rem);
+  }
+
+  /* 넓은 화면: 헤더 아래 화면 높이를 영상이 다 채운다. 방송 정보는 스크롤해야 보인다 */
+  .theater {
+    max-height: none;
+    height: calc(100vh - var(--header-height));
+    aspect-ratio: auto;
   }
 }

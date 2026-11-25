@@ -31,6 +31,7 @@
 - 헤더·사이드바(푸터를 넣는다면 푸터도)는 `frontend/src/layouts/RootLayout.tsx`에 한 번만 둔다. 페이지는 메인 칸 안의 내용만 만든다. 페이지가 헤더·사이드바를 직접 넣거나 그 크기를 알 필요가 없어야 한다.
 - 메인 칸은 기본으로 안쪽 여백이 있다. 방송 화면처럼 여백 없이 칸을 다 써야 하는 페이지는 `router.tsx`의 그 경로에 `handle: { flush: true }`를 붙인다. 그런 페이지는 자기 안쪽 여백을 직접 정한다.
 - 방송 화면(`/channels/:id`)은 메인 칸 안에서 다시 왼쪽 칸(영상 + 방송 정보)과 오른쪽 채팅 칸(`--chat-width`)으로 나뉜다. 채팅을 접으면 왼쪽 칸이 너비를 다 쓴다.
+- 넓은 화면(플레이어 버튼 또는 `t`)은 사이드바 칸을 빼서 메인 칸이 그 자리까지 넓어지게 한다. 상태는 `RootLayout`이 갖고 `<Outlet context>`(`LayoutContext`)로 페이지에 넘긴다. 방송 화면을 떠나면 꺼진다.
 - 푸터는 넣는다면 한두 줄(서비스 이름, 포트폴리오 안내, 출처 표기). 방송 보기 화면에는 두지 않는다.
 
 ## 3. 색·크기는 변수로
@@ -61,7 +62,8 @@
 | 폼 입력칸·라벨·버튼·에러 문구 | `src/styles/form.module.css` | 로그인, 회원가입. 마이페이지·스튜디오 폼도 이것을 쓴다 |
 | 가운데 카드 틀 | `src/components/AuthCard.tsx` | 로그인, 회원가입 |
 | 선 아이콘 | `src/components/icons.tsx` | 헤더, 사이드바, 내 채널, 방송 화면 |
-| 플레이어(컨트롤·스페이스바 재생/정지) | `src/pages/LivePlayer.tsx` | 방송 화면 |
+| 플레이어(컨트롤, 단축키: 스페이스 재생/정지·`t` 넓은 화면·`f` 전체 화면) | `src/pages/LivePlayer.tsx` | 방송 화면 |
+| 플레이어 설정 메뉴(해상도·라디오 모드·재생 문제 제보) | `src/pages/PlayerSettings.tsx` | 방송 화면 |
 | 채팅 칸 | `src/components/ChatPanel.tsx` | 방송 화면 |
 | 동영상 카드 목록(더보기 → 전체보기) | `src/components/ChannelVideos.tsx` | 방송 화면. 지금은 예시 데이터(`src/pages/sampleVideos.ts`) |
 | 소셜 로그인 버튼 | `src/components/SocialLoginButtons.tsx` | 로그인 |

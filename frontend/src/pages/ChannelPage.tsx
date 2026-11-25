@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
-import { useParams } from 'react-router'
+import { useEffect, useState } from 'react'
+import { useOutletContext, useParams } from 'react-router'
 import { fetchChannel } from '../api/channels.ts'
 import { ApiError, errorMessage } from '../api/client.ts'
 import ChannelVideos from '../components/ChannelVideos.tsx'
 import ChatPanel from '../components/ChatPanel.tsx'
+import type { LayoutContext } from '../layouts/RootLayout.tsx'
 import { GiftIcon, HeartIcon, MoreHorizontalIcon, PlusCircleIcon, UserIcon } from '../components/icons.tsx'
 import { pollInterval, useBroadcastView } from './broadcastView.ts'
 import styles from './ChannelPage.module.css'
@@ -23,6 +24,11 @@ function ChannelPage() {
   })
   const view = useBroadcastView(channel.data?.live)
   const [chatOpen, setChatOpen] = useState(true)
+  // 넓은 화면은 RootLayout이 갖고 있다(사이드바를 숨긴다). 레이아웃 없이 그릴 때(테스트)는 없다
+  const layout = useOutletContext<LayoutContext | undefined>()
+  const setTheater = layout?.setTheater
+  // 방송 화면을 떠나면 다른 화면에 사이드바가 돌아오게 끈다
+  useEffect(() => () => setTheater?.(false), [setTheater])
 
   if (channel.isPending) return null
   // 폴링 한 번 실패로 보던 영상을 지우지 않는다. 받은 채널이 있으면 그것으로 계속 그린다
@@ -40,6 +46,8 @@ function ChannelPage() {
             view={view}
             channelId={channelId}
             overlay={!chatOpen && <ChatOpenButtons onOpenChat={() => setChatOpen(true)} />}
+            theater={layout?.theater}
+            onToggleTheater={layout && (() => layout.setTheater(!layout.theater))}
           />
         )}
         <div className={styles.info}>
