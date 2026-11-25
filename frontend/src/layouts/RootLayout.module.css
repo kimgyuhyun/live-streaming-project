@@ -1,0 +1,22 @@
+/*
+ * 헤더 아래 바탕 칸. 왼쪽 사이드바 칸과 오른쪽 메인 칸을 나란히 둔다.
+ * 메인 칸은 사이드바가 차지하고 남은 너비를 모두 쓴다(펼침·접힘에 따라 저절로 바뀐다).
+ */
+.shell {
+  display: flex;
+  align-items: flex-start;
+  min-height: calc(100vh - var(--header-height));
+}
+
+.main {
+  flex: 1;
+  /* 안의 콘텐츠가 넓어도 칸을 밀어내지 않게 한다 */
+  min-width: 0;
+  padding: var(--space-4);
+}
+
+@media (min-width: 1024px) {
+  .main {
+    padding: var(--space-5) var(--space-6);
+  }
+}

@@ -8,6 +8,7 @@ OBS로 송출한 방송을 웹에서 실시간으로 보고 채팅하는 1인 �
 | --- | --- |
 | 기획 (기능 범위, 기술 스택, 일정, 검증 결과 요약) | `docs/plan.html` |
 | 로컬 인프라 검증 기록 (측정값·방법) | `docs/spikes/infra-validation.md` |
+| 화면 디자인 규칙 (레이아웃, 색·간격 변수, 공통 부품, 벤치마킹) | `docs/design.md` |
 | 확정 사양 + 용어 정의 | `docs/result/spec-fixed.md` |
 | 도메인별 PRD (확정된 ADR 포함) | `docs/result/prd/{도메인}.md` |
 | 3안 비교 원본 | `docs/result/adr/{도메인}.md` |
@@ -112,6 +113,8 @@ class MemberServiceTest {
 ## 프론트 컨벤션
 
 React + Vite + TypeScript. E2E(Playwright)는 `frontend/playwright.config.ts`가 생기면 하네스의 E2E 게이트가 켜진다.
+
+화면을 만들거나 고치기 전에 `docs/design.md`(레이아웃·스타일 규칙)를 읽는다.
 
 ### 테스트
 

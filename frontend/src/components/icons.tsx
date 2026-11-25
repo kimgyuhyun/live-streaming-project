@@ -82,6 +82,53 @@ export function SunIcon(props: IconProps) {
   )
 }
 
+export function BroadcastIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m10 9 5 3-5 3z" />
+    </Svg>
+  )
+}
+
+export function ClipIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="6" cy="6" r="3" />
+      <circle cx="6" cy="18" r="3" />
+      <path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12" />
+    </Svg>
+  )
+}
+
+export function GridIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="4" y="4" width="6" height="6" rx="1" />
+      <rect x="14" y="4" width="6" height="6" rx="1" />
+      <rect x="4" y="14" width="6" height="6" rx="1" />
+      <rect x="14" y="14" width="6" height="6" rx="1" />
+    </Svg>
+  )
+}
+
+export function CalendarIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18M8 3v4M16 3v4" />
+    </Svg>
+  )
+}
+
+export function HeartIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 20s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 10c0 5.65-7 10-7 10z" />
+    </Svg>
+  )
+}
+
 export function UserIcon(props: IconProps) {
   return (
     <Svg {...props}>
