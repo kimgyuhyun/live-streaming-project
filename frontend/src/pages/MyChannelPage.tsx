@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { fetchMe } from '../api/members.ts'
 import { BroadcastIcon, ChevronRightIcon, SettingsIcon, UserIcon, VideoIcon } from '../components/icons.tsx'
 import styles from './MyChannelPage.module.css'
@@ -11,7 +11,9 @@ const TABS = ['홈', '동영상', '클립', '커뮤니티', '정보']
 function MyChannelPage() {
   // RootLayout과 같은 쿼리를 쓴다. 401이면 비로그인으로 본다
   const me = useQuery({ queryKey: ['me'], queryFn: fetchMe, retry: false })
-  const [tab, setTab] = useState(TABS[0])
+  // ?tab=동영상처럼 들어오면 그 탭을 연 채로 시작한다(방송 화면의 "전체보기")
+  const requestedTab = useSearchParams()[0].get('tab')
+  const [tab, setTab] = useState(requestedTab && TABS.includes(requestedTab) ? requestedTab : TABS[0])
 
   if (me.isPending) return null
   if (me.isError) {

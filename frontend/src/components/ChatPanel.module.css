@@ -1,0 +1,148 @@
+/*
+ * 좁은 화면: 영상·방송 정보 아래에 놓이는 고정 높이 칸.
+ * 1024 이상: 방송 화면 오른쪽 칸. 스크롤해도 헤더 아래에 붙어 화면 높이를 채운다
+ */
+.chat {
+  display: flex;
+  flex-direction: column;
+  height: 28rem;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  height: 3rem;
+  padding: 0 var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  text-align: center;
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+}
+
+.icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.messages {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: var(--space-3);
+  overflow-y: auto;
+}
+
+.empty {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.inputBox {
+  display: flex;
+  align-items: center;
+  height: var(--control-height);
+  padding: 0 var(--space-1) 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.notice {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.donate {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.send {
+  height: 2rem;
+  margin-left: auto;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.send:hover {
+  color: var(--color-text);
+}
+
+@media (min-width: 1024px) {
+  .chat {
+    position: sticky;
+    top: var(--header-height);
+    flex-shrink: 0;
+    width: var(--chat-width);
+    height: calc(100vh - var(--header-height));
+    border-top: 0;
+    border-left: 1px solid var(--color-border);
+  }
+}

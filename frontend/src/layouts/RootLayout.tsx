@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Outlet } from 'react-router'
+import { Outlet, useMatches } from 'react-router'
 import Header from '../components/Header.tsx'
 import Sidebar from '../components/Sidebar.tsx'
 import styles from './RootLayout.module.css'
@@ -12,6 +12,8 @@ function RootLayout() {
   // 넓은 화면: 펼침/접힘. 좁은 화면: 덮는 메뉴 열림/닫힘
   const [collapsed, setCollapsed] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  // 방송 화면처럼 메인 칸을 여백 없이 다 쓰는 경로(router.tsx의 handle.flush)
+  const flush = useMatches().some((match) => (match.handle as { flush?: boolean } | undefined)?.flush)
 
   useEffect(() => {
     const query = window.matchMedia(DESKTOP)
@@ -34,7 +36,7 @@ function RootLayout() {
           open={!isDesktop && drawerOpen}
           onClose={() => setDrawerOpen(false)}
         />
-        <main className={styles.main}>
+        <main className={`${styles.main} ${flush ? styles.flush : ''}`}>
           <Outlet />
         </main>
       </div>

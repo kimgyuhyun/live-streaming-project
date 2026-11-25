@@ -20,3 +20,8 @@
     padding: var(--space-5) var(--space-6);
   }
 }
+
+/* 방송 화면처럼 칸을 여백 없이 다 쓰는 페이지. 페이지가 자기 안쪽 여백을 정한다 */
+.main.flush {
+  padding: 0;
+}

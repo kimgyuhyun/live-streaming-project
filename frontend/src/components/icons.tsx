@@ -137,6 +137,154 @@ export function ChevronRightIcon(props: IconProps) {
   )
 }
 
+export function PlayIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M7 5v14l12-7z" fill="currentColor" />
+    </Svg>
+  )
+}
+
+export function PauseIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none" />
+      <rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none" />
+    </Svg>
+  )
+}
+
+export function VolumeIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 9v6h4l5 4V5L8 9z" />
+      <path d="M16 9a3 3 0 0 1 0 6M19 6a7 7 0 0 1 0 12" />
+    </Svg>
+  )
+}
+
+export function VolumeOffIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 9v6h4l5 4V5L8 9z" />
+      <path d="m17 9 4 6M21 9l-4 6" />
+    </Svg>
+  )
+}
+
+export function PipIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <rect x="12" y="11" width="7" height="6" rx="1" />
+    </Svg>
+  )
+}
+
+export function TheaterIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="2" y="7" width="20" height="10" rx="2" />
+    </Svg>
+  )
+}
+
+export function FullscreenIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+    </Svg>
+  )
+}
+
+export function ChatIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 5h16v11H9l-5 4z" />
+    </Svg>
+  )
+}
+
+export function CoinIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M15 9.5c0-1.4-1.3-2.5-3-2.5s-3 1-3 2.3c0 3 6 1.7 6 4.7 0 1.3-1.3 2.5-3 2.5s-3-1.1-3-2.5M12 5v2M12 17v2" />
+    </Svg>
+  )
+}
+
+export function PanelCloseIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 12h11M11 7l5 5-5 5M20 5v14" />
+    </Svg>
+  )
+}
+
+export function MoreVerticalIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none" />
+    </Svg>
+  )
+}
+
+export function MoreHorizontalIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    </Svg>
+  )
+}
+
+export function SmileIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8.5 14a4 4 0 0 0 7 0M9 9.5h.01M15 9.5h.01" />
+    </Svg>
+  )
+}
+
+export function PlusCircleIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 8v8M8 12h8" />
+    </Svg>
+  )
+}
+
+export function GiftIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="3" y="8" width="18" height="4" rx="1" />
+      <path d="M5 12v8h14v-8M12 8v12M12 8c-1.5-3-5-3.5-5-1s3 1 5 1c2 0 5 1.5 5-1s-3.5-2-5 1" />
+    </Svg>
+  )
+}
+
+export function RefreshIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" />
+    </Svg>
+  )
+}
+
+export function ChevronDownIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="m6 9 6 6 6-6" />
+    </Svg>
+  )
+}
+
 export function UserIcon(props: IconProps) {
   return (
     <Svg {...props}>

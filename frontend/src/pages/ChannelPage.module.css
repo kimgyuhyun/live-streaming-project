@@ -1,0 +1,143 @@
+/*
+ * 방송 화면. 좁은 화면: 영상 → 방송 정보 → 채팅을 위에서 아래로.
+ * 1024 이상: 왼쪽 칸(영상 + 방송 정보)과 오른쪽 채팅 칸을 나란히. 채팅을 접으면 왼쪽 칸이 너비를 다 쓴다
+ */
+.watch {
+  display: flex;
+  flex-direction: column;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+}
+
+.info {
+  padding: var(--space-4);
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.channelName {
+  color: var(--color-link);
+  font-weight: 700;
+}
+
+.tag {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.streamer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 3.5rem;
+  height: 3.5rem;
+  padding: var(--space-2);
+  border: 2px solid var(--color-primary);
+  border-radius: 50%;
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+}
+
+.streamerText {
+  flex: 1;
+  min-width: 0;
+}
+
+.streamerName {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+}
+
+.followers {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 2.25rem;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--color-border);
+}
+
+.primary {
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+}
+
+.primary:hover {
+  background: var(--color-primary-hover);
+}
+
+.round {
+  width: 2.25rem;
+  padding: 0;
+  justify-content: center;
+}
+
+.buttonIcon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.description {
+  margin-top: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+}
+
+@media (min-width: 1024px) {
+  .watch {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .info {
+    padding: var(--space-4) var(--space-6);
+  }
+}

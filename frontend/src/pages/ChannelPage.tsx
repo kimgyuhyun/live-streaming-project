@@ -1,10 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import { useParams } from 'react-router'
 import { fetchChannel } from '../api/channels.ts'
 import { ApiError, errorMessage } from '../api/client.ts'
+import ChannelVideos from '../components/ChannelVideos.tsx'
+import ChatPanel from '../components/ChatPanel.tsx'
+import { GiftIcon, HeartIcon, MoreHorizontalIcon, PlusCircleIcon, UserIcon } from '../components/icons.tsx'
 import { pollInterval, useBroadcastView } from './broadcastView.ts'
-import { PlayerArea } from './LivePlayer.tsx'
+import styles from './ChannelPage.module.css'
+import { ChatOpenButtons, PlayerArea } from './LivePlayer.tsx'
 
+// 팔로우·구독·구독 선물은 아직 기능이 없어 모양만 있다(팔로워 수도 늘 0)
 function ChannelPage() {
   const channelId = Number(useParams().channelId)
   const channel = useQuery({
@@ -16,6 +22,7 @@ function ChannelPage() {
     refetchInterval: (query) => pollInterval(query.state.data?.live),
   })
   const view = useBroadcastView(channel.data?.live)
+  const [chatOpen, setChatOpen] = useState(true)
 
   if (channel.isPending) return null
   // 폴링 한 번 실패로 보던 영상을 지우지 않는다. 받은 채널이 있으면 그것으로 계속 그린다
@@ -26,15 +33,53 @@ function ChannelPage() {
   }
 
   return (
-    <section>
-      <h1>{channel.data.name}</h1>
-      {/* 운영자가 붙인 데모 표시(확정 사양 10절). 방송 중이든 아니든 보인다 */}
-      {channel.data.demo && <p>데모 채널</p>}
-      {/* 방송 중이면 지금 방송의, 아니면 다음 방송의 제목. 텍스트로 넣어 React가 이스케이프한다 */}
-      <h2>{channel.data.title}</h2>
-      {view && <PlayerArea view={view} channelId={channelId} />}
-      {channel.data.description && <p>{channel.data.description}</p>}
-    </section>
+    <div className={styles.watch}>
+      <section className={styles.main}>
+        {view && (
+          <PlayerArea
+            view={view}
+            channelId={channelId}
+            overlay={!chatOpen && <ChatOpenButtons onOpenChat={() => setChatOpen(true)} />}
+          />
+        )}
+        <div className={styles.info}>
+          {/* 방송 중이면 지금 방송의, 아니면 다음 방송의 제목. 텍스트로 넣어 React가 이스케이프한다 */}
+          <h1 className={styles.title}>{channel.data.title}</h1>
+          <p className={styles.meta}>
+            <span className={styles.channelName}>{channel.data.name}</span>
+            {/* 운영자가 붙인 데모 표시(확정 사양 10절). 방송 중이든 아니든 보인다 */}
+            {channel.data.demo && <span className={styles.tag}>데모 채널</span>}
+          </p>
+          <div className={styles.streamer}>
+            <UserIcon className={styles.avatar} />
+            <div className={styles.streamerText}>
+              <p className={styles.streamerName}>{channel.data.name}</p>
+              <p className={styles.followers}>팔로워 0명</p>
+            </div>
+            <div className={styles.actions}>
+              <button className={`${styles.button} ${styles.primary}`} type="button">
+                <HeartIcon className={styles.buttonIcon} />
+                팔로우
+              </button>
+              <button className={styles.button} type="button">
+                <PlusCircleIcon className={styles.buttonIcon} />
+                구독
+              </button>
+              <button className={styles.button} type="button">
+                <GiftIcon className={styles.buttonIcon} />
+                구독 선물
+              </button>
+              <button className={`${styles.button} ${styles.round}`} type="button" aria-label="더 보기">
+                <MoreHorizontalIcon className={styles.buttonIcon} />
+              </button>
+            </div>
+          </div>
+          {channel.data.description && <p className={styles.description}>{channel.data.description}</p>}
+        </div>
+        <ChannelVideos />
+      </section>
+      {chatOpen && <ChatPanel onClose={() => setChatOpen(false)} />}
+    </div>
   )
 }
 
