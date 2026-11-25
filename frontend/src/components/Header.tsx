@@ -15,8 +15,7 @@ import {
   WalletIcon,
 } from './icons.tsx'
 
-// 카테고리·검색·지갑·알림·키·테마는 아직 기능이 없어 모양만 있다
-const CATEGORIES = ['게임', 'e스포츠', '스포츠', '엔터+']
+// 검색·지갑·알림·키·테마는 아직 기능이 없어 모양만 있다
 
 type Props = {
   // 사이드바가 펼쳐져(좁은 화면에서는 열려) 있는지. ☰의 안내 문구를 바꾼다
@@ -69,13 +68,6 @@ function Header({ menuExpanded, onMenuClick }: Props) {
         <Link className={styles.logo} to="/">
           조타
         </Link>
-        <nav className={styles.nav}>
-          {CATEGORIES.map((name) => (
-            <button key={name} className={styles.navItem} type="button">
-              {name}
-            </button>
-          ))}
-        </nav>
       </div>
 
       <form className={styles.search} role="search" onSubmit={handleSearch}>
