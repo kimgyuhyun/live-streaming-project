@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react'
 import { NavLink } from 'react-router'
-import { BroadcastIcon, CalendarIcon, ClipIcon, GridIcon, HeartIcon } from './icons.tsx'
+import { BroadcastIcon, ClipIcon, GridIcon, HeartIcon } from './icons.tsx'
 import styles from './Sidebar.module.css'
 
 type Item = {
@@ -15,7 +15,6 @@ const ITEMS: Item[] = [
   { label: '전체 방송', shortLabel: '방송', Icon: BroadcastIcon, to: '/' },
   { label: '인기 클립', shortLabel: '클립', Icon: ClipIcon },
   { label: '카테고리', shortLabel: '카테고리', Icon: GridIcon },
-  { label: '편성표', shortLabel: '편성표', Icon: CalendarIcon },
   { label: '팔로잉', shortLabel: '팔로잉', Icon: HeartIcon },
 ]
 
