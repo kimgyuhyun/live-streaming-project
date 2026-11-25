@@ -15,10 +15,16 @@ import {
   WalletIcon,
 } from './icons.tsx'
 
-// 메뉴·카테고리·검색·지갑·알림·키·테마는 아직 기능이 없어 모양만 있다
+// 카테고리·검색·지갑·알림·키·테마는 아직 기능이 없어 모양만 있다
 const CATEGORIES = ['게임', 'e스포츠', '스포츠', '엔터+']
 
-function Header() {
+type Props = {
+  // 사이드바가 펼쳐져(좁은 화면에서는 열려) 있는지. ☰의 안내 문구를 바꾼다
+  menuExpanded: boolean
+  onMenuClick: () => void
+}
+
+function Header({ menuExpanded, onMenuClick }: Props) {
   const queryClient = useQueryClient()
   // 401이면 비로그인으로 본다. 다시 시도해도 결과가 같다
   const me = useQuery({ queryKey: ['me'], queryFn: fetchMe, retry: false })
@@ -50,7 +56,14 @@ function Header() {
   return (
     <header className={styles.header}>
       <div className={styles.left}>
-        <button className={styles.iconButton} type="button" aria-label="메뉴">
+        <button
+          className={styles.iconButton}
+          type="button"
+          aria-label={menuExpanded ? '메뉴 접기' : '메뉴 펼치기'}
+          title={menuExpanded ? '메뉴 접기' : '메뉴 펼치기'}
+          aria-expanded={menuExpanded}
+          onClick={onMenuClick}
+        >
           <MenuIcon className={styles.icon} />
         </button>
         <Link className={styles.logo} to="/">

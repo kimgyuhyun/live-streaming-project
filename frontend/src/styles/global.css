@@ -25,6 +25,7 @@
   --color-danger: #ff6b6b;
 
   --font-sans: system-ui, -apple-system, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --font-size-xs: 0.6875rem;
   --font-size-sm: 0.8125rem;
   --font-size-md: 0.875rem;
   --font-size-lg: 1.125rem;
@@ -44,6 +45,11 @@
 
   /* 입력칸·버튼 높이를 맞춘다 */
   --control-height: 2.5rem;
+
+  /* 화면 틀: 위 헤더, 왼쪽 사이드바(펼침·접힘) */
+  --header-height: 3.75rem;
+  --sidebar-width: 15rem;
+  --sidebar-width-collapsed: 4.5rem;
 }
 
 body {
