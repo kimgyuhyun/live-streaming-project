@@ -52,6 +52,8 @@
 - 사이드바·채팅을 여닫으면 너비가 바뀌는 칸 안의 목록(카드 그리드 등)은 화면 너비 대신 그 칸 너비로 정한다: 칸에 `container-type: inline-size`, 목록에 `@container (min-width: …)`.
 - 크기는 rem. 레이아웃 너비는 flex·grid·%·max-width로 잡고 고정 px 너비를 피한다.
 - `!important`나 인라인 `style`로 덮어쓰지 않는다.
+- 마우스를 올리면 뜨는 설명(툴팁)에 HTML `title` 속성을 쓰지 않는다. 브라우저·OS가 그려서 CSS가 닿지 않고 늘 흰 바탕으로 나온다. `src/styles/tooltip.module.css`(`data-tooltip`)를 쓰고 `aria-label`을 같이 둔다.
+- 키보드 포커스(`:focus-visible`)에 브라우저 기본 흰 테두리가 그대로 나오지 않게, 버튼은 마우스를 올렸을 때와 같은 바탕을 준다.
 
 ## 5. 공통 부품
 
@@ -59,6 +61,7 @@
 
 | 무엇 | 어디 | 쓰는 곳 |
 | --- | --- | --- |
+| 툴팁(마우스를 올리면 뜨는 설명) | `src/styles/tooltip.module.css` | 플레이어 버튼, 헤더 ☰, 채팅 접기, 소셜 로그인, 동영상 카드 제목 |
 | 폼 입력칸·라벨·버튼·에러 문구 | `src/styles/form.module.css` | 로그인, 회원가입. 마이페이지·스튜디오 폼도 이것을 쓴다 |
 | 가운데 카드 틀 | `src/components/AuthCard.tsx` | 로그인, 회원가입 |
 | 선 아이콘 | `src/components/icons.tsx` | 헤더, 사이드바, 내 채널, 방송 화면 |

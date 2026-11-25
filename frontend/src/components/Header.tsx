@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { logout } from '../api/auth.ts'
 import { fetchMe } from '../api/members.ts'
+import tip from '../styles/tooltip.module.css'
 import styles from './Header.module.css'
 import {
   BellIcon,
@@ -56,10 +57,10 @@ function Header({ menuExpanded, onMenuClick }: Props) {
     <header className={styles.header}>
       <div className={styles.left}>
         <button
-          className={styles.iconButton}
+          className={`${styles.iconButton} ${tip.tooltip} ${tip.alignStart}`}
           type="button"
           aria-label={menuExpanded ? '메뉴 접기' : '메뉴 펼치기'}
-          title={menuExpanded ? '메뉴 접기' : '메뉴 펼치기'}
+          data-tooltip={menuExpanded ? '메뉴 접기' : '메뉴 펼치기'}
           aria-expanded={menuExpanded}
           onClick={onMenuClick}
         >

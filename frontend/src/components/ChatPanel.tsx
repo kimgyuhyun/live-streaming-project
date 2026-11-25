@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import tip from '../styles/tooltip.module.css'
 import styles from './ChatPanel.module.css'
 import { CoinIcon, MoreVerticalIcon, PanelCloseIcon, SmileIcon } from './icons.tsx'
 
@@ -19,7 +20,13 @@ function ChatPanel({ onClose }: Props) {
   return (
     <aside className={styles.chat} aria-label="채팅">
       <div className={styles.header}>
-        <button className={styles.iconButton} type="button" aria-label="채팅 접기" title="채팅 접기" onClick={onClose}>
+        <button
+          className={`${styles.iconButton} ${tip.tooltip} ${tip.alignStart}`}
+          type="button"
+          aria-label="채팅 접기"
+          data-tooltip="채팅 접기"
+          onClick={onClose}
+        >
           <PanelCloseIcon className={styles.icon} />
         </button>
         <h2 className={styles.title}>채팅</h2>

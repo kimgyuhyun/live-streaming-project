@@ -2,6 +2,7 @@ import { useState } from 'react'
 import googleIcon from '../assets/icons/social/google.svg'
 import kakaoIcon from '../assets/icons/social/kakao.svg'
 import naverIcon from '../assets/icons/social/naver.svg'
+import tip from '../styles/tooltip.module.css'
 import styles from './SocialLoginButtons.module.css'
 
 const PROVIDERS = [
@@ -21,10 +22,10 @@ function SocialLoginButtons() {
         {PROVIDERS.map(({ name, icon, className }) => (
           <button
             key={name}
-            className={`${styles.button} ${className}`}
+            className={`${styles.button} ${className} ${tip.tooltip}`}
             type="button"
             aria-label={`${name}로 로그인`}
-            title={`${name}로 로그인`}
+            data-tooltip={`${name}로 로그인`}
             onClick={() => setNotice(true)}
           >
             <img className={styles.icon} src={icon} alt="" />

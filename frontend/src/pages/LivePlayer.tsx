@@ -12,6 +12,7 @@ import {
   VolumeIcon,
   VolumeOffIcon,
 } from '../components/icons.tsx'
+import tip from '../styles/tooltip.module.css'
 import { hlsUrl, type BroadcastView } from './broadcastView.ts'
 import styles from './LivePlayer.module.css'
 import { PlayerSettings } from './PlayerSettings.tsx'
@@ -208,16 +209,23 @@ export function HlsPlayer({ src, theater = false, onToggleTheater }: PlayerProps
           </button>
           <span className={styles.spacer} />
           {document.pictureInPictureEnabled && (
-            <button className={styles.button} type="button" aria-label="PIP 모드" title="PIP 모드" onClick={togglePip}>
+            <button
+              className={`${styles.button} ${tip.tooltip} ${tip.top}`}
+              type="button"
+              aria-label="PIP 모드"
+              data-tooltip="PIP 모드"
+              onClick={togglePip}
+            >
               <PipIcon className={styles.icon} />
             </button>
           )}
           <div className={styles.settings} ref={settingsRef}>
             <button
-              className={styles.button}
+              className={`${styles.button} ${tip.tooltip} ${tip.top}`}
               type="button"
               aria-label="설정"
-              title="설정"
+              data-tooltip="설정"
+              aria-haspopup="menu"
               aria-expanded={settingsOpen}
               onClick={() => setSettingsOpen((open) => !open)}
             >
@@ -226,20 +234,20 @@ export function HlsPlayer({ src, theater = false, onToggleTheater }: PlayerProps
             {settingsOpen && <PlayerSettings quality={quality} radio={radio} onRadioChange={setRadio} />}
           </div>
           <button
-            className={styles.button}
+            className={`${styles.button} ${tip.tooltip} ${tip.top}`}
             type="button"
             aria-label={theater ? '넓은 화면 끄기 (t)' : '넓은 화면 (t)'}
-            title={theater ? '넓은 화면 끄기 (t)' : '넓은 화면 (t)'}
+            data-tooltip={theater ? '넓은 화면 끄기 (t)' : '넓은 화면 (t)'}
             aria-pressed={theater}
             onClick={onToggleTheater}
           >
             <TheaterIcon className={styles.icon} />
           </button>
           <button
-            className={styles.button}
+            className={`${styles.button} ${tip.tooltip} ${tip.top} ${tip.alignEnd}`}
             type="button"
             aria-label="전체 화면 (f)"
-            title="전체 화면 (f)"
+            data-tooltip="전체 화면 (f)"
             onClick={toggleFullscreen}
           >
             <FullscreenIcon className={styles.icon} />
@@ -254,10 +262,21 @@ export function HlsPlayer({ src, theater = false, onToggleTheater }: PlayerProps
 export function ChatOpenButtons({ onOpenChat }: { onOpenChat: () => void }): ReactElement {
   return (
     <div className={styles.overlay}>
-      <button className={styles.overlayButton} type="button" aria-label="채팅 펼치기" title="채팅 펼치기" onClick={onOpenChat}>
+      <button
+        className={`${styles.overlayButton} ${tip.tooltip} ${tip.left}`}
+        type="button"
+        aria-label="채팅 펼치기"
+        data-tooltip="채팅 펼치기"
+        onClick={onOpenChat}
+      >
         <ChatIcon className={styles.icon} />
       </button>
-      <button className={styles.overlayButton} type="button" aria-label="후원하기" title="후원하기">
+      <button
+        className={`${styles.overlayButton} ${tip.tooltip} ${tip.left}`}
+        type="button"
+        aria-label="후원하기"
+        data-tooltip="후원하기"
+      >
         <CoinIcon className={styles.icon} />
       </button>
     </div>
