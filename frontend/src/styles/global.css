@@ -1,0 +1,54 @@
+/*
+ * 색·간격·크기는 여기 변수로만 정한다. 화면 CSS에는 값을 직접 쓰지 않고 var(--...)로 가져다 쓴다.
+ * 어두운 화면 하나만 쓴다(방송 플랫폼이라 영상 주변이 어두워야 눈이 편하다).
+ * 브레이크포인트: 480 / 768 / 1024 / 1280 (min-width, 모바일 우선). CSS 변수는 미디어쿼리에 쓸 수 없어 여기 적어 둔다.
+ */
+:root {
+  color-scheme: dark;
+
+  /* 바탕 → 카드 → 카드 위 요소 순으로 밝아진다 */
+  --color-bg: #0e0e10;
+  --color-surface: #18181b;
+  --color-surface-raised: #26262c;
+  --color-border: #3d3d45;
+
+  --color-text: #efeff1;
+  --color-text-muted: #adadb8;
+
+  /* 포인트 색. 버튼·링크·포커스가 이 계열을 쓴다 */
+  --color-primary: #7c4dff;
+  --color-primary-hover: #6a3df0;
+  --color-primary-text: #ffffff;
+  --color-link: #b49cff;
+  --color-focus: #9d7bff;
+
+  --color-danger: #ff6b6b;
+
+  --font-sans: system-ui, -apple-system, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --font-size-sm: 0.8125rem;
+  --font-size-md: 0.875rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.5rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-8: 3rem;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-pill: 9999px;
+
+  /* 입력칸·버튼 높이를 맞춘다 */
+  --control-height: 2.5rem;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
+}

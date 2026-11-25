@@ -1,8 +1,10 @@
 import { useMutation } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { errorMessage } from '../api/client.ts'
 import { signUp } from '../api/members.ts'
+import AuthCard from '../components/AuthCard.tsx'
+import form from '../styles/form.module.css'
 
 function SignUpPage() {
   const navigate = useNavigate()
@@ -21,25 +23,45 @@ function SignUpPage() {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h1>가입</h1>
-      <label>
-        이메일
-        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-      </label>
-      <label>
-        비밀번호
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-      </label>
-      <label>
-        닉네임
-        <input value={nickname} onChange={(e) => setNickname(e.target.value)} required />
-      </label>
-      {mutation.isError && <p role="alert">{errorMessage(mutation.error)}</p>}
-      <button type="submit" disabled={mutation.isPending}>
-        가입
-      </button>
-    </form>
+    <AuthCard
+      title="회원가입"
+      footer={<Link to="/login">이미 계정이 있으신가요? 로그인</Link>}
+    >
+      <form className={form.form} onSubmit={handleSubmit}>
+        <label className={form.field}>
+          이메일
+          <input
+            className={form.input}
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </label>
+        <label className={form.field}>
+          비밀번호
+          <input
+            className={form.input}
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </label>
+        <label className={form.field}>
+          닉네임
+          <input className={form.input} value={nickname} onChange={(e) => setNickname(e.target.value)} required />
+        </label>
+        {mutation.isError && (
+          <p className={form.error} role="alert">
+            {errorMessage(mutation.error)}
+          </p>
+        )}
+        <button className={form.button} type="submit" disabled={mutation.isPending}>
+          회원가입
+        </button>
+      </form>
+    </AuthCard>
   )
 }
 
