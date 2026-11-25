@@ -56,7 +56,7 @@
 | --- | --- | --- |
 | 폼 입력칸·라벨·버튼·에러 문구 | `src/styles/form.module.css` | 로그인, 회원가입. 마이페이지·스튜디오 폼도 이것을 쓴다 |
 | 가운데 카드 틀 | `src/components/AuthCard.tsx` | 로그인, 회원가입 |
-| 선 아이콘 | `src/components/icons.tsx` | 헤더, 사이드바 |
+| 선 아이콘 | `src/components/icons.tsx` | 헤더, 사이드바, 내 채널 |
 | 소셜 로그인 버튼 | `src/components/SocialLoginButtons.tsx` | 로그인 |
 | 이미지 아이콘 파일 | `src/assets/icons/` | 소셜 로그인 |
 
