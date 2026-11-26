@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fetchMyChannel, updateTitle, type ChannelResponse } from '../api/channels.ts'
@@ -62,6 +62,40 @@ describe('StudioBroadcastPage', () => {
 
     expect(await screen.findByText('저장했습니다')).not.toBeNull()
     expect(updateTitleMock).toHaveBeenCalledWith('새 제목')
+  })
+
+  it('should open the chat settings menu from the ⋮ button', async () => {
+    renderPage()
+
+    fireEvent.click(await screen.findByRole('button', { name: '채팅 설정' }))
+
+    const items = within(screen.getByRole('menu', { name: '채팅 설정' })).getAllByRole('menuitem')
+    expect(items.map((item) => item.textContent)).toEqual([
+      '클린봇켜짐',
+      '채팅 이용 권한모든 사용자',
+      '이모티콘 모드사용 안 함',
+      '저속 모드사용 안 함',
+      '활동 제한 해제 요청0건',
+      '주간 후원 랭킹노출',
+    ])
+  })
+
+  it('should close the chat settings menu when clicking outside', async () => {
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: '채팅 설정' }))
+
+    fireEvent.mouseDown(document.body)
+
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  it('should show the quick settings values in the chat settings menu', async () => {
+    renderPage()
+    fireEvent.click(await screen.findByRole('switch', { name: '이모티콘 모드' }))
+
+    fireEvent.click(screen.getByRole('button', { name: '채팅 설정' }))
+
+    expect(screen.getByRole('menuitem', { name: /이모티콘 모드/ }).textContent).toBe('이모티콘 모드사용')
   })
 
   it('should show the follower count only after turning on 정보 보기', async () => {
