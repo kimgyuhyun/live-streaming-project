@@ -1,0 +1,19 @@
+/* 헤더 아래 바탕 칸. 왼쪽 스튜디오 사이드바 칸과 오른쪽 메인 칸을 나란히 둔다 */
+.shell {
+  display: flex;
+  align-items: flex-start;
+  min-height: calc(100vh - var(--header-height));
+}
+
+.main {
+  flex: 1;
+  /* 안의 콘텐츠가 넓어도 칸을 밀어내지 않게 한다 */
+  min-width: 0;
+  padding: var(--space-4);
+}
+
+@media (min-width: 1024px) {
+  .main {
+    padding: var(--space-6);
+  }
+}

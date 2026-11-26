@@ -1,0 +1,283 @@
+/*
+ * 카드 두 줄(왼쪽: 방송 시작·동영상·기념일 / 오른쪽: 가이드·채팅·공지). 좁으면 한 줄로 쌓는다.
+ * 사이드바를 숨기면 메인 칸 너비가 바뀌므로 화면 너비 대신 이 칸 너비로 나눈다
+ */
+.dashboard {
+  container-type: inline-size;
+  max-width: 70rem;
+  margin: 0 auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+@container (min-width: 48rem) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.cardTitle {
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+}
+
+.accent {
+  color: var(--color-link);
+}
+
+.lead {
+  font-weight: 700;
+}
+
+.text {
+  color: var(--color-text-muted);
+}
+
+.link {
+  color: var(--color-link);
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+/* 단계 번호(①②③)는 목록 순서로 매긴다 */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+  counter-reset: step;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  counter-increment: step;
+}
+
+.stepTitle {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-weight: 700;
+}
+
+.stepTitle::before {
+  content: counter(step);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+/* 번호 자리만큼 들여 쓴다 */
+.stepText,
+.software {
+  margin-left: calc(1.25rem + var(--space-2));
+}
+
+.stepText {
+  color: var(--color-text-muted);
+}
+
+.software {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.softwareLink {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.softwareLink:hover,
+.softwareLink:focus-visible {
+  outline: none;
+  background: var(--color-surface-raised);
+}
+
+.softwareBadge {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+/* 배지 오른쪽 아래에 덮는 내려받기 표시 */
+.softwareDownload {
+  position: absolute;
+  right: calc(var(--space-2) * -1);
+  bottom: calc(var(--space-2) * -1);
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0.1875rem;
+  border-radius: 50%;
+  background: var(--color-text);
+  color: var(--color-bg);
+}
+
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 8rem;
+  height: var(--control-height);
+  padding: 0 var(--space-5);
+  border: 0;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primaryButton {
+  align-self: center;
+  margin-top: var(--space-2);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+}
+
+.primaryButton:hover,
+.primaryButton:focus-visible {
+  outline: none;
+  background: var(--color-primary-hover);
+}
+
+.secondaryButton {
+  background: var(--color-surface-raised);
+  color: var(--color-link);
+}
+
+.secondaryButton:hover,
+.secondaryButton:focus-visible {
+  outline: none;
+  background: var(--color-border);
+}
+
+/* 포인트 색 바탕 카드. 테두리 대신 바탕색으로 구분한다 */
+.guideCard {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+}
+
+.guideList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.guideItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.guideIcon,
+.chatIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.guideIcon {
+  background: var(--color-overlay);
+}
+
+.guideSvg {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.guideTitle {
+  font-weight: 800;
+}
+
+.guideText {
+  font-size: var(--font-size-sm);
+}
+
+.chatSettings {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.chatIcon {
+  background: var(--color-surface-raised);
+  color: var(--color-link);
+}
+
+.chatTitle {
+  margin-bottom: var(--space-1);
+  font-weight: 700;
+}
+
+.bullets {
+  color: var(--color-text-muted);
+}
+
+.bullets li::before {
+  content: '· ';
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  align-self: stretch;
+}

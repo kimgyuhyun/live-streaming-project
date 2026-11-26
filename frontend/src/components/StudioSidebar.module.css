@@ -1,0 +1,196 @@
+/*
+ * 1024 미만: 평소엔 숨기고, ☰를 누르면(.toggled) 본문 위로 덮어 연다(뒤는 어둡게).
+ * 1024 이상: 바탕 칸(StudioLayout .shell)의 왼쪽 칸. 스크롤해도 헤더 아래에 붙어 따라온다. ☰를 누르면 숨긴다
+ */
+.sidebar {
+  position: fixed;
+  top: var(--header-height);
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+  display: none;
+  width: var(--sidebar-width);
+  padding: var(--space-4) var(--space-3);
+  overflow-y: auto;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.sidebar.toggled {
+  display: block;
+}
+
+.backdrop {
+  position: fixed;
+  inset: var(--header-height) 0 0 0;
+  z-index: 15;
+  padding: 0;
+  border: 0;
+  background: rgb(0 0 0 / 0.5);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  height: 2.75rem;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.item:hover,
+.item:focus-visible,
+.child:hover,
+.child:focus-visible {
+  outline: none;
+  background: var(--color-surface-raised);
+}
+
+.active {
+  background: var(--color-surface-raised);
+  color: var(--color-link);
+}
+
+.icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+.label {
+  min-width: 0;
+}
+
+.chevron {
+  width: 1rem;
+  height: 1rem;
+  margin-left: auto;
+  color: var(--color-text-muted);
+  transition: transform 0.15s;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+/* 펼친 메뉴의 하위 항목. 아이콘 자리만큼 들여 쓴다 */
+.children {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-1) 0;
+}
+
+.child {
+  display: flex;
+  align-items: center;
+  height: 2.25rem;
+  padding: 0 var(--space-3) 0 calc(var(--space-3) * 2 + 1.25rem);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.child.active {
+  color: var(--color-link);
+}
+
+.guides {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+.guide {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.guide:hover,
+.guide:focus-visible {
+  outline: none;
+  background: var(--color-surface-raised);
+}
+
+.guideBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+.guideText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.guideName {
+  font-weight: 700;
+}
+
+.guideDescription {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.guideIcon {
+  width: 1rem;
+  height: 1rem;
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+@media (min-width: 1024px) {
+  .sidebar {
+    position: sticky;
+    bottom: auto;
+    z-index: auto;
+    display: block;
+    flex-shrink: 0;
+    height: calc(100vh - var(--header-height));
+  }
+
+  .sidebar.toggled {
+    display: none;
+  }
+
+  .backdrop {
+    display: none;
+  }
+}
