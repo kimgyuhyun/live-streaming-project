@@ -345,18 +345,33 @@ class StudioTermsIntegrationTest {
                     .andExpect(jsonPath("$.code").value("FORBIDDEN"));
         }
 
+        // 개발 편의상 운영자도 동의 팝업을 스트리머와 똑같이 본다. 동의 여부 조회·동의 두 경로만 열린다
         @Test
-        @DisplayName("should return 403 with code FORBIDDEN when an operator agrees to the terms")
-        void rejectsOperator() throws Exception {
-            String email = newEmail();
-            signUp(email);
-            // 역할은 로그인할 때 세션에 실린다. 로그인 전에 운영자로 바꾼다
-            jdbcTemplate.update("UPDATE member SET role = 'OPERATOR' WHERE id = ?", memberIdOf(email));
-            Cookie session = loggedIn(email);
+        @DisplayName("should return 204 and then agreed true when an operator agrees to both required terms")
+        void operatorAgrees() throws Exception {
+            Cookie session = operatorSession();
+            agree(session, BOTH).andExpect(status().isNoContent());
 
-            agree(session, BOTH)
+            termsStatus(session).andExpect(jsonPath("$.agreed").value(true));
+        }
+
+        @Test
+        @DisplayName("should return 403 with code FORBIDDEN when an operator who has agreed reads the studio channel")
+        void operatorStillBlockedFromStudio() throws Exception {
+            Cookie session = operatorSession();
+            agree(session, BOTH).andExpect(status().isNoContent());
+
+            mockMvc.perform(get("/api/studio/channel").cookie(session))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("FORBIDDEN"));
         }
+    }
+
+    // 운영자로 로그인한 세션. 역할은 로그인할 때 세션에 실린다. 로그인 전에 운영자로 바꾼다
+    private Cookie operatorSession() throws Exception {
+        String email = newEmail();
+        signUp(email);
+        jdbcTemplate.update("UPDATE member SET role = 'OPERATOR' WHERE id = ?", memberIdOf(email));
+        return loggedIn(email);
     }
 }
