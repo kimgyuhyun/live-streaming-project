@@ -63,6 +63,6 @@ public class ChannelService {
     private static ChannelResponse toResponse(Channel channel) {
         return new ChannelResponse(channel.getId(), channel.getName(),
                 Objects.requireNonNullElse(channel.getDescription(), ""), channel.isLive(),
-                Objects.requireNonNullElse(channel.getTitle(), channel.getName() + "의 방송"), channel.isDemo());
+                Objects.requireNonNullElse(channel.getTitle(), channel.getName() + "의 방송"), channel.isDemo(), 0);
     }
 }

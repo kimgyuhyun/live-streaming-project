@@ -49,7 +49,7 @@ class ChannelServiceTest {
 
             ChannelResponse response = channelService.find(CHANNEL_ID);
 
-            assertThat(response).isEqualTo(new ChannelResponse(CHANNEL_ID, "방송채널", "안녕하세요", false, "방송채널의 방송", false));
+            assertThat(response).isEqualTo(new ChannelResponse(CHANNEL_ID, "방송채널", "안녕하세요", false, "방송채널의 방송", false, 0));
         }
 
         @Test
@@ -108,6 +108,18 @@ class ChannelServiceTest {
         }
 
         @Test
+        @DisplayName("should return the follower count of the channel")
+        void returnsFollowerCount() {
+            Channel channel = savedChannel("");
+            channel.setFollowerCount(3);
+            given(channelMapper.findById(CHANNEL_ID)).willReturn(Optional.of(channel));
+
+            ChannelResponse response = channelService.find(CHANNEL_ID);
+
+            assertThat(response.followerCount()).isEqualTo(3);
+        }
+
+        @Test
         @DisplayName("should throw CHANNEL_NOT_FOUND when the channel does not exist")
         void rejectsMissingChannel() {
             given(channelMapper.findById(CHANNEL_ID)).willReturn(Optional.empty());
@@ -129,7 +141,7 @@ class ChannelServiceTest {
             given(channelMapper.findByMemberId(OWNER_ID)).willReturn(Optional.of(savedChannel("소개")));
 
             assertThat(channelService.findMine(OWNER_ID))
-                    .isEqualTo(new ChannelResponse(CHANNEL_ID, "방송채널", "소개", false, "방송채널의 방송", false));
+                    .isEqualTo(new ChannelResponse(CHANNEL_ID, "방송채널", "소개", false, "방송채널의 방송", false, 0));
         }
 
         @Test
@@ -157,7 +169,7 @@ class ChannelServiceTest {
                     new UpdateChannelRequest("새이름", "새 소개"));
 
             verify(channelMapper).update(CHANNEL_ID, "새이름", "새 소개");
-            assertThat(response).isEqualTo(new ChannelResponse(CHANNEL_ID, "새이름", "새 소개", false, "새이름의 방송", false));
+            assertThat(response).isEqualTo(new ChannelResponse(CHANNEL_ID, "새이름", "새 소개", false, "새이름의 방송", false, 0));
         }
 
         @Test

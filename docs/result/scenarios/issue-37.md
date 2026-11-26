@@ -190,6 +190,18 @@ interface FollowButtonProps { channelId: number }
 - [ ] [예외] `ChannelPage` — should go to the login page when a visitor who is not logged in clicks 팔로우
 - [ ] [예외] `ChannelPage` — should keep 팔로우 and the follower count when the follow request fails
 
+### Red 기록
+
+- 만든 stub: `follow/FollowService`·`FollowController`(본문 `UnsupportedOperationException`), `FollowMapper`·`FollowStatusResponse`, `ChannelMapper.increaseFollowerCount`·`decreaseFollowerCount`(선언만), `ChannelResponse.followerCount`(`ChannelService`는 아직 0을 넣는다), `ErrorCode.CANNOT_FOLLOW_OWN_CHANNEL`, 프론트 `api/follows.ts`(`throw`), `ChannelResponse.followerCount` 타입.
+- 마이그레이션 `V9__create_follow.sql`도 Red에 넣었다. 처음엔 빼고 돌렸더니 동시성 테스트 두 개가 `follow` 테이블이 없어(`BadSqlGrammarException`) 단언에 닿지 못했다(나쁜 실패). 스키마는 타입 선언처럼 테스트가 돌기 위한 전제라 넣고 다시 돌렸다.
+- 기존 테스트 손질(컴파일): `new ChannelResponse(...)`에 `followerCount` 0을 더했다(`ChannelControllerTest`·`ChannelOperatorControllerTest`·`ChannelServiceTest`). `StreamerApplicationReviewIntegrationTest`의 익명 `ChannelMapper`에 새 메서드 두 개를 위임으로 더했다.
+- 실행: 단위·컨트롤러는 파일마다, 통합(`FollowIntegrationTest`)은 컨테이너 기동 때문에 다 쓰고 파일 단위로 한 번.
+- 결과: 시나리오 41개 = 백엔드 32개(서비스 10 · 컨트롤러 5 · 통합 16 · `ChannelService.find` 1) + 프론트 9개. 백엔드 32개 중 27개 실패(단언 또는 stub의 not implemented), 프론트 9개 전부 실패(단언).
+- **구현 없이 통과한 5개** — Green에서 변이로 확인한다.
+  - `FollowIntegration` 401 세 개: `SecurityConfig`의 `anyRequest().authenticated()`가 이미 막는다(`GET /api/channels/*`의 `permitAll`은 한 단계 경로만).
+  - `FollowIntegration — should return followerCount 0 when nobody follows the channel`: `ChannelService`가 stub으로 0을 넣는다.
+  - `FollowIntegration — …one member sends follows and unfollows…`: stub이라 아무것도 바뀌지 않아 0 = 0. 방어 전 구현(defect-repro)으로 깨지는 것을 Green에서 기록한다.
+
 ---
 
 ## AC 대조
@@ -214,4 +226,4 @@ interface FollowButtonProps { channelId: number }
 - `FollowService.unfollow`·`FollowService.isFollowing`의 자기 채널 400 — 화면이 내 채널을 아는 방법(시그니처 "판단이 갈린 곳")
 - `ChannelPage — should keep 팔로우 and the follower count when the follow request fails` — 실패했는데 수가 늘어 보이면 화면이 틀린 값을 보인다
 
-**커버리지:** AC 12개 / 시나리오 44개 / 미커버 0개
+**커버리지:** AC 12개 / 시나리오 41개 / 미커버 0개

@@ -391,6 +391,16 @@ class StreamerApplicationReviewIntegrationTest {
                 }
 
                 @Override
+                public void increaseFollowerCount(long id) {
+                    channelMapper.increaseFollowerCount(id);
+                }
+
+                @Override
+                public void decreaseFollowerCount(long id) {
+                    channelMapper.decreaseFollowerCount(id);
+                }
+
+                @Override
                 public void updateStreamKey(long id, String hash, String prefix) {
                     channelMapper.updateStreamKey(id, hash, prefix);
                 }
