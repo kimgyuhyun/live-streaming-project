@@ -260,3 +260,101 @@ interface FollowButtonProps { channelId: number }
 - `ChannelPage — should keep 팔로우 and the follower count when the follow request fails` — 실패했는데 수가 늘어 보이면 화면이 틀린 값을 보인다
 
 **커버리지:** AC 12개 / 시나리오 41개 / 미커버 0개
+
+---
+
+## AC 검증
+
+### 이슈 #37 AC 검증 결과 (브랜치 feat/viewer/issue-37, HEAD 3a68bc9) — `harness:ac-verifier` 원문
+
+## 이슈 #37 AC 검증 — 채널을 팔로우하고 채널 페이지에서 팔로워 수를 본다
+
+검증 대상: `C:/live-streaming-issue-37`, 브랜치 `feat/viewer/issue-37` (main 대비 커밋 4개: `cf376a4` docs → `2ee2aab` test → `15ef760` test → `3a68bc9` feat). 시작할 때 worktree는 깨끗했다(`git status --short` 출력 없음). 코드는 고치지 않았다.
+
+12개 AC 모두 구현이 있고 테스트도 통과한다. 두 AC에서 테스트가 놓치는 경우가 있다.
+- **AC 9:** 요청이 전부 실패해도 통과한다.
+- **AC 10:** 화면이 팔로우를 실제로 취소하는지 확인하지 않는다.
+
+이번 실행 결과(직접 돌림):
+- **백엔드** `--tests "Follow*" --tests "ChannelServiceTest"` → BUILD SUCCESSFUL.
+  - `FollowIntegration` 16/16, `FollowController` 5/5, `FollowService.follow` 4/4, `.unfollow` 3/3, `.isFollowing` 3/3, `ChannelService.find` 9/9. 실패와 오류는 0이다.
+  - 결과 XML 시각은 2026-11-26T11:43Z다(Testcontainers Oracle).
+- **프론트** `npx vitest run src/pages/ChannelPage.test.tsx` → 20/20 통과. 이슈 #37 관련 9개 포함.
+
+### AC별 판정 표
+
+| AC | 판정 | 테스트 (파일:줄) | 구현 (파일:줄) | 근거 |
+| --- | --- | --- | --- | --- |
+| 1. 팔로우 → 204, `following: true`, `followerCount` +1 | ✅ | `should return 204 and then following true when a member follows another channel` (FollowIntegrationTest.java:199)<br>`should add one to followerCount of the channel lookup…` (:212)<br>`should return followerCount 0 when nobody follows the channel` (:251)<br>`FollowService.follow — should save the follow and add one…` (FollowServiceTest.java:59)<br>`ChannelService.find — should return the follower count of the channel` (ChannelServiceTest.java) | `FollowService.follow` (FollowService.java:25-31)<br>`ChannelMapper.xml` `increaseFollowerCount`(`follower_count + 1`), `columns`에 `c.follower_count`<br>`ChannelService.toResponse`의 `getFollowerCount()` | 실제 HTTP PUT 204 다음 GET `/follow`의 `$.following == true`를 단언한다. `GET /api/channels/{id}`의 `followerCount`가 0에서 1이 된다(0 시작은 :251이 별도로 단언). |
+| 2. 다시 팔로우 → 204, 수 그대로, 행 하나 | ✅ | `should return 204 and keep followerCount when the member follows the same channel again` (FollowIntegrationTest.java:259)<br>`should keep one follow row…` (:271)<br>`FollowService.follow — should not change the follower count when the member already follows` (FollowServiceTest.java:72) | `FollowMapper.xml` `MERGE … WHEN NOT MATCHED`<br>`FollowService.insertIfAbsent`의 `== 1` 검사 (FollowService.java:56-62) | 두 번째 PUT이 204이고, `followerCount == 1`과 `SELECT COUNT(*) FROM follow == 1`을 진짜 Oracle에서 단언한다. |
+| 3. 취소 → 204, `following: false`, 수 -1 | ✅ | `should return 204 and then following false when the member unfollows the channel` (FollowIntegrationTest.java:223)<br>`should subtract one from followerCount…` (:237)<br>`FollowService.unfollow — should delete the follow and subtract one…` (FollowServiceTest.java:112) | `FollowService.unfollow` (FollowService.java:34-40)<br>`decreaseFollowerCount`(`follower_count - 1`) | 두 회원이 팔로우해 2가 된 뒤 한 명이 취소하면 1이 되는 것을 단언한다. 이 경우 0으로 바닥에 붙는 구현은 통과하지 못한다. 취소 후 `$.following == false`도 단언한다. |
+| 4. 안 한 채널 취소 → 204, 수 그대로(0 아래로 안 감) | ✅ | `should return 204 and keep followerCount at 0 when a member who does not follow unfollows the channel` (FollowIntegrationTest.java:283)<br>`FollowService.unfollow — should not change the follower count when the member does not follow` (FollowServiceTest.java:125) | `followMapper.delete(...) == 1`일 때만 감소 (FollowService.java:37) | 통합 테스트는 0에서 0이 되는 것만 본다. "그대로"는 단위 테스트의 `never().decreaseFollowerCount`가 일반적으로 보장한다. Green 기록에서 "항상 -1" 변이가 이 통합 테스트를 깨뜨렸다(-1). 선택 제안은 아래에 있다. |
+| 5. 자기 채널 팔로우 → 400, 저장 없음 | ✅ | `should return 400 with code CANNOT_FOLLOW_OWN_CHANNEL when the streamer follows their own channel` (FollowIntegrationTest.java:332)<br>`should save no follow row and keep followerCount…` (:344)<br>`FollowService.follow — should throw CANNOT_FOLLOW_OWN_CHANNEL without saving` (FollowServiceTest.java:83) | `checkFollowable` (FollowService.java:47-53)<br>`ErrorCode.CANNOT_FOLLOW_OWN_CHANNEL(BAD_REQUEST)` | 실제 가입, 신청, 승인으로 만든 스트리머가 자기 채널에 PUT하면 400과 `$.code`가 나온다. 이때 follow 행 0, `followerCount` 0을 단언한다. 단위 테스트는 구체 타입 `BusinessException`과 `code`까지 확인한다. |
+| 6. 없는 채널 팔로우 → 404 | ✅ | `should return 404 with code CHANNEL_NOT_FOUND when a member follows a channel that does not exist` (FollowIntegrationTest.java:356)<br>`FollowService.follow — should throw CHANNEL_NOT_FOUND without saving` (FollowServiceTest.java:95) | `channelMapper.findById(...).orElseThrow(CHANNEL_NOT_FOUND)` (FollowService.java:48-49) | 로그인 회원이 채널 999999999에 PUT하면 404이고 `$.code == "CHANNEL_NOT_FOUND"`다. |
+| 7. 비로그인 팔로우·취소·여부 → 401 | ✅ | `should return 401 when a visitor who is not logged in follows / unfollows / asks whether they follow a channel` (FollowIntegrationTest.java:366, :375, :384) | `SecurityConfig.java:58`의 `GET /api/channels/*` permitAll은 한 단계 경로만 연다. `:61` `anyRequest().authenticated()`, 진입점은 `UNAUTHENTICATED` | 실제 보안 필터를 거친다. PUT·DELETE는 허용 Origin 헤더를 붙여 보내므로 401이 출처 검사가 아니라 인증에서 나온다. Green 기록에 따르면 `permitAll` 변이로 세 개 모두 실패했다. 이 변이는 이번에 다시 돌리지 않았다. |
+| 8. 20명 동시 팔로우, 10명 동시 취소 → 수 = 행 수(10) | ✅ | `should make followerCount equal the 10 follow rows when 20 members follow at the same time and 10 of them unfollow at the same time` (FollowIntegrationTest.java:294) | 영향 행 수가 1일 때만 DB가 `follower_count ± 1` (FollowService.java:28-30, :37-39, ChannelMapper.xml) | 래치로 동시에 출발시키고 스레드마다 각자 커밋한다. `[followerCount, 행 수] == [10, 10]`을 단언한다. 이번 실행 출력은 `20 follows {success=20}, 10 unfollows {success=10}`이다. 모두 실패하면 0/0이 되어 단언이 깨지므로 빈 통과도 불가능하다. Green의 defect-repro 기록에서는 "읽고 더해 쓰기" 구현이 -2/10과 2/10으로 실패했다. |
+| 9. 한 회원 동시 팔로우·취소 반복 → 수 = 행 수 | ⚠️ 부분 충족 | `should make followerCount equal the follow rows when one member sends follows and unfollows to the same channel at the same time many times` (FollowIntegrationTest.java:310) | 같은 구현 + `DuplicateKeyException`을 "새로 안 들어감"으로 처리 (FollowService.java:56-62) | 구현은 맞다. 테스트는 팔로우 2 : 취소 1, 20건 × 5회로 "항상 ±1" 변이를 잡는다(Green 기록 30/0). 이번 실행은 모든 회차 `success=20`이었다. 다만 단언이 `followerCount == 행 수` 하나뿐이고 성공 수는 출력만 하고 단언하지 않는다(:325, :328). 그래서 요청이 전부 예외로 실패해도 0 == 0으로 통과한다. 동시 MERGE가 기본 키에 걸릴 때의 `DuplicateKeyException` 처리를 확인하는 테스트도 없다. `grep "success\|DuplicateKey"` 결과 :163, :172, :190 집계 코드뿐이다. |
+| 10. "팔로우" 누르면 "팔로잉", 수 +1, 다시 누르면 되돌아감 | ⚠️ 부분 충족 | `should change the button to 팔로잉 when a member clicks 팔로우` (ChannelPage.test.tsx:201)<br>`should show 팔로워 4명 when a member clicks 팔로우 on a channel with 3 followers` (:210)<br>`should change the button back to 팔로우 when the member clicks 팔로잉` (:219)<br>`should show 팔로워 3명 when the member clicks 팔로잉 on a channel with 4 followers` (:229)<br>`should keep 팔로우 and the follower count when the follow request fails` (:262) | `FollowButton.tsx:24-33`(onSuccess에서 `['follow']`와 `['channel']` 캐시를 ±1)<br>`ChannelPage.tsx` `팔로워 {followerCount}명` | 화면 문구와 숫자 변화는 단언으로 확인했다. 구현도 `next ? follow : unfollow`로 맞다. 그러나 `unfollowMock`은 선언(:32)과 초기화(:58)만 있고 어디서도 단언하지 않는다. `follow`·`unfollow`가 채널 7로 불렸는지도 확인하지 않는다(`grep toHaveBeenCalledWith` 0건). 그래서 "팔로잉"을 눌러도 `follow`를 다시 보내는 구현이 되돌림 테스트 두 개를 통과한다. 그 경우 화면은 되돌아가도 서버는 팔로우 상태로 남는다. 이건 코드를 읽고 추론한 것이고 변이를 실행해 보지는 않았다. "되돌림"은 처음부터 `following: true`인 상태에서만 보고, 한 화면에서 팔로우 → 팔로잉 → 팔로우로 왕복하는 테스트는 없다. |
+| 11. 내 채널 페이지 → 버튼 없음 | ✅ | `should not show the follow button when the streamer opens their own channel` (ChannelPage.test.tsx:239)<br>`FollowService.isFollowing — should throw CANNOT_FOLLOW_OWN_CHANNEL…` (FollowServiceTest.java:171) | `FollowButton.tsx:38`(401이 아닌 오류면 `null`)<br>`isFollowing`의 `checkFollowable` (FollowService.java:43-45) | 서버는 자기 채널의 팔로우 여부 조회에 400을 준다. 화면은 400을 받으면 버튼을 그리지 않는다. 테스트는 조회가 불린 뒤 타이머를 0만큼 넘기고 `팔로우` 버튼이 없음을 단언한다. 이 방식이 대기 상태(`isPending`, 역시 `null`)와 구별되는지는 변이로 직접 확인하지 않았다. 같은 대기 방식을 쓰는 :262가 Green의 onMutate 변이로 깨졌다는 기록을 간접 근거로 삼는다. `팔로잉` 버튼이 없다는 단언은 없다. 구현이 `null`을 반환하므로 판정에는 영향이 없다. |
+| 12. 비로그인이 "팔로우" → 로그인 화면 | ✅ | `should go to the login page when a visitor who is not logged in clicks 팔로우` (ChannelPage.test.tsx:252)<br>`FollowIntegration — 401 when … asks whether they follow` (FollowIntegrationTest.java:384) | `FollowButton.tsx:36`(`ApiError` 401이면 loggedOut), `:42` `navigate('/login')` | 팔로우 여부 조회가 401이면 "팔로우" 버튼을 보여 주고, 누르면 `/login` 라우트("로그인 화면")가 렌더되는 것을 단언한다. 서버가 실제로 401을 주는 것은 통합 테스트 :384가 확인한다. |
+
+### 요약
+
+AC 12개 중 ✅ 10 / ⚠️ 2 / ❌ 0
+
+### 갭이 있는 AC에 대한 추가 시나리오 제안
+
+AC 9:
+- [ ] [경계] `FollowIntegration` — should complete every follow and unfollow without an error when one member sends them to the same channel at the same time
+  - `runAtOnce` 결과의 `success`가 매 회차 20이고 실패 항목이 없음을 단언한다. 그러면 0 == 0으로 비어서 통과하는 일이 없어지고 `DuplicateKeyException` 처리도 지켜진다.
+- [ ] [경계] `FollowService.follow` — should not change the follower count when saving the follow hits a duplicate key
+  - `insertIfAbsent`가 `DuplicateKeyException`을 던지도록 목을 만들고, 예외가 밖으로 나오지 않으며 `increaseFollowerCount`가 불리지 않음을 단언한다.
+
+AC 10:
+- [ ] [정상] `ChannelPage` — should send unfollow for channel 7 when the member clicks 팔로잉
+  - `unfollowMock`이 `7`로 한 번 불렸고 `followMock`은 불리지 않았음을 단언한다.
+- [ ] [정상] `ChannelPage` — should send follow for channel 7 when a member clicks 팔로우
+- [ ] [정상] `ChannelPage` — should show 팔로우 and 팔로워 3명 again when a member clicks 팔로우 and then 팔로잉 on a channel with 3 followers
+  - 한 화면에서 왕복한다.
+
+(선택, AC 4 보강 — 판정에는 영향 없음)
+- [ ] [경계] `FollowIntegration` — should keep followerCount at 1 when a member who does not follow unfollows a channel with one follower
+
+### 가짜 테스트 목록
+
+다음 네 패턴에 해당하는 테스트는 없다.
+- 인자 없는 `toThrow`
+- `await` 없는 비동기 호출
+- 단언 없는 테스트
+- 목이 반환한 값을 그대로 단언
+
+백엔드 예외 단언은 모두 `isInstanceOf(BusinessException.class)`에 `.extracting("code")`까지 확인한다.
+
+`FollowControllerTest.java:250`은 목이 준 `true`를 `$.following`으로 단언한다. 하지만 컨트롤러 직렬화를 보는 `@WebMvcTest`이고, 실제 경로는 `FollowIntegrationTest.java:199`·`:223`이 진짜 DB로 확인하므로 가짜로 보지 않는다.
+
+단언이 약한 곳(위 ⚠️의 원인):
+1. `FollowIntegrationTest.java:317-328` — 성공 수를 출력만 하고 단언하지 않아서 전부 실패해도 통과한다. 조이는 법: `assertThat(result).containsExactly(entry("success", 20))` 같은 단언을 회차마다 추가한다.
+2. `ChannelPage.test.tsx:219`, `:229` — `follow`와 `unfollow` 목이 둘 다 성공을 돌려줘서 어느 API를 불렀는지 구별하지 못한다. 조이는 법: `expect(unfollowMock).toHaveBeenCalledWith(7)`과 `expect(followMock).not.toHaveBeenCalled()`를 추가한다.
+
+### 실행한 명령 목록
+
+1. `cd /c/live-streaming-issue-37 && cat .claude/harness.json && git status --short && git log --oneline main..feat/viewer/issue-37 && gh issue view 37` → 설정 확인. worktree 깨끗함. 커밋 4개. AC 12개 확인
+2. `git diff --stat main...feat/viewer/issue-37 && cat docs/result/scenarios/issue-37.md` → 변경 파일 26개, 시나리오 41개, AC 대조표와 Green(defect-repro) 기록 확인
+3. `cat -n` follow 패키지 java 4개 + `V9__create_follow.sql` + `FollowMapper.xml`, `git diff` channel·common·ChannelMapper.xml → 서비스, 매퍼 SQL, 원자적 ±1, 오류 코드 확인
+4. `sed -n 1,50p ChannelMapper.xml; grep map-underscore application.yml; grep requestMatchers SecurityConfig` → `c.follower_count`가 조회되고 camelCase 매핑이 켜져 있음, 보안 규칙 :50-61 확인 (grep 하나가 대상 디렉터리 없음으로 exit 2였지만 필요한 출력은 모두 나옴)
+5. `cat -n FollowServiceTest.java FollowControllerTest.java` → 단위 10개, 컨트롤러 5개 본문 확인
+6. `cat -n FollowIntegrationTest.java` → 통합 16개 본문 확인. 성공 수가 단언되지 않음(:325, :328)
+7. `cat -n FollowButton.tsx api/follows.ts`, `git diff` ChannelPage.tsx·channels.ts, `cat -n ChannelPage.test.tsx` → 화면 구현과 테스트 9개 확인
+8. `git diff` ChannelServiceTest·StreamerApplicationReviewIntegrationTest, `sed -n 35,65p SecurityConfig.java` → `ChannelService.find` 팔로워 수 테스트, 401 진입점, OriginValidationFilter 위치 확인
+9. `JAVA_HOME="$HOME/.jdks/liberica-21.0.7" ./gradlew test --tests "Follow*" --tests "ChannelServiceTest"` → BUILD SUCCESSFUL in 51s
+10. `npx vitest run ChannelPage.test.tsx` → 파일 2개, 테스트 22개 통과 (이름 패턴에 2개 파일이 걸림)
+11. `grep` `build/test-results/test/TEST-*.xml` (testsuite 요약, `defect-repro` 출력) → FollowIntegration 16, FollowController 5, FollowService 4+3+3, ChannelService.find 9, 실패 0. 동시성 출력은 `success=20`/`success=10`, 한 회원 5회 모두 `success=20`
+12. `npx vitest run src/pages/ChannelPage.test.tsx --reporter=verbose` → ChannelPage 20/20 통과, #37 테스트 9개 이름 확인
+13. `grep -n "unfollowMock\|followMock).toHaveBeenCalledWith\|toHaveBeenCalledWith(7" ChannelPage.test.tsx; grep -rn "success\|DuplicateKey" follow 테스트; grep -rln follow frontend 테스트` → `unfollowMock`은 :32, :58뿐으로 단언 0건. 성공 수와 `DuplicateKey` 관련 단언 0건(집계 코드 :163, :172, :190뿐)
+
+관련 파일:
+- `C:/live-streaming-issue-37/backend/src/main/java/com/livestream/follow/FollowService.java`
+- `C:/live-streaming-issue-37/backend/src/test/java/com/livestream/follow/FollowIntegrationTest.java`
+- `C:/live-streaming-issue-37/frontend/src/pages/FollowButton.tsx`
+- `C:/live-streaming-issue-37/frontend/src/pages/ChannelPage.test.tsx`
+- `C:/live-streaming-issue-37/docs/result/scenarios/issue-37.md`
