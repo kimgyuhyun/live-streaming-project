@@ -16,6 +16,7 @@ import StudioObsGuidePage from './pages/StudioObsGuidePage.tsx'
 import StudioRestrictionsPage from './pages/StudioRestrictionsPage.tsx'
 import StudioSettingsPage from './pages/StudioSettingsPage.tsx'
 import StudioVideoAnalyticsPage from './pages/StudioVideoAnalyticsPage.tsx'
+import StudioVideosPage from './pages/StudioVideosPage.tsx'
 
 export const router = createBrowserRouter([
   {
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
       { path: 'analytics/video', element: <StudioVideoAnalyticsPage /> },
       { path: 'viewers/followers', element: <StudioFollowersPage /> },
       { path: 'viewers/restrictions', element: <StudioRestrictionsPage /> },
+      { path: 'content/videos', element: <StudioVideosPage /> },
       { path: 'guide/obs', element: <StudioObsGuidePage /> },
     ],
   },
