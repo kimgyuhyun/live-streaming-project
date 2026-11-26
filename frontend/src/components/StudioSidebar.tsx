@@ -39,7 +39,6 @@ const ITEMS: Item[] = [
 
 // 방송 소프트웨어 안내. 아직 안내 글이 없어 모양만 있다
 const GUIDES = [
-  { name: 'PRISM 가이드', description: '저지연 방송 설정', badge: 'P' },
   { name: 'OBS 가이드', description: '방송 기본 세팅', badge: 'OBS' },
 ]
 

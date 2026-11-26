@@ -8,7 +8,6 @@ const SETTINGS_PATH = '/studio/broadcast/settings'
 // 방송 소프트웨어는 각 회사의 공식 내려받기 페이지로 보낸다. 로고는 쓰지 않고 글자로 둔다
 const SOFTWARE = [
   { name: 'Open Broadcaster Software', badge: 'OBS', href: 'https://obsproject.com/download' },
-  { name: 'PRISM Live Studio', badge: 'PRISM', href: 'https://prismlive.com' },
 ]
 
 const BROADCAST_GUIDE: { title: string; description: string; Icon: ComponentType<{ className?: string }> }[] = [
