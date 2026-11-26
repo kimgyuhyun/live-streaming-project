@@ -445,3 +445,33 @@ export function ImageIcon(props: IconProps) {
     </Svg>
   )
 }
+
+// 로봇 머리(클린봇)
+export function BotIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="4" y="8" width="16" height="12" rx="3" />
+      <path d="M12 4v4M9 13h.01M15 13h.01M9.5 16.5h5" />
+    </Svg>
+  )
+}
+
+// 속도계(저속 모드)
+export function GaugeIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4.9 18A9 9 0 1 1 19.1 18" />
+      <path d="m12 13-3-3" />
+    </Svg>
+  )
+}
+
+// 사람 + 빗금(활동 제한)
+export function UserOffIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="10" cy="8" r="4" />
+      <path d="M3 20a7 7 0 0 1 11-5.7M16 16l5 5M21 16l-5 5" />
+    </Svg>
+  )
+}

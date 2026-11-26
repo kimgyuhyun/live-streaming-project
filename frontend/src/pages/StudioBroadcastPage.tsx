@@ -1,10 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { fetchMyChannel, updateTitle } from '../api/channels.ts'
 import { errorMessage } from '../api/client.ts'
 import HelpTip from '../components/HelpTip.tsx'
-import { ChevronRightIcon, MoreVerticalIcon, PlusIcon, SearchIcon } from '../components/icons.tsx'
+import {
+  BotIcon,
+  ChartIcon,
+  ChatIcon,
+  ChevronRightIcon,
+  GaugeIcon,
+  MoreVerticalIcon,
+  PlusIcon,
+  SearchIcon,
+  SmileIcon,
+  UserOffIcon,
+} from '../components/icons.tsx'
 import form from '../styles/form.module.css'
 import { hlsUrl } from './broadcastView.ts'
 import { HlsPlayer } from './LivePlayer.tsx'
@@ -20,6 +31,11 @@ const OBS_GUIDE_PATH = '/studio/guide/obs'
 function StudioBroadcastPage() {
   // 송출을 켜고 끈 뒤 몇 초 안에 미리보기·상태가 바뀌도록 5초마다 다시 읽는다
   const channel = useQuery({ queryKey: ['myChannel'], queryFn: fetchMyChannel, refetchInterval: 5000 })
+  const [chatSettings, setChatSettings] = useState<ChatSettings>({
+    audience: 'all',
+    emoticonMode: false,
+    slowMode: false,
+  })
 
   if (channel.isPending) return null
   if (channel.isError) return <p role="alert">{errorMessage(channel.error)}</p>
@@ -58,8 +74,8 @@ function StudioBroadcastPage() {
           </div>
         </div>
 
-        <StudioChat />
-        <QuickSettings />
+        <StudioChat settings={chatSettings} />
+        <QuickSettings settings={chatSettings} onChange={setChatSettings} />
       </div>
     </div>
   )
@@ -340,31 +356,98 @@ const REPLAYS = [
   { value: 'none', label: '다시보기 없음' },
 ] as const
 
+type Audience = 'all' | 'followers' | 'managers'
+
+// 채팅 ⋮ 메뉴와 빠른 설정이 같이 보여 주는 값. 저장할 API가 아직 없어 이 화면에만 남는다
+type ChatSettings = { audience: Audience; emoticonMode: boolean; slowMode: boolean }
+
+const AUDIENCE_LABEL: Record<Audience, string> = { all: '모든 사용자', followers: '팔로워', managers: '운영자' }
+
 // 채팅은 아직 기능이 없어 모양만 있다(방송 화면의 채팅 칸과 같다)
-function StudioChat() {
+function StudioChat({ settings }: { settings: ChatSettings }) {
   return (
     <section className={`${styles.panel} ${styles.chat}`} aria-label="채팅">
       <div className={styles.panelHead}>
         <h2 className={styles.panelTitle}>채팅</h2>
-        <button className={styles.iconButton} type="button" aria-label="채팅 설정">
-          <MoreVerticalIcon className={styles.iconSvg} />
-        </button>
+        <ChatMenu settings={settings} />
       </div>
       <p className={styles.empty}>아직 채팅이 없습니다</p>
     </section>
   )
 }
 
+// ⋮를 누르면 아래로 펼치는 채팅 설정 메뉴. 밖을 누르거나 Esc로 닫는다.
+// 각 줄은 아직 하위 화면이 없어 모양만 있다. 클린봇·활동 제한·후원 랭킹 값은 고정 글자다
+function ChatMenu({ settings }: { settings: ChatSettings }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function closeOnOutside(e: MouseEvent) {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+    }
+    function closeOnEscape(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', closeOnOutside)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutside)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [open])
+
+  const items = [
+    { label: '클린봇', value: '켜짐', Icon: BotIcon, more: false },
+    { label: '채팅 이용 권한', value: AUDIENCE_LABEL[settings.audience], Icon: ChatIcon, more: true },
+    { label: '이모티콘 모드', value: settings.emoticonMode ? '사용' : '사용 안 함', Icon: SmileIcon, more: true },
+    { label: '저속 모드', value: settings.slowMode ? '사용' : '사용 안 함', Icon: GaugeIcon, more: true },
+    { label: '활동 제한 해제 요청', value: '0건', Icon: UserOffIcon, more: false },
+    { label: '주간 후원 랭킹', value: '노출', Icon: ChartIcon, more: true },
+  ]
+
+  return (
+    <div className={styles.menuWrap} ref={ref}>
+      <button
+        className={styles.iconButton}
+        type="button"
+        aria-label="채팅 설정"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <MoreVerticalIcon className={styles.iconSvg} />
+      </button>
+      {open && (
+        <ul className={styles.menu} role="menu" aria-label="채팅 설정">
+          {items.map(({ label, value, Icon, more }) => (
+            <li key={label} role="none">
+              <button className={styles.menuItem} type="button" role="menuitem">
+                <Icon className={styles.menuIcon} />
+                <span className={styles.menuLabel}>{label}</span>
+                <span className={styles.menuValue}>{value}</span>
+                {more && <ChevronRightIcon className={styles.menuChevron} />}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 // 설정 화면의 채팅 설정을 방송 중에 빨리 바꾸는 칸. 저장할 API가 아직 없어 모양만 있다
-function QuickSettings() {
-  const [audience, setAudience] = useState('all')
-  const [emoticonMode, setEmoticonMode] = useState(false)
-  const [slowMode, setSlowMode] = useState(false)
+function QuickSettings({ settings, onChange }: { settings: ChatSettings; onChange: (settings: ChatSettings) => void }) {
   const [firstChatHighlight, setFirstChatHighlight] = useState(true)
 
   const switches = [
-    { label: '이모티콘 모드', checked: emoticonMode, onChange: setEmoticonMode },
-    { label: '저속 모드', checked: slowMode, onChange: setSlowMode },
+    {
+      label: '이모티콘 모드',
+      checked: settings.emoticonMode,
+      onChange: (emoticonMode: boolean) => onChange({ ...settings, emoticonMode }),
+    },
+    { label: '저속 모드', checked: settings.slowMode, onChange: (slowMode: boolean) => onChange({ ...settings, slowMode }) },
     { label: '첫 채팅 하이라이트', checked: firstChatHighlight, onChange: setFirstChatHighlight },
   ]
 
@@ -380,8 +463,8 @@ function QuickSettings() {
           <select
             id="quick-audience"
             className={styles.select}
-            value={audience}
-            onChange={(e) => setAudience(e.target.value)}
+            value={settings.audience}
+            onChange={(e) => onChange({ ...settings, audience: e.target.value as Audience })}
           >
             <option value="all">모두</option>
             <option value="followers">팔로워</option>
