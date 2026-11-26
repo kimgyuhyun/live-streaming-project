@@ -6,7 +6,8 @@ import { fetchMyChannel } from '../api/channels.ts'
 import { fetchMe } from '../api/members.ts'
 import { fetchStreamKey } from '../api/streamKey.ts'
 import { fetchStudioTerms } from '../api/studioTerms.ts'
-import StudioPage from './StudioPage.tsx'
+import StudioSettingsPage from '../pages/StudioSettingsPage.tsx'
+import StudioLayout from './StudioLayout.tsx'
 
 vi.mock('../api/members.ts', () => ({ fetchMe: vi.fn() }))
 vi.mock('../api/channels.ts', () => ({ fetchMyChannel: vi.fn(), updateChannel: vi.fn(), updateTitle: vi.fn() }))
@@ -21,10 +22,13 @@ const fetchStudioTermsMock = vi.mocked(fetchStudioTerms)
 function renderStudio() {
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <MemoryRouter initialEntries={['/studio']}>
+      <MemoryRouter initialEntries={['/studio/broadcast/settings']}>
         <Routes>
           <Route path="/" element={<p>홈 화면</p>} />
-          <Route path="/studio" element={<StudioPage />} />
+          {/* 설정 화면이 스튜디오 채널을 읽는다. 약관 전에는 이 화면까지 가지 않아야 한다 */}
+          <Route path="/studio" element={<StudioLayout />}>
+            <Route path="broadcast/settings" element={<StudioSettingsPage />} />
+          </Route>
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -42,13 +46,13 @@ beforeEach(() => {
 
 afterEach(cleanup)
 
-describe('StudioPage', () => {
+describe('StudioLayout', () => {
   it('should show the studio when the streamer has agreed', async () => {
     fetchStudioTermsMock.mockResolvedValue({ agreed: true })
 
     renderStudio()
 
-    expect(await screen.findByRole('heading', { name: '스튜디오' })).not.toBeNull()
+    expect(await screen.findByRole('heading', { name: '방송 설정' })).not.toBeNull()
   })
 
   it('should show the studio when an operator has agreed', async () => {
@@ -57,7 +61,7 @@ describe('StudioPage', () => {
 
     renderStudio()
 
-    expect(await screen.findByRole('heading', { name: '스튜디오' })).not.toBeNull()
+    expect(await screen.findByRole('heading', { name: '방송 설정' })).not.toBeNull()
   })
 
   it('should show the terms popup and not request the studio channel when the streamer has not agreed', async () => {
