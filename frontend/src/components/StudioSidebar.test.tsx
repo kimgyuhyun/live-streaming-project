@@ -50,6 +50,14 @@ describe('StudioSidebar', () => {
     expect(screen.getByRole('link', { name: '활동 제한' }).getAttribute('href')).toBe('/studio/viewers/restrictions')
   })
 
+  it('should show the 동영상 link when 콘텐츠 관리 is opened', () => {
+    renderSidebar('/studio')
+
+    fireEvent.click(screen.getByRole('button', { name: '콘텐츠 관리' }))
+
+    expect(screen.getByRole('link', { name: '동영상' }).getAttribute('href')).toBe('/studio/content/videos')
+  })
+
   it('should start with 방송 관리 open when the current page is 방송 관리 > 설정', () => {
     renderSidebar('/studio/broadcast/settings')
 

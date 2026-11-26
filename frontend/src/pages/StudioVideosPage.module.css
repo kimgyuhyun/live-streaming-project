@@ -1,0 +1,113 @@
+/* 스튜디오 > 콘텐츠 관리 > 동영상. 제목 줄(왼쪽 제목, 오른쪽 업로드) 아래 카드 하나에 목록 표 */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 70rem;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* 지금 화면 이름. 탭처럼 밑줄을 둔다 */
+.title {
+  padding-bottom: var(--space-1);
+  border-bottom: 2px solid var(--color-link);
+  color: var(--color-link);
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+}
+
+.uploadButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 2.75rem;
+  padding: 0 var(--space-5);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.uploadButton:hover,
+.uploadButton:focus-visible {
+  outline: none;
+  background: var(--color-primary-hover);
+}
+
+.uploadIcon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.card {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+@media (min-width: 768px) {
+  .card {
+    padding: var(--space-6);
+  }
+}
+
+/* 좁으면 표만 가로로 밀어 본다(페이지 전체가 밀리지 않게) */
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 32rem;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.table th {
+  height: 2.75rem;
+  padding: 0 var(--space-2);
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  font-weight: 700;
+  text-align: center;
+}
+
+/* 영상(썸네일·제목)이 넓게, 액션은 남는 자리 */
+.videoColumn {
+  width: 65%;
+}
+
+.emptyCell {
+  height: 15rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  text-align: center;
+}
+
+.inlineLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-link);
+  cursor: pointer;
+}
+
+.inlineLink:hover,
+.inlineLink:focus-visible {
+  outline: none;
+  text-decoration: underline;
+}

@@ -475,3 +475,13 @@ export function UserOffIcon(props: IconProps) {
     </Svg>
   )
 }
+
+// 화면 + 위쪽 화살표(동영상 업로드)
+export function UploadIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M8 20h8M12 20v-3M20 12V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h6" />
+      <path d="M18 21v-6M15 17l3-3 3 3" />
+    </Svg>
+  )
+}
