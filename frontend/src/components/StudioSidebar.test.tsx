@@ -32,6 +32,15 @@ describe('StudioSidebar', () => {
     expect(links.indexOf('방송하기')).toBe(links.indexOf('설정') - 1)
   })
 
+  it('should show the 라이브 분석 and 동영상 분석 links when 분석 is opened', () => {
+    renderSidebar('/studio')
+
+    fireEvent.click(screen.getByRole('button', { name: '분석' }))
+
+    expect(screen.getByRole('link', { name: '라이브 분석' }).getAttribute('href')).toBe('/studio/analytics/live')
+    expect(screen.getByRole('link', { name: '동영상 분석' }).getAttribute('href')).toBe('/studio/analytics/video')
+  })
+
   it('should start with 방송 관리 open when the current page is 방송 관리 > 설정', () => {
     renderSidebar('/studio/broadcast/settings')
 
