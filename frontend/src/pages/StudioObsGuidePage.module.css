@@ -1,0 +1,162 @@
+/* 스튜디오 > OBS 설정 가이드. 대시보드 카드와 같은 모양의 칸을 위에서 아래로 쌓는다 */
+.guide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 56rem;
+  margin: 0 auto;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.cardTitle {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+}
+
+.text {
+  color: var(--color-text-muted);
+}
+
+.bullets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.bullets li::before {
+  content: '· ';
+}
+
+.link {
+  color: var(--color-link);
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.code {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+}
+
+/* 좁은 화면에서는 표만 가로로 밀어 본다(페이지 전체가 밀리지 않게) */
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.table {
+  min-width: 32rem;
+  font-size: var(--font-size-sm);
+}
+
+.table th,
+.table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+}
+
+.table tbody tr:last-child th,
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table thead th {
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  font-weight: 600;
+  text-align: center;
+}
+
+/* 항목 이름은 길이가 제각각이라 왼쪽, 값은 정해진 모양이라 가운데, 설명은 글이라 왼쪽 */
+.table tbody th {
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.value {
+  color: var(--color-text);
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.note {
+  color: var(--color-text-muted);
+  text-align: left;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.tab {
+  height: 2.25rem;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab:hover,
+.tab:focus-visible {
+  outline: none;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+}
+
+.tabActive,
+.tabActive:hover,
+.tabActive:focus-visible {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.when {
+  font-weight: 700;
+}
+
+.source {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}

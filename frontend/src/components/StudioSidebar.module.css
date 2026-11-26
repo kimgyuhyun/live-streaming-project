@@ -137,6 +137,10 @@
   background: var(--color-surface-raised);
 }
 
+.guideActive {
+  border-color: var(--color-primary);
+}
+
 .guideBadge {
   display: flex;
   align-items: center;
@@ -166,14 +170,6 @@
   font-size: var(--font-size-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.guideIcon {
-  width: 1rem;
-  height: 1rem;
-  margin-left: auto;
-  flex-shrink: 0;
-  color: var(--color-text-muted);
 }
 
 @media (min-width: 1024px) {

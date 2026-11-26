@@ -6,7 +6,6 @@ import {
   CoinIcon,
   DashboardIcon,
   DocumentIcon,
-  DownloadIcon,
   MegaphoneIcon,
   MonitorIcon,
   PersonIcon,
@@ -37,9 +36,9 @@ const ITEMS: Item[] = [
   { label: '공지사항', Icon: MegaphoneIcon },
 ]
 
-// 방송 소프트웨어 안내. 아직 안내 글이 없어 모양만 있다
+// 방송 소프트웨어 안내 페이지
 const GUIDES = [
-  { name: 'OBS 가이드', description: '방송 기본 세팅', badge: 'OBS' },
+  { name: 'OBS 가이드', description: '방송 기본 세팅', badge: 'OBS', to: '/studio/guide/obs' },
 ]
 
 function groupsContaining(pathname: string): string[] {
@@ -131,7 +130,12 @@ function StudioSidebar({ onClose, toggled }: Props) {
         </nav>
         <div className={styles.guides}>
           {GUIDES.map((guide) => (
-            <button key={guide.name} className={styles.guide} type="button">
+            <NavLink
+              key={guide.name}
+              to={guide.to}
+              className={({ isActive }) => `${styles.guide} ${isActive ? styles.guideActive : ''}`}
+              onClick={onClose}
+            >
               <span className={styles.guideBadge} aria-hidden="true">
                 {guide.badge}
               </span>
@@ -139,8 +143,7 @@ function StudioSidebar({ onClose, toggled }: Props) {
                 <span className={styles.guideName}>{guide.name}</span>
                 <span className={styles.guideDescription}>{guide.description}</span>
               </span>
-              <DownloadIcon className={styles.guideIcon} />
-            </button>
+            </NavLink>
           ))}
         </div>
       </aside>

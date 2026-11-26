@@ -9,6 +9,7 @@ import MyPage from './pages/MyPage.tsx'
 import NotFoundPage from './pages/NotFoundPage.tsx'
 import SignUpPage from './pages/SignUpPage.tsx'
 import StudioDashboardPage from './pages/StudioDashboardPage.tsx'
+import StudioObsGuidePage from './pages/StudioObsGuidePage.tsx'
 import StudioSettingsPage from './pages/StudioSettingsPage.tsx'
 
 export const router = createBrowserRouter([
@@ -32,6 +33,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <StudioDashboardPage /> },
       { path: 'broadcast/settings', element: <StudioSettingsPage /> },
+      { path: 'guide/obs', element: <StudioObsGuidePage /> },
     ],
   },
 ])
