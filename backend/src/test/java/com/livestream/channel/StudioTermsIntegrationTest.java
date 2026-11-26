@@ -69,6 +69,9 @@ class StudioTermsIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private OperatorChannelInitializer operatorChannelInitializer;
+
     private static String unique() {
         return String.valueOf(ThreadLocalRandom.current().nextInt(100_000, 1_000_000));
     }
@@ -345,7 +348,7 @@ class StudioTermsIntegrationTest {
                     .andExpect(jsonPath("$.code").value("FORBIDDEN"));
         }
 
-        // 개발 편의상 운영자도 동의 팝업을 스트리머와 똑같이 본다. 동의 여부 조회·동의 두 경로만 열린다
+        // 개발 편의상 운영자도 스튜디오를 스트리머와 똑같이 쓴다. 약관 동의도 똑같이 거친다
         @Test
         @DisplayName("should return 204 and then agreed true when an operator agrees to both required terms")
         void operatorAgrees() throws Exception {
@@ -356,22 +359,32 @@ class StudioTermsIntegrationTest {
         }
 
         @Test
-        @DisplayName("should return 403 with code FORBIDDEN when an operator who has agreed reads the studio channel")
-        void operatorStillBlockedFromStudio() throws Exception {
+        @DisplayName("should return 403 with code STUDIO_TERMS_NOT_AGREED when an operator who has not agreed reads the studio channel")
+        void blocksOperatorBeforeAgreeing() throws Exception {
             Cookie session = operatorSession();
-            agree(session, BOTH).andExpect(status().isNoContent());
 
             mockMvc.perform(get("/api/studio/channel").cookie(session))
                     .andExpect(status().isForbidden())
-                    .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+                    .andExpect(jsonPath("$.code").value("STUDIO_TERMS_NOT_AGREED"));
+        }
+
+        @Test
+        @DisplayName("should let an operator read the studio channel after agreeing to the terms")
+        void operatorReadsStudioChannel() throws Exception {
+            Cookie session = operatorSession();
+            agree(session, BOTH).andExpect(status().isNoContent());
+
+            mockMvc.perform(get("/api/studio/channel").cookie(session)).andExpect(status().isOk());
         }
     }
 
-    // 운영자로 로그인한 세션. 역할은 로그인할 때 세션에 실린다. 로그인 전에 운영자로 바꾼다
+    // 운영자로 로그인한 세션. 역할은 로그인할 때 세션에 실린다. 로그인 전에 운영자로 바꾼다.
+    // 운영자 채널은 앱이 뜰 때 생기므로(OperatorChannelInitializer) 여기서는 직접 불러 만든다
     private Cookie operatorSession() throws Exception {
         String email = newEmail();
         signUp(email);
         jdbcTemplate.update("UPDATE member SET role = 'OPERATOR' WHERE id = ?", memberIdOf(email));
+        operatorChannelInitializer.createMissingChannels();
         return loggedIn(email);
     }
 }

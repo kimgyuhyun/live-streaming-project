@@ -125,7 +125,7 @@ export function useStudioEntry(): { enterStudio: () => void; termsModal: ReactNo
 - **차단 위치** — 서비스 메서드마다 검사하지 않고 인터셉터 한 곳에서 막는다. 스튜디오 API가 새로 생겨도 빠뜨리지 않는다. 대가로 스튜디오 요청마다 동의 조회 쿼리가 하나 더 나간다. 스튜디오는 스트리머 본인만 쓰는 화면이라 요청이 적다.
 - **동의 여부 응답** — `{agreed}`만 준다. 약관 목록·문구는 프론트(`studioTermsText.ts`)가 갖는다. 약관 버전은 백엔드 `StudioTerms`와 프론트 파일 두 곳에 있으므로 같이 올린다.
 - **운영자** — 헤더에 스튜디오 버튼이 보이지만(편의상) 동의 여부 조회부터 403이라 팝업 없이 기존 "스트리머만 쓸 수 있습니다" 화면으로 간다. 이슈 본문의 "팝업에서 가입하면…" 문장보다 단순하다. AC에는 영향 없다.
-  - **이후 변경(2026-11-26, 사용자 결정)** — 개발 편의상 운영자도 팝업을 스트리머와 똑같이 본다. `SecurityConfig`에서 동의 여부 조회·동의 두 경로만 `STREAMER`·`OPERATOR`에 연다(운영자 동의도 저장된다). 동의 뒤 `/studio`는 여전히 "스트리머만 쓸 수 있습니다"이고, 스튜디오 나머지 API는 운영자에게 403 `FORBIDDEN`이다.
+  - **이후 변경(2026-11-26, 사용자 결정)** — 개발 편의상 운영자도 스튜디오를 스트리머와 똑같이 쓴다. `SecurityConfig`의 `/api/studio/**`를 `STREAMER`·`OPERATOR`에 열고, 약관 동의도 똑같이 거친다(동의 전 403 `STUDIO_TERMS_NOT_AGREED`). 운영자는 승인 절차가 없어 채널이 없으므로 앱이 뜰 때 `OperatorChannelInitializer`가 닉네임으로 만든다.
 - **기존 테스트** — `/api/studio/**`를 부르는 통합 테스트(`ChannelIntegrationTest`·`StreamKeyIntegrationTest`·`StreamKeyReissueIntegrationTest`)는 스트리머를 만든 뒤 약관에 동의시킨다. 컨트롤러 테스트(`ChannelControllerTest`·`StreamKeyControllerTest`, `@WebMvcTest`)는 인터셉터가 끼므로 `StudioTermsService`를 가짜로 두고 "동의함"으로 답하게 한다. Red 단계에서 같이 고친다.
 
 ### 이 이슈에서 만들지 않는 것
