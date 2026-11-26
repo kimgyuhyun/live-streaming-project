@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.livestream.channel.StudioTermsMapper">
+
+    <select id="findByMember" resultType="com.livestream.channel.StudioTermsAgreement">
+        SELECT terms_code, terms_version
+        FROM studio_terms_agreement
+        WHERE member_id = #{memberId}
+    </select>
+
+    <!-- 이미 있으면 아무것도 하지 않는다. 동시에 두 번 오면 늦은 쪽이 기본 키에 걸린다(StudioTermsService가 무시) -->
+    <insert id="insertIfAbsent">
+        MERGE INTO studio_terms_agreement t
+        USING (SELECT #{memberId} AS member_id, #{termsCode} AS terms_code, #{termsVersion} AS terms_version FROM dual) s
+        ON (t.member_id = s.member_id AND t.terms_code = s.terms_code AND t.terms_version = s.terms_version)
+        WHEN NOT MATCHED THEN
+            INSERT (member_id, terms_code, terms_version) VALUES (s.member_id, s.terms_code, s.terms_version)
+    </insert>
+</mapper>
