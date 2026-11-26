@@ -22,7 +22,7 @@ type Item = {
   children?: { label: string; to: string }[]
 }
 
-// 대시보드·방송 관리(방송하기·설정)·분석(라이브·동영상)만 이동한다. 나머지는 아직 기능이 없어 모양만 있다
+// 대시보드·방송 관리·분석·시청자 관리의 하위 메뉴만 이동한다. 나머지는 아직 기능이 없어 모양만 있다
 const ITEMS: Item[] = [
   { label: '대시보드', Icon: DashboardIcon, to: '/studio' },
   {
@@ -41,7 +41,14 @@ const ITEMS: Item[] = [
       { label: '동영상 분석', to: '/studio/analytics/video' },
     ],
   },
-  { label: '시청자 관리', Icon: UsersIcon, children: [] },
+  {
+    label: '시청자 관리',
+    Icon: UsersIcon,
+    children: [
+      { label: '팔로워', to: '/studio/viewers/followers' },
+      { label: '활동 제한', to: '/studio/viewers/restrictions' },
+    ],
+  },
   { label: '콘텐츠 관리', Icon: DocumentIcon, children: [] },
   { label: '수익 관리', Icon: CoinIcon, children: [] },
   { label: '채널/권한 관리', Icon: ShieldIcon, children: [] },

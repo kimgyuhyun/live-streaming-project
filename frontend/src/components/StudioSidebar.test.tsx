@@ -41,6 +41,15 @@ describe('StudioSidebar', () => {
     expect(screen.getByRole('link', { name: '동영상 분석' }).getAttribute('href')).toBe('/studio/analytics/video')
   })
 
+  it('should show the 팔로워 and 활동 제한 links when 시청자 관리 is opened', () => {
+    renderSidebar('/studio')
+
+    fireEvent.click(screen.getByRole('button', { name: '시청자 관리' }))
+
+    expect(screen.getByRole('link', { name: '팔로워' }).getAttribute('href')).toBe('/studio/viewers/followers')
+    expect(screen.getByRole('link', { name: '활동 제한' }).getAttribute('href')).toBe('/studio/viewers/restrictions')
+  })
+
   it('should start with 방송 관리 open when the current page is 방송 관리 > 설정', () => {
     renderSidebar('/studio/broadcast/settings')
 

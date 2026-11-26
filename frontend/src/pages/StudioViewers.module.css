@@ -1,0 +1,276 @@
+/* 스튜디오 > 시청자 관리(팔로워·활동 제한). 제목(또는 탭) 아래에 카드를 쌓는다 */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 70rem;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+}
+
+/* 탭 안에서 카드를 쌓는다 */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+@media (min-width: 768px) {
+  .card {
+    padding: var(--space-6);
+  }
+}
+
+/* 팔로워 수 요약 칸 */
+.summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-weight: 700;
+}
+
+.summaryIcon {
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--color-text-muted);
+}
+
+.summarySlash {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.summaryCount {
+  color: var(--color-link);
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 검색칸 + 버튼. 좁으면 검색칸이 줄어든다(버튼이 아래로 내려가지 않게) */
+.search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.searchField {
+  display: flex;
+  flex: 0 1 16rem;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+}
+
+.searchField:focus-within,
+.addInput:focus {
+  outline: none;
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 1px var(--color-focus);
+}
+
+.searchIcon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  outline: none;
+}
+
+.searchInput::placeholder,
+.addInput::placeholder {
+  color: var(--color-text-muted);
+}
+
+.primaryButton,
+.secondaryButton {
+  min-width: 5rem;
+  height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primaryButton {
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+}
+
+.primaryButton:hover:not(:disabled),
+.primaryButton:focus-visible {
+  outline: none;
+  background: var(--color-primary-hover);
+}
+
+.secondaryButton {
+  background: var(--color-surface-raised);
+  color: var(--color-link);
+}
+
+.secondaryButton:hover:not(:disabled),
+.secondaryButton:focus-visible {
+  outline: none;
+  background: var(--color-border);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* 활동 제한: 위쪽 탭 */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 0 var(--space-1);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.tab:hover,
+.tab:focus-visible {
+  outline: none;
+  color: var(--color-text);
+}
+
+.tabActive {
+  border-bottom-color: var(--color-link);
+  color: var(--color-link);
+}
+
+.badge {
+  min-width: 1.25rem;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-raised);
+  color: var(--color-link);
+  font-size: var(--font-size-xs);
+  text-align: center;
+}
+
+/* 활동 제한 추가: 이름 | 입력 + 버튼 */
+.addRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+@media (min-width: 768px) {
+  .addRow {
+    grid-template-columns: 11rem minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-4);
+  }
+
+  .addLabel {
+    min-height: var(--control-height);
+  }
+}
+
+.addLabel {
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+}
+
+.addControl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.addInline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.addInput {
+  flex: 1 1 16rem;
+  min-width: 0;
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.notes li::before {
+  content: '· ';
+}
+
+/* 목록 제목 줄: 왼쪽 "목록 N", 오른쪽 검색 */
+.listHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.listTitle {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+}
+
+.listCount {
+  margin-left: var(--space-1);
+  color: var(--color-link);
+}
