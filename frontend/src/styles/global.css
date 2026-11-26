@@ -17,12 +17,14 @@
   --color-text: #efeff1;
   --color-text-muted: #adadb8;
 
-  /* 포인트 색. 버튼·링크·포커스가 이 계열을 쓴다 */
-  --color-primary: #7c4dff;
-  --color-primary-hover: #6a3df0;
+  /* 포인트 색. 버튼·링크·포커스가 이 계열을 쓴다.
+     바탕 색은 치지직 스튜디오 캡처에서 잰 값(#4E41DB, 흰 글자 대비 약 6.8:1). 2026-11-26 너무 밝아 눈이 아프다는 의견으로 바꿨다.
+     어두운 바탕 위 글자로 쓰면 대비가 약 2.5:1이라, 글자·링크는 같은 계열을 밝힌 값을 쓴다(대비 약 6:1) */
+  --color-primary: #4e41db;
+  --color-primary-hover: #4335c4;
   --color-primary-text: #ffffff;
-  --color-link: #b49cff;
-  --color-focus: #9d7bff;
+  --color-link: #9b93f2;
+  --color-focus: #7d72ec;
 
   --color-danger: #ff6b6b;
 
