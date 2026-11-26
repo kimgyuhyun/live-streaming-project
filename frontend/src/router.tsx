@@ -10,8 +10,10 @@ import NotFoundPage from './pages/NotFoundPage.tsx'
 import SignUpPage from './pages/SignUpPage.tsx'
 import StudioBroadcastPage from './pages/StudioBroadcastPage.tsx'
 import StudioDashboardPage from './pages/StudioDashboardPage.tsx'
+import StudioFollowersPage from './pages/StudioFollowersPage.tsx'
 import StudioLiveAnalyticsPage from './pages/StudioLiveAnalyticsPage.tsx'
 import StudioObsGuidePage from './pages/StudioObsGuidePage.tsx'
+import StudioRestrictionsPage from './pages/StudioRestrictionsPage.tsx'
 import StudioSettingsPage from './pages/StudioSettingsPage.tsx'
 import StudioVideoAnalyticsPage from './pages/StudioVideoAnalyticsPage.tsx'
 
@@ -39,6 +41,8 @@ export const router = createBrowserRouter([
       { path: 'broadcast/settings', element: <StudioSettingsPage /> },
       { path: 'analytics/live', element: <StudioLiveAnalyticsPage /> },
       { path: 'analytics/video', element: <StudioVideoAnalyticsPage /> },
+      { path: 'viewers/followers', element: <StudioFollowersPage /> },
+      { path: 'viewers/restrictions', element: <StudioRestrictionsPage /> },
       { path: 'guide/obs', element: <StudioObsGuidePage /> },
     ],
   },
