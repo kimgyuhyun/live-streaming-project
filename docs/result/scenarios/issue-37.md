@@ -160,10 +160,14 @@ interface FollowButtonProps { channelId: number }
 - [x] [정상] `ChannelPage` — should show 팔로워 4명 when a member clicks 팔로우 on a channel with 3 followers
 - [x] [정상] `ChannelPage` — should change the button back to 팔로우 when the member clicks 팔로잉
 - [x] [정상] `ChannelPage` — should show 팔로워 3명 when the member clicks 팔로잉 on a channel with 4 followers
+- [x] [정상] `ChannelPage` — should send follow for channel 7 when a member clicks 팔로우
+- [x] [정상] `ChannelPage` — should send unfollow for channel 7 when the member clicks 팔로잉
+- [x] [정상] `ChannelPage` — should show 팔로우 and 팔로워 3명 again when a member clicks 팔로우 and then 팔로잉 on a channel with 3 followers
 
 ### 경계
 
 - [x] [경계] `FollowService.follow` — should not change the follower count when the member already follows the channel
+- [x] [경계] `FollowService.follow` — should not change the follower count when saving the follow hits a duplicate key
 - [x] [경계] `FollowService.unfollow` — should not change the follower count when the member does not follow the channel
 - [x] [경계] `FollowIntegration` — should return followerCount 0 when nobody follows the channel
 - [x] [경계] `FollowIntegration` — should return 204 and keep followerCount when the member follows the same channel again
@@ -171,6 +175,7 @@ interface FollowButtonProps { channelId: number }
 - [x] [경계] `FollowIntegration` — should return 204 and keep followerCount at 0 when a member who does not follow unfollows the channel
 - [x] [경계] `FollowIntegration` — should make followerCount equal the 10 follow rows when 20 members follow at the same time and 10 of them unfollow at the same time
 - [x] [경계] `FollowIntegration` — should make followerCount equal the follow rows when one member sends follows and unfollows to the same channel at the same time many times
+- [x] [경계] `FollowIntegration` — should complete every follow and unfollow without an error when one member sends them to the same channel at the same time
 
 ### 예외
 
@@ -259,7 +264,7 @@ interface FollowButtonProps { channelId: number }
 - `FollowService.unfollow`·`FollowService.isFollowing`의 자기 채널 400 — 화면이 내 채널을 아는 방법(시그니처 "판단이 갈린 곳")
 - `ChannelPage — should keep 팔로우 and the follower count when the follow request fails` — 실패했는데 수가 늘어 보이면 화면이 틀린 값을 보인다
 
-**커버리지:** AC 12개 / 시나리오 41개 / 미커버 0개
+**커버리지:** AC 12개 / 시나리오 46개(AC 검증 뒤 5개 추가 — AC 9에 2개, AC 10에 3개) / 미커버 0개
 
 ---
 
@@ -358,3 +363,18 @@ AC 10:
 - `C:/live-streaming-issue-37/frontend/src/pages/FollowButton.tsx`
 - `C:/live-streaming-issue-37/frontend/src/pages/ChannelPage.test.tsx`
 - `C:/live-streaming-issue-37/docs/result/scenarios/issue-37.md`
+
+### 구현자 이견
+
+- **AC 9·10의 테스트 갭은 메운다.** 검증자 제안 5개(AC 9에 2개, AC 10에 3개)를 문장 그대로 시나리오에 넣었다. 기존 한 회원 테스트에 성공 수 단언을 덧붙이지 않고 새 테스트로 따로 본다(한 테스트 한 가지).
+- **AC 4 선택 제안(팔로워 1명인 채널에서 안 한 회원이 취소)은 넣지 않는다.** 단위 테스트의 `never().decreaseFollowerCount`와 Green 기록의 "늘 −1" 변이(통합 테스트가 −1로 실패)로 이미 지켜진다.
+- **AC 11의 "대기 상태와 구별되는지"** — 구현은 대기 중에도, 400에서도 버튼을 그리지 않는다. 둘 다 "버튼 없음"이 맞는 화면이라 구별할 테스트를 더하지 않는다.
+
+### 갭을 메운 결과
+
+추가한 시나리오 5개는 구현이 이미 맞아 처음부터 통과했다. 검증자가 말한 잘못된 구현을 넣어 새 테스트가 잡는지 보고 되돌렸다.
+
+| 변이 | 실패한 테스트 |
+| --- | --- |
+| `FollowService`가 `DuplicateKeyException`을 잡지 않음(다른 예외로 바꿈) | `FollowService.follow — should not change the follower count when saving the follow hits a duplicate key`, `FollowIntegration — should complete every follow and unfollow without an error when one member sends them to the same channel at the same time` (이때 한 회원 동시 요청 5회차마다 `DuplicateKeyException` 3~9건. 기존 `…followerCount equal the follow rows…`는 검증자 지적대로 통과했다) |
+| `FollowButton`이 "팔로잉"을 눌러도 `follow`를 보냄 | `ChannelPage — should send unfollow for channel 7 when the member clicks 팔로잉` |

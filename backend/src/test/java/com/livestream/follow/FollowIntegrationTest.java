@@ -329,6 +329,23 @@ class FollowIntegrationTest {
         }
 
         @Test
+        @DisplayName("should complete every follow and unfollow without an error when one member sends them to the same channel at the same time")
+        void concurrentRequestsByOneMemberAllSucceed() throws Exception {
+            long channelId = newChannel();
+            long memberId = signUp(newEmail());
+
+            Map<String, Integer> result = runAtOnce(20, i -> {
+                if (i % 3 != 0) {
+                    followService.follow(memberId, channelId);
+                } else {
+                    followService.unfollow(memberId, channelId);
+                }
+            });
+
+            assertThat(result).containsExactly(Map.entry("success", 20));
+        }
+
+        @Test
         @DisplayName("should return 400 with code CANNOT_FOLLOW_OWN_CHANNEL when the streamer follows their own channel")
         void rejectsOwnChannel() throws Exception {
             String email = newEmail();

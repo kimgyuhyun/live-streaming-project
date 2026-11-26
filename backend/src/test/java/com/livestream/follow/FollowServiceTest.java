@@ -19,6 +19,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
+import org.springframework.dao.DuplicateKeyException;
 
 class FollowServiceTest {
 
@@ -73,6 +74,18 @@ class FollowServiceTest {
         void keepsCountWhenAlreadyFollowing() {
             channelExists();
             given(followMapper.insertIfAbsent(MEMBER_ID, CHANNEL_ID)).willReturn(0);
+
+            followService.follow(MEMBER_ID, CHANNEL_ID);
+
+            verify(channelMapper, never()).increaseFollowerCount(anyLong());
+        }
+
+        // 같은 회원의 팔로우가 동시에 두 번 오면 늦은 쪽의 MERGE가 기본 키에 걸린다
+        @Test
+        @DisplayName("should not change the follower count when saving the follow hits a duplicate key")
+        void keepsCountOnDuplicateKey() {
+            channelExists();
+            given(followMapper.insertIfAbsent(MEMBER_ID, CHANNEL_ID)).willThrow(new DuplicateKeyException("pk_follow"));
 
             followService.follow(MEMBER_ID, CHANNEL_ID);
 

@@ -236,6 +236,38 @@ describe('ChannelPage', () => {
     expect(await screen.findByText('팔로워 3명')).not.toBeNull()
   })
 
+  it('should send follow for channel 7 when a member clicks 팔로우', async () => {
+    fetchChannelMock.mockResolvedValue(channel(false, false, 3))
+    renderPage()
+
+    fireEvent.click(await screen.findByRole('button', { name: '팔로우' }))
+    await screen.findByRole('button', { name: '팔로잉' })
+
+    expect([followMock.mock.calls, unfollowMock.mock.calls]).toEqual([[[7]], []])
+  })
+
+  it('should send unfollow for channel 7 when the member clicks 팔로잉', async () => {
+    fetchChannelMock.mockResolvedValue(channel(false, false, 4))
+    fetchFollowStatusMock.mockResolvedValue({ following: true })
+    renderPage()
+
+    fireEvent.click(await screen.findByRole('button', { name: '팔로잉' }))
+    await screen.findByRole('button', { name: '팔로우' })
+
+    expect([unfollowMock.mock.calls, followMock.mock.calls]).toEqual([[[7]], []])
+  })
+
+  it('should show 팔로우 and 팔로워 3명 again when a member clicks 팔로우 and then 팔로잉 on a channel with 3 followers', async () => {
+    fetchChannelMock.mockResolvedValue(channel(false, false, 3))
+    renderPage()
+
+    fireEvent.click(await screen.findByRole('button', { name: '팔로우' }))
+    fireEvent.click(await screen.findByRole('button', { name: '팔로잉' }))
+    await screen.findByRole('button', { name: '팔로우' })
+
+    expect(screen.queryByText('팔로워 3명')).not.toBeNull()
+  })
+
   it('should not show the follow button when the streamer opens their own channel', async () => {
     fetchChannelMock.mockResolvedValue(channel(false, false, 3))
     fetchFollowStatusMock.mockRejectedValue(
