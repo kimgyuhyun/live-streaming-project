@@ -51,6 +51,15 @@ describe('StudioPage', () => {
     expect(await screen.findByRole('heading', { name: '스튜디오' })).not.toBeNull()
   })
 
+  it('should show the studio when an operator has agreed', async () => {
+    fetchMeMock.mockResolvedValue({ id: 2, email: 'o@example.test', nickname: '운영자', role: 'OPERATOR' })
+    fetchStudioTermsMock.mockResolvedValue({ agreed: true })
+
+    renderStudio()
+
+    expect(await screen.findByRole('heading', { name: '스튜디오' })).not.toBeNull()
+  })
+
   it('should show the terms popup and not request the studio channel when the streamer has not agreed', async () => {
     fetchStudioTermsMock.mockResolvedValue({ agreed: false })
 

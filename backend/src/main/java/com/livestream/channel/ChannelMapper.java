@@ -11,6 +11,9 @@ public interface ChannelMapper {
     // 생성된 id를 channel에 채운다. 같은 회원의 두 번째 채널은 uk_channel_member 위반
     void insert(Channel channel);
 
+    // 채널이 없는 운영자마다 닉네임으로 채널을 만든다(OperatorChannelInitializer)
+    void insertForOperatorsWithoutChannel();
+
     Optional<Channel> findById(long id);
 
     Optional<Channel> findByMemberId(long memberId);

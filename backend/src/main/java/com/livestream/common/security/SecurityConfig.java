@@ -56,10 +56,8 @@ class SecurityConfig {
                         .requestMatchers("/api/operator/**").hasRole("OPERATOR")
                         // 채널 페이지는 비로그인 시청자도 본다. 고치기(PUT)는 로그인 + 주인 확인(ChannelService)
                         .requestMatchers(HttpMethod.GET, "/api/channels/*").permitAll()
-                        // 약관 동의 팝업은 개발 편의상 운영자도 본다. 스튜디오 나머지는 스트리머만
-                        .requestMatchers("/api/studio/terms", "/api/studio/terms-agreement")
-                        .hasAnyRole("STREAMER", "OPERATOR")
-                        .requestMatchers("/api/studio/**").hasRole("STREAMER")
+                        // 운영자도 개발 편의상 스튜디오를 쓴다(채널은 OperatorChannelInitializer가 만든다)
+                        .requestMatchers("/api/studio/**").hasAnyRole("STREAMER", "OPERATOR")
                         .anyRequest().authenticated());
         return http.build();
     }

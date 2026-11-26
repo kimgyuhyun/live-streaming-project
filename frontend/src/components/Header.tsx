@@ -88,7 +88,7 @@ function Header({ menuExpanded, onMenuClick }: Props) {
       <div className={styles.right}>
         {me.data ? (
           <>
-            {/* 운영자에게도 보인다(편의상). 약관 동의 팝업까지는 똑같이 뜨고, 스튜디오 화면과 API는 여전히 스트리머만 쓸 수 있다 */}
+            {/* 운영자에게도 보인다. 개발 편의상 운영자도 스튜디오를 스트리머와 똑같이 쓴다 */}
             {(me.data.role === 'STREAMER' || me.data.role === 'OPERATOR') && (
               // 약관에 동의하지 않았으면 이 화면에 동의 팝업을 띄운다(#35)
               <button className={styles.pillButton} type="button" onClick={enterStudio}>

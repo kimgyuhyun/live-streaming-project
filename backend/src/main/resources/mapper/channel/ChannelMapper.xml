@@ -8,6 +8,14 @@
         VALUES (#{memberId}, #{name}, #{description,jdbcType=VARCHAR})
     </insert>
 
+    <insert id="insertForOperatorsWithoutChannel">
+        INSERT INTO channel (member_id, name)
+        SELECT m.id, m.nickname
+        FROM member m
+        WHERE m.role = 'OPERATOR'
+          AND NOT EXISTS (SELECT 1 FROM channel c WHERE c.member_id = m.id)
+    </insert>
+
     <!-- live: 진행 중 방송(ended_at IS NULL)이 있으면 1(#11).
          조건을 uk_broadcast_live_channel과 같은 식으로 써서 그 인덱스로 찾는다 -->
     <sql id="columns">

@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-// 스트리머와 운영자(개발 편의상)가 부른다(SecurityConfig). 이 두 경로는 동의 전에도 열려 있다(StudioTermsWebConfig)
+// 스트리머와 운영자(개발 편의상)가 부른다(SecurityConfig의 /api/studio/**). 이 두 경로는 동의 전에도 열려 있다(StudioTermsWebConfig)
 @RestController
 class StudioTermsController {
 

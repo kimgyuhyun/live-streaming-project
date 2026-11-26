@@ -361,6 +361,11 @@ class StreamerApplicationReviewIntegrationTest {
                 }
 
                 @Override
+                public void insertForOperatorsWithoutChannel() {
+                    channelMapper.insertForOperatorsWithoutChannel();
+                }
+
+                @Override
                 public Optional<Channel> findById(long id) {
                     return channelMapper.findById(id);
                 }

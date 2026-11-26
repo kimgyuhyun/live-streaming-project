@@ -71,6 +71,9 @@ class OperatorAccountIntegrationTest {
     // 운영자 닉네임은 하나로 고정이라, DB를 같이 쓰는 테스트끼리 겹치지 않게 매번 지우고 시작한다
     @BeforeEach
     void removeOperatorNickname() {
+        // 운영자 채널(OperatorChannelInitializer)이 생겼을 수 있다. 회원보다 먼저 지운다
+        jdbcTemplate.update("DELETE FROM channel WHERE member_id IN (SELECT id FROM member WHERE nickname = ?)",
+                OPERATOR_NICKNAME);
         jdbcTemplate.update("DELETE FROM member WHERE nickname = ?", OPERATOR_NICKNAME);
     }
 
