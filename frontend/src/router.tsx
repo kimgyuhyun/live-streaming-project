@@ -8,6 +8,7 @@ import MyChannelPage from './pages/MyChannelPage.tsx'
 import MyPage from './pages/MyPage.tsx'
 import NotFoundPage from './pages/NotFoundPage.tsx'
 import SignUpPage from './pages/SignUpPage.tsx'
+import StudioBroadcastPage from './pages/StudioBroadcastPage.tsx'
 import StudioDashboardPage from './pages/StudioDashboardPage.tsx'
 import StudioObsGuidePage from './pages/StudioObsGuidePage.tsx'
 import StudioSettingsPage from './pages/StudioSettingsPage.tsx'
@@ -32,6 +33,7 @@ export const router = createBrowserRouter([
     element: <StudioLayout />,
     children: [
       { index: true, element: <StudioDashboardPage /> },
+      { path: 'broadcast/live', element: <StudioBroadcastPage /> },
       { path: 'broadcast/settings', element: <StudioSettingsPage /> },
       { path: 'guide/obs', element: <StudioObsGuidePage /> },
     ],

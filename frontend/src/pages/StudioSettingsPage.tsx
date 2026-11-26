@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { fetchMyChannel, updateChannel, updateTitle, type ChannelResponse } from '../api/channels.ts'
+import { fetchMyChannel, updateChannel, type ChannelResponse } from '../api/channels.ts'
 import { errorMessage } from '../api/client.ts'
 import form from '../styles/form.module.css'
 import ChatSettingsSections from './ChatSettingsSections.tsx'
@@ -21,60 +21,9 @@ function StudioSettingsPage() {
       {/* 진행 중 방송이 있으면 송출 중(#11) */}
       <StreamKeySection channelId={channel.data.id} live={channel.data.live} />
       <ChatSettingsSections />
-      {/* 입력란은 처음 읽은 값으로 채운다. 저장하면 입력한 값이 곧 저장된 값이다 */}
-      <TitleForm title={channel.data.title} />
+      {/* 입력란은 처음 읽은 값으로 채운다. 저장하면 입력한 값이 곧 저장된 값이다. 방송 제목은 방송하기 화면에 있다 */}
       <ChannelForm channel={channel.data} />
     </div>
-  )
-}
-
-// 방송 제목 1~50자. 방송 중에 바꾸면 채널 페이지의 다음 조회부터 새 제목이다
-function TitleForm({ title: savedTitle }: { title: string }) {
-  const queryClient = useQueryClient()
-  const [title, setTitle] = useState(savedTitle)
-  const mutation = useMutation({
-    mutationFn: () => updateTitle(title),
-    onSuccess: (channel) =>
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['myChannel'] }),
-        queryClient.invalidateQueries({ queryKey: ['channel', channel.id] }),
-      ]),
-  })
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    mutation.mutate()
-  }
-
-  return (
-    <section className={styles.section} aria-labelledby="title-settings">
-      <h2 id="title-settings" className={styles.sectionTitle}>
-        방송 정보 설정
-      </h2>
-      <form className={styles.card} onSubmit={handleSubmit}>
-        <div className={styles.row}>
-          <label className={styles.label} htmlFor="broadcast-title">
-            방송 제목
-          </label>
-          <div className={styles.control}>
-            <div className={styles.inline}>
-              <input
-                id="broadcast-title"
-                className={`${form.input} ${styles.grow}`}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                maxLength={50}
-                required
-              />
-              <button className={styles.secondaryButton} type="submit" disabled={mutation.isPending}>
-                저장
-              </button>
-            </div>
-            <SaveResult mutation={mutation} />
-          </div>
-        </div>
-      </form>
-    </section>
   )
 }
 

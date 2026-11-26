@@ -233,16 +233,19 @@ export function HlsPlayer({ src, theater = false, onToggleTheater }: PlayerProps
             </button>
             {settingsOpen && <PlayerSettings quality={quality} radio={radio} onRadioChange={setRadio} />}
           </div>
-          <button
-            className={`${styles.button} ${tip.tooltip} ${tip.top}`}
-            type="button"
-            aria-label={theater ? '넓은 화면 끄기 (t)' : '넓은 화면 (t)'}
-            data-tooltip={theater ? '넓은 화면 끄기 (t)' : '넓은 화면 (t)'}
-            aria-pressed={theater}
-            onClick={onToggleTheater}
-          >
-            <TheaterIcon className={styles.icon} />
-          </button>
+          {/* 넓은 화면을 이어 줄 틀이 없는 곳(스튜디오 미리보기)에서는 버튼을 두지 않는다 */}
+          {onToggleTheater && (
+            <button
+              className={`${styles.button} ${tip.tooltip} ${tip.top}`}
+              type="button"
+              aria-label={theater ? '넓은 화면 끄기 (t)' : '넓은 화면 (t)'}
+              data-tooltip={theater ? '넓은 화면 끄기 (t)' : '넓은 화면 (t)'}
+              aria-pressed={theater}
+              onClick={onToggleTheater}
+            >
+              <TheaterIcon className={styles.icon} />
+            </button>
+          )}
           <button
             className={`${styles.button} ${tip.tooltip} ${tip.top} ${tip.alignEnd}`}
             type="button"

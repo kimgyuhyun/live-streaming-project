@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { HelpIcon } from '../components/icons.tsx'
-import tip from '../styles/tooltip.module.css'
+import HelpTip from '../components/HelpTip.tsx'
 import form from '../styles/form.module.css'
 import styles from './StudioSettingsPage.module.css'
 
@@ -140,14 +139,7 @@ function SwitchRow({
     <div className={styles.row}>
       <span className={styles.label}>
         {label}
-        <button
-          className={`${styles.helpButton} ${tip.tooltip} ${tip.alignStart}`}
-          type="button"
-          aria-label={`${label} 설명: ${help}`}
-          data-tooltip={help}
-        >
-          <HelpIcon className={styles.helpIcon} />
-        </button>
+        <HelpTip label={label} text={help} />
       </span>
       <div>
         <input

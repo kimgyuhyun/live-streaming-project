@@ -22,10 +22,17 @@ type Item = {
   children?: { label: string; to: string }[]
 }
 
-// 대시보드·방송 관리 > 설정만 이동한다. 나머지는 아직 기능이 없어 모양만 있다
+// 대시보드·방송 관리(방송하기·설정)만 이동한다. 나머지는 아직 기능이 없어 모양만 있다
 const ITEMS: Item[] = [
   { label: '대시보드', Icon: DashboardIcon, to: '/studio' },
-  { label: '방송 관리', Icon: MonitorIcon, children: [{ label: '설정', to: '/studio/broadcast/settings' }] },
+  {
+    label: '방송 관리',
+    Icon: MonitorIcon,
+    children: [
+      { label: '방송하기', to: '/studio/broadcast/live' },
+      { label: '설정', to: '/studio/broadcast/settings' },
+    ],
+  },
   { label: '분석', Icon: ChartIcon, children: [] },
   { label: '시청자 관리', Icon: UsersIcon, children: [] },
   { label: '콘텐츠 관리', Icon: DocumentIcon, children: [] },

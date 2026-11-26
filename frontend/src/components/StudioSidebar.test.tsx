@@ -22,6 +22,16 @@ describe('StudioSidebar', () => {
     expect(screen.getByRole('link', { name: '설정' }).getAttribute('href')).toBe('/studio/broadcast/settings')
   })
 
+  it('should show the 방송하기 link above 설정 when 방송 관리 is opened', () => {
+    renderSidebar('/studio')
+
+    fireEvent.click(screen.getByRole('button', { name: '방송 관리' }))
+
+    const links = screen.getAllByRole('link').map((link) => link.textContent)
+    expect(screen.getByRole('link', { name: '방송하기' }).getAttribute('href')).toBe('/studio/broadcast/live')
+    expect(links.indexOf('방송하기')).toBe(links.indexOf('설정') - 1)
+  })
+
   it('should start with 방송 관리 open when the current page is 방송 관리 > 설정', () => {
     renderSidebar('/studio/broadcast/settings')
 

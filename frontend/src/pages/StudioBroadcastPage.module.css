@@ -1,0 +1,448 @@
+/*
+ * 스튜디오 > 방송하기. 사이드바를 숨기면 메인 칸 너비가 바뀌므로 화면 너비 대신 칸 너비로 나눈다.
+ *  좁음: 왼쪽 칸 → 채팅 → 빠른 설정을 위에서 아래로
+ *  64rem 이상: 왼쪽 칸 | 오른쪽 칸(채팅 위, 빠른 설정 아래)
+ *  90rem 이상: 왼쪽 칸 | 채팅 | 빠른 설정
+ */
+.page {
+  container: page / inline-size;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@container page (min-width: 64rem) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+  }
+
+  .main {
+    grid-row: span 2;
+  }
+}
+
+@container page (min-width: 90rem) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 20rem 20rem;
+  }
+
+  .main {
+    grid-row: auto;
+  }
+}
+
+/* 왼쪽 칸: 미리보기 → 상태 줄 → (스트림 상태·통계 | 방송 정보) */
+.main {
+  container: main / inline-size;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.preview {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  background: var(--color-player-bg);
+}
+
+.offline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 100%;
+  padding: var(--space-4);
+  text-align: center;
+}
+
+.offlineTitle {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+}
+
+.offlineText {
+  color: var(--color-text-muted);
+}
+
+.guideButton {
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.guideButton:hover,
+.guideButton:focus-visible {
+  outline: none;
+  background: var(--color-text-muted);
+}
+
+.statusBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: var(--control-height);
+  margin-bottom: var(--space-4);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  background: var(--color-surface-raised);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border: 2px solid var(--color-text-muted);
+  border-radius: 50%;
+}
+
+.dotLive {
+  border-color: var(--color-live);
+  background: var(--color-live);
+}
+
+.below {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@container main (min-width: 44rem) {
+  .below {
+    grid-template-columns: 16rem minmax(0, 1fr);
+  }
+}
+
+.stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* 제목 줄이 있는 카드(스트림 상태·통계·채팅·뉴스피드·빠른 설정) */
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 3rem;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.panelTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-md);
+  font-weight: 800;
+}
+
+.headLink {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.headLink:hover,
+.headLink:focus-visible {
+  outline: none;
+  color: var(--color-text);
+}
+
+.headLinkIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.headSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+/* 이름·값 칸 두 줄. 마지막 홀수 칸은 한 줄을 다 쓴다 */
+.cells {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: 4.5rem;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cell:nth-child(odd):not(.cellWide) {
+  border-right: 1px solid var(--color-border);
+}
+
+.cellWide {
+  grid-column: 1 / -1;
+  border-bottom: 0;
+}
+
+.cellLabel {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.cellValue {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+}
+
+/* 정보 보기를 끄면 값을 흐리게 */
+.cellsHidden .cellValue {
+  color: var(--color-text-muted);
+}
+
+/* 방송 정보: 이름 | 입력 줄. 칸이 좁으면 이름 아래에 입력 */
+.info {
+  container: info / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+@container info (min-width: 34rem) {
+  .row {
+    grid-template-columns: 9rem minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-4);
+  }
+
+  /* 입력칸 높이의 가운데에 이름을 맞춘다 */
+  .label {
+    min-height: var(--control-height);
+  }
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: 700;
+}
+
+.required {
+  color: var(--color-danger);
+}
+
+/* 돋보기가 붙은 입력칸 */
+.searchField {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+}
+
+.searchField:focus-within {
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 1px var(--color-focus);
+}
+
+.searchIcon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  outline: none;
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* 미리보기 이미지 올리는 칸(16:9) */
+.upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: 100%;
+  max-width: 16rem;
+  aspect-ratio: 16 / 9;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.upload:hover,
+.upload:focus-visible {
+  outline: none;
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
+}
+
+.uploadIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.uploadLabel {
+  font-weight: 700;
+}
+
+.uploadSize {
+  font-size: var(--font-size-xs);
+}
+
+/* 채팅. 세 칸일 때는 화면 높이를 채우고, 왼쪽 칸을 스크롤해도 헤더 아래에 붙어 있다 */
+.chat {
+  height: 32rem;
+}
+
+@container page (min-width: 64rem) {
+  .chat {
+    height: 36rem;
+  }
+}
+
+@container page (min-width: 90rem) {
+  .chat {
+    position: sticky;
+    top: calc(var(--header-height) + var(--space-6));
+    height: calc(100vh - var(--header-height) - var(--space-6) * 2);
+  }
+}
+
+.empty {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.iconButton:hover,
+.iconButton:focus-visible {
+  outline: none;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+}
+
+.iconSvg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.quickGroup {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.quickList > li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+.quickItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 3.25rem;
+  padding: 0 var(--space-4);
+}
+
+.quickButton {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.quickButton:hover,
+.quickButton:focus-visible {
+  outline: none;
+  background: var(--color-surface-raised);
+}
+
+.select {
+  height: 2rem;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.select:focus-visible {
+  outline: none;
+  border-color: var(--color-focus);
+}
