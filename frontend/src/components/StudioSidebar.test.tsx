@@ -28,6 +28,12 @@ describe('StudioSidebar', () => {
     expect(screen.getByRole('button', { name: '방송 관리' }).getAttribute('aria-expanded')).toBe('true')
   })
 
+  it('should link the OBS 가이드 card to the OBS guide page', () => {
+    renderSidebar('/studio')
+
+    expect(screen.getByRole('link', { name: /OBS 가이드/ }).getAttribute('href')).toBe('/studio/guide/obs')
+  })
+
   it('should open 방송 관리 when moving to 방송 관리 > 설정 from another studio page', () => {
     render(
       <MemoryRouter initialEntries={['/studio']}>
