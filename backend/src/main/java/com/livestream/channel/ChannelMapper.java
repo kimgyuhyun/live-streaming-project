@@ -25,5 +25,10 @@ public interface ChannelMapper {
     // channel.demo = 1. 이미 1이어도 그대로(#14)
     void markDemo(long id);
 
+    // follower_count = follower_count + 1 / - 1. 읽고 더해 쓰지 않는다(#37)
+    void increaseFollowerCount(long id);
+
+    void decreaseFollowerCount(long id);
+
     void updateStreamKey(@Param("id") long id, @Param("hash") String hash, @Param("prefix") String prefix);
 }

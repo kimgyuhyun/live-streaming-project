@@ -16,6 +16,8 @@ public class Channel {
     private String title;
     // 운영자가 데모 표시를 붙였으면 true(#14)
     private boolean demo;
+    // 팔로워 수(#37). 팔로우가 실제로 들어가거나 지워질 때만 ±1
+    private long followerCount;
 
     public Channel() {
     }
@@ -96,5 +98,13 @@ public class Channel {
 
     public void setDemo(boolean demo) {
         this.demo = demo;
+    }
+
+    public long getFollowerCount() {
+        return followerCount;
+    }
+
+    public void setFollowerCount(long followerCount) {
+        this.followerCount = followerCount;
     }
 }

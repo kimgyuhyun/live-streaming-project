@@ -37,7 +37,7 @@ class ChannelOperatorControllerTest {
         @DisplayName("should return 200 with the channel when an operator marks it as demo")
         void returnsDemoChannel() throws Exception {
             given(channelService.markDemo(CHANNEL_ID))
-                    .willReturn(new ChannelResponse(CHANNEL_ID, "데모채널1", "", true, "데모채널1의 방송", true));
+                    .willReturn(new ChannelResponse(CHANNEL_ID, "데모채널1", "", true, "데모채널1의 방송", true, 0));
 
             mockMvc.perform(put("/api/operator/channels/{channelId}/demo", CHANNEL_ID))
                     .andExpect(status().isOk())

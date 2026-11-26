@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.livestream.follow.FollowMapper">
+
+    <!-- 이미 있으면 아무것도 하지 않는다(영향 행 0). 같은 회원·채널이 동시에 두 번 오면
+         늦은 쪽이 기본 키에 걸린다(FollowService가 "새로 들어가지 않음"으로 친다) -->
+    <insert id="insertIfAbsent">
+        MERGE INTO follow f
+        USING (SELECT #{memberId} AS member_id, #{channelId} AS channel_id FROM dual) s
+        ON (f.member_id = s.member_id AND f.channel_id = s.channel_id)
+        WHEN NOT MATCHED THEN
+            INSERT (member_id, channel_id) VALUES (s.member_id, s.channel_id)
+    </insert>
+
+    <delete id="delete">
+        DELETE FROM follow WHERE member_id = #{memberId} AND channel_id = #{channelId}
+    </delete>
+
+    <select id="exists" resultType="boolean">
+        SELECT CASE WHEN EXISTS (
+            SELECT 1 FROM follow WHERE member_id = #{memberId} AND channel_id = #{channelId}
+        ) THEN 1 ELSE 0 END
+        FROM dual
+    </select>
+</mapper>
