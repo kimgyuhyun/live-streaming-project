@@ -1,0 +1,260 @@
+/* 내 채널 > 채널 관리. 제목 줄(취소·저장) 아래에 "칸 제목 + 카드"를 쌓고, 카드 안은 "이름 | 입력" 줄 */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 60rem;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.cancelButton,
+.saveButton,
+.addButton {
+  height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cancelButton {
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+}
+
+.cancelButton:hover:not(:disabled),
+.cancelButton:focus-visible {
+  outline: none;
+  background: var(--color-border);
+}
+
+.saveButton,
+.addButton {
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+}
+
+.saveButton:hover:not(:disabled),
+.saveButton:focus-visible,
+.addButton:hover,
+.addButton:focus-visible {
+  outline: none;
+  background: var(--color-primary-hover);
+}
+
+.cancelButton:disabled,
+.saveButton:disabled {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+.addButton {
+  align-self: flex-start;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+}
+
+.sectionText {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin-top: var(--space-2);
+  padding: var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+@media (min-width: 768px) {
+  .card {
+    padding: var(--space-6);
+  }
+
+  .row {
+    grid-template-columns: 11rem minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  /* 입력칸 높이의 가운데에 이름을 맞춘다 */
+  .label {
+    min-height: var(--control-height);
+  }
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  align-self: start;
+  font-weight: 700;
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* 프로필 사진 + 이미지 수정 */
+.profileImage {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 7.5rem;
+  height: 7.5rem;
+  padding: var(--space-5);
+  border-radius: 50%;
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+}
+
+.outlineButton {
+  height: 2.25rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.outlineButton:hover,
+.outlineButton:focus-visible {
+  outline: none;
+  background: var(--color-surface-raised);
+}
+
+/* 글자 수가 오른쪽에 붙는 입력칸 */
+.field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+}
+
+.field:focus-within {
+  border-color: var(--color-focus);
+}
+
+.input,
+.textarea {
+  flex: 1;
+  min-width: 0;
+  padding: 0 var(--space-4);
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  outline: none;
+}
+
+.input {
+  height: var(--control-height);
+}
+
+.textarea {
+  min-height: 6rem;
+  padding: var(--space-3) var(--space-4) var(--space-6);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.counter {
+  flex-shrink: 0;
+  padding-right: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 여러 줄 칸에서는 글자 수를 오른쪽 아래에 둔다 */
+.counterBottom {
+  position: absolute;
+  right: 0;
+  bottom: var(--space-3);
+}
+
+.count {
+  color: var(--color-text);
+}
+
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.notes li::before {
+  content: '· ';
+}
+
+.status {
+  color: var(--color-link);
+  font-size: var(--font-size-sm);
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}

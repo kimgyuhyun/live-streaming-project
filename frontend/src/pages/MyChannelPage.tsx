@@ -15,8 +15,8 @@ function MyChannelPage() {
   // ?tab=동영상처럼 들어오면 그 탭을 연 채로 시작한다(방송 화면의 "전체보기")
   const requestedTab = useSearchParams()[0].get('tab')
   const [tab, setTab] = useState(requestedTab && TABS.includes(requestedTab) ? requestedTab : TABS[0])
-  // 약관에 동의하지 않았으면 이 화면에 동의 팝업을 띄운다(#35)
-  const { enterStudio, termsModal } = useStudioEntry()
+  // 약관에 동의하지 않았으면 이 화면에 동의 팝업을 띄운다(#35). 채널 관리도 스튜디오 API로 내 채널을 읽어서 같다
+  const { enterStudio, enterAfterTerms, termsModal } = useStudioEntry()
 
   if (me.isPending) return null
   if (me.isError) {
@@ -51,7 +51,7 @@ function MyChannelPage() {
               <VideoIcon className={styles.pillIcon} />
               방송하기
             </button>
-            <button className={styles.pillButton} type="button" onClick={enterStudio}>
+            <button className={styles.pillButton} type="button" onClick={() => enterAfterTerms('/me/manage')}>
               <SettingsIcon className={styles.pillIcon} />
               채널 관리
             </button>
