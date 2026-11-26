@@ -4,6 +4,7 @@ import StudioLayout from './layouts/StudioLayout.tsx'
 import ChannelManagePage from './pages/ChannelManagePage.tsx'
 import ChannelPage from './pages/ChannelPage.tsx'
 import HomePage from './pages/HomePage.tsx'
+import LivesPage from './pages/LivesPage.tsx'
 import LoginPage from './pages/LoginPage.tsx'
 import MyChannelPage from './pages/MyChannelPage.tsx'
 import MyPage from './pages/MyPage.tsx'
@@ -24,6 +25,7 @@ export const router = createBrowserRouter([
     element: <RootLayout />,
     children: [
       { index: true, element: <HomePage /> },
+      { path: 'lives', element: <LivesPage /> },
       { path: 'signup', element: <SignUpPage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'me', element: <MyChannelPage /> },

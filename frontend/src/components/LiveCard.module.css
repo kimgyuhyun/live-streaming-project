@@ -1,0 +1,104 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.thumbnail {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+}
+
+.thumbnailIcon {
+  width: 2.5rem;
+  height: 2.5rem;
+  color: var(--color-text-muted);
+}
+
+/* 썸네일 위에 덮는 LIVE·시청자 수 표시(docs/design.md 1절 예외) */
+.badges {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  display: flex;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+}
+
+.liveBadge,
+.viewerBadge {
+  padding: 0.125rem var(--space-2);
+}
+
+.liveBadge {
+  background: var(--color-live);
+  color: var(--color-primary-text);
+}
+
+.viewerBadge {
+  background: var(--color-overlay);
+  color: var(--color-primary-text);
+}
+
+.info {
+  display: flex;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: var(--space-2);
+  border-radius: 50%;
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* 제목은 두 줄까지 */
+.title {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.channelName {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.tag {
+  padding: 0.0625rem var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
