@@ -399,3 +399,184 @@ PRD: docs/result/prd/channel.md
 - [ ] Given 데모 설정 스크립트, When 데모 채널의 키를 발급하기 전에, Then 약관에 먼저 동의한다
 
 PRD: docs/result/prd/channel.md
+
+---
+
+# 이슈 목록 — 시청자 활동·방송 목록 (viewer)
+
+> 상태: **확정, GitHub 등록 완료** (2026-11-26) — #37~#42, 라벨 `viewer`.
+> 근거: `docs/result/spec-fixed.md` 7절·9절(방송 목록), `docs/result/prd/viewer.md`(V1·V2), `docs/spikes/infra-validation.md` 4절
+> 번호는 GitHub 번호와 같다(마지막 이슈·PR이 #36).
+
+| # | 제목 | 도메인 | 선행 | 크기 |
+| --- | --- | --- | --- | --- |
+| 37 | 채널을 팔로우하고 채널 페이지에서 팔로워 수를 본다 | viewer | #12 | 1일 |
+| 38 | 팔로잉 화면에서 팔로우한 채널을 방송 중 먼저 본다 | viewer | #37 | 반나절 |
+| 39 | 채널 페이지에서 동시 시청자 수를 본다 | viewer | #11, #12 | 1일 |
+| 40 | 한 곳(IP)에서 시청을 많이 열어도 5개까지만 센다 | viewer | #39 | 반나절 |
+| 41 | 메인 화면에서 방송 중 목록을 시청자 수 순으로 본다 | viewer | #39 | 1일 |
+| 42 | 시청자 수 집계와 방송 목록을 규모별로 잰다 | viewer | #40, #41 | 1일 |
+
+---
+
+## #37 채널을 팔로우하고 채널 페이지에서 팔로워 수를 본다
+
+회원이 채널 페이지에서 팔로우·팔로우 취소를 하고, 채널의 팔로워 수를 본다. 지금 모양만 있는 팔로우 버튼과 "팔로워 0명"을 실제로 동작하게 한다. 1일.
+
+**선행**: #12
+
+## 이 이슈에서 정한 것
+
+- 저장: 새 테이블 `follow(member_id, channel_id, created_at)`, 기본 키(member_id, channel_id), `channel_id` 색인, 회원·채널 외래 키. `channel.follower_count`(기본 0) 열 추가. 마이그레이션 V9 하나로
+- 팔로워 수: 팔로우가 실제로 새로 들어갔을 때만 `follower_count = follower_count + 1`, 취소가 실제로 지웠을 때만 `- 1`을 같은 트랜잭션에서 한다(읽고 더해 쓰지 않는다)
+- API: `PUT /api/channels/{id}/follow`(팔로우), `DELETE` 같은 주소(취소) — 둘 다 멱등, 204. `GET /api/channels/{id}/follow` → `{following}`. 자기 채널 400(`CANNOT_FOLLOW_OWN_CHANNEL`), 없는 채널 404(`CHANNEL_NOT_FOUND`), 비로그인 401
+- 채널 조회(`GET /api/channels/{id}`) 응답에 `followerCount`. 내가 팔로우했는지는 넣지 않는다(nginx가 `$uri`로 1초 캐시한다 — 넣으면 남의 값이 보인다)
+- 화면: 팔로우 버튼은 "팔로우"/"팔로잉"으로 바뀐다. 내 채널에서는 버튼이 없다. 비로그인이 누르면 로그인 화면. 채널 조회가 1초 캐시라, 응답 뒤 팔로워 수는 화면에서 바로 고쳐 보인다
+- 동시성: 숫자 열 방어를 넣기 전에 동시 팔로우로 숫자가 어긋나는 것을 먼저 재현해 기록한다(`defect-repro`)
+
+## Acceptance Criteria
+- [ ] Given 다른 채널을 팔로우하지 않은 회원, When 팔로우하면, Then 204이고 팔로우 여부는 `following: true`, 채널 조회의 `followerCount`가 1 늘어난다
+- [ ] Given 이미 팔로우한 회원, When 다시 팔로우하면, Then 204이고 `followerCount`는 그대로, `follow` 행은 하나다
+- [ ] Given 팔로우한 회원, When 팔로우를 취소하면, Then 204이고 `following: false`, `followerCount`가 1 줄어든다
+- [ ] Given 팔로우하지 않은 회원, When 취소하면, Then 204이고 `followerCount`는 그대로다(0 아래로 내려가지 않는다)
+- [ ] Given 스트리머, When 자기 채널을 팔로우하면, Then 400(`CANNOT_FOLLOW_OWN_CHANNEL`)이고 아무것도 저장되지 않는다
+- [ ] Given 없는 채널, When 팔로우하면, Then 404(`CHANNEL_NOT_FOUND`)다
+- [ ] Given 비로그인, When 팔로우·취소·팔로우 여부 API를 부르면, Then 401이다
+- [ ] Given 회원 20명이 같은 채널을 동시에 팔로우하고 그중 10명이 동시에 취소하면, Then `followerCount`는 `follow` 행 수(10)와 같다
+- [ ] Given 한 회원이 같은 채널에 팔로우·취소를 동시에 여러 번 보내면, Then 끝난 뒤 `followerCount`는 그 채널의 `follow` 행 수와 같다
+- [ ] Given 채널 페이지, When 회원이 "팔로우"를 누르면, Then 버튼이 "팔로잉"이 되고 "팔로워 N명"이 1 늘어나며, 다시 누르면 되돌아간다
+- [ ] Given 내 채널 페이지, Then 팔로우 버튼이 없다
+- [ ] Given 비로그인, When 채널 페이지에서 "팔로우"를 누르면, Then 로그인 화면으로 간다
+
+PRD: docs/result/prd/viewer.md
+
+---
+
+## #38 팔로잉 화면에서 팔로우한 채널을 방송 중 먼저 본다
+
+사이드바 "팔로잉"을 누르면 내가 팔로우한 채널 목록 화면이 열린다. 방송 중인 채널이 먼저, 그다음 오프라인 채널. 반나절.
+
+**선행**: #37
+
+## 이 이슈에서 정한 것
+
+- API: `GET /api/me/following?offset=` → `{items: [{channelId, name, live, title}], hasMore}`. 20개씩. 내 것만 본다(다른 회원을 고르는 값이 없다)
+- 순서: 방송 중 먼저, 각 묶음 안에서는 팔로우한 시각 최근 순. SQL 한 번(진행 중 여부는 `ChannelMapper.xml`의 `EXISTS` 식 그대로)
+- 화면: `/following`. 사이드바 "팔로잉"(지금 모양만)이 이 화면으로 간다. 비로그인은 로그인 화면으로. "더 보기"로 20개씩 이어 붙인다
+
+## Acceptance Criteria
+- [ ] Given X·Y·Z 순서로 팔로우했고 Y만 방송 중, When 팔로잉을 보면, Then Y, Z, X 순이다
+- [ ] Given 21개 채널을 팔로우, When 처음 보면, Then 20개와 `hasMore: true`, 다음 요청(`offset=20`)에서 1개와 `hasMore: false`다
+- [ ] Given 팔로우한 채널이 없음, When 팔로잉 화면을 열면, Then "팔로우한 채널이 없습니다"가 보인다
+- [ ] Given 비로그인, When 팔로잉 API를 부르면, Then 401이고, 사이드바 "팔로잉"을 누르면 로그인 화면으로 간다
+- [ ] Given 팔로잉 화면, When 채널을 누르면, Then 그 채널 페이지로 간다. 방송 중인 채널에는 방송 중 표시와 방송 제목이 보인다
+
+PRD: docs/result/prd/viewer.md
+
+---
+
+## #39 채널 페이지에서 동시 시청자 수를 본다
+
+MediaMTX 시청 세션을 5초마다 모아 채널별 동시 시청자 수를 세고, 채널 페이지(방송 화면)에 보여 준다. 1일.
+
+**선행**: #11, #12
+
+## 이 이슈에서 정한 것
+
+- 집계: Spring이 5초마다 `GET /v3/hlssessions/list`를 마지막 페이지까지 읽어 `live/{채널ID}`별 세션 수를 센다. 진행 중 방송이 없는 경로는 버린다. 세션에서는 `path`·`remoteAddr`만 읽고, 주소는 저장·로그하지 않는다
+- 서버 2대: Redis 잠금(`SET NX`, 4초 만료)을 잡은 서버만 그 회차를 센다
+- 판(스냅샷): 회차마다 `viewers:{판}:count`(방송ID → 수)를 쓰고, 다 쓴 다음 `viewers:current`를 새 판 번호로 바꾼다. 판은 2분 뒤 만료. 진행 중 방송은 0명이어도 넣는다
+- 채널 조회 응답에 `viewerCount`: 지금 판의 값. 방송 중이 아니거나 판이 없으면 0
+- MediaMTX 호출이 실패하면 그 회차는 건너뛰고(이전 판 유지) 실패만 남긴다. 회차마다 걸린 시간을 로그로 남긴다
+- 화면: 방송 중이면 "N명 시청 중". 채널 조회를 이미 폴링하므로 그 값으로 갱신한다
+- 테스트 설정은 주기 작업을 끈다(`app.scheduling.enabled=false`) — 집계 함수를 직접 부른다
+
+## Acceptance Criteria
+- [ ] Given 방송 중 채널 A에 세션 3개, B에 1개, 방송 중이 아닌 경로 C에 2개, When 집계하면, Then 판에 A=3, B=1이고 C는 없다
+- [ ] Given 방송 중이고 세션이 없는 채널 D, When 집계하면, Then 판에 D=0이다
+- [ ] Given 세션 목록이 여러 페이지, When 집계하면, Then 모든 페이지의 세션을 센다
+- [ ] Given 집계가 끝남, When 채널 A를 조회하면, Then `viewerCount`가 3이다. 방송 중이 아닌 채널은 0이다
+- [ ] Given 집계 객체 두 개(서버 2대)가 같은 회차에 동시에 돌면, Then MediaMTX 세션 목록은 한 번만 읽힌다
+- [ ] Given 잠금을 잡은 쪽이 멈춰 잠금이 만료됨, When 다음 회차, Then 다른 쪽이 집계한다
+- [ ] Given MediaMTX 호출이 실패, When 집계하면, Then 예외가 밖으로 나가지 않고 이전 판의 값이 그대로 보인다
+- [ ] Given 판이 2분 넘게 새로 만들어지지 않음, When 채널을 조회하면, Then `viewerCount`는 0이다
+- [ ] Given 방송 중인 채널 페이지, Then "N명 시청 중"이 보이고, 오프라인이면 보이지 않는다
+- [ ] Given 로컬 도커에서 실제 시청, When 방송 화면을 열면 10초 안에 1 늘고, 닫으면 1분 안에 1 준다(수동 확인, 시각을 기록한다)
+
+PRD: docs/result/prd/viewer.md
+
+---
+
+## #40 한 곳(IP)에서 시청을 많이 열어도 5개까지만 센다
+
+시청자 수 부풀리기를 막는다. 같은 IP에서 같은 방송을 보는 세션은 5개까지만 센다. 그러려면 MediaMTX가 nginx 뒤에서도 진짜 시청자 주소를 봐야 한다. 반나절.
+
+**선행**: #39
+
+## 이 이슈에서 정한 것
+
+- nginx `/hls/`가 `X-Forwarded-For`를 넘긴다(앞단 `real_ip` 설정으로 고친 진짜 주소)
+- MediaMTX `hlsTrustedProxies`에 nginx가 있는 도커 대역을 넣는다(1.21.4에 있는 설정 — 바이너리에서 확인했다)
+- 집계: (IP, 경로)마다 최대 5세션. 한도는 설정값(`app.viewer.max-sessions-per-ip`, 기본 5)
+- 지금(설정 전)은 모든 세션이 nginx 내부 주소로 보인다(스파이크 4절). 설정 뒤 진짜 주소가 보이는지를 먼저 확인하고, 안 보이면 이 이슈를 멈추고 이유를 남긴다
+
+## Acceptance Criteria
+- [ ] Given 같은 IP의 세션 8개와 다른 IP의 세션 2개가 채널 A에, When 집계하면, Then A=7이다
+- [ ] Given 같은 IP가 A에 5개, B에 5개, When 집계하면, Then A=5, B=5다(경로마다 센다)
+- [ ] Given 로컬 도커에서 nginx를 거쳐 시청, When 세션 목록을 보면, Then `remoteAddr`가 nginx 내부 주소가 아니라 요청한 쪽 주소다(수동 확인, 결과를 기록한다)
+- [ ] Given 집계, Then 로그·Redis 어디에도 시청자 IP가 남지 않는다
+
+PRD: docs/result/prd/viewer.md
+
+---
+
+## #41 메인 화면에서 방송 중 목록을 시청자 수 순으로 본다
+
+메인 화면에 지금 방송 중인 방송을 시청자 수가 많은 순으로 20개씩 보여 준다. 순위는 #39의 집계가 판마다 만든다. 1일.
+
+**선행**: #39
+
+## 이 이슈에서 정한 것
+
+- 판에 순위를 더한다: `viewers:{판}:rank`(순위 집합 — 값 `{역순 시작 시각}:{방송ID}`, 점수 시청자 수). `count`와 `rank`를 다 쓴 다음 `viewers:current`를 바꾼다
+- API: `GET /api/broadcasts?snapshot=&offset=` → `{snapshot, items: [{broadcastId, channelId, channelName, title, viewerCount, startedAt}], hasMore}`. 첫 요청은 지금 판, "더 보기"는 같은 판. 20개의 제목·채널 이름은 DB에서 한 번에 읽고 끝난 방송은 거른다
+- 판이 만료된 `snapshot`으로 물으면 지금 판의 첫 묶음을 준다(화면은 목록을 새로 그린다)
+- 집계가 멈춤(지금 판이 없거나 2분 넘음): DB의 진행 중 방송을 시작 순으로, `viewerCount` 없이, `snapshot: null`
+- nginx: `snapshot` 없는 첫 묶음 요청만 1초 캐시(회원마다 다른 값이 없다)
+- 화면: 메인(`/`)에 카드 목록 — 썸네일 자리(기본 이미지, 썸네일은 아직 없다), 방송 제목, 채널 이름, 시청자 수. 카드를 누르면 채널 페이지. "더 보기"로 이어 붙인다
+
+## Acceptance Criteria
+- [ ] Given 방송 세 개의 시청자 9, 5, 5(5명인 X가 Y보다 먼저 시작), When 목록을 보면, Then 9명, X, Y 순이다
+- [ ] Given 시청자 0명인 방송, When 목록을 보면, Then 목록에 있다(맨 뒤)
+- [ ] Given 방송 25개, When 처음 보면, Then 20개와 `hasMore: true`와 판 번호, 같은 판으로 다음 묶음에서 5개와 `hasMore: false`다
+- [ ] Given 첫 묶음을 받은 뒤 새 판에서 순위가 바뀜, When 같은 판으로 다음 묶음을 받으면, Then 두 묶음 사이에 겹치거나 빠진 방송이 없다
+- [ ] Given 판에는 있지만 그 뒤 끝난 방송, When 목록을 보면, Then 그 방송은 빠진다
+- [ ] Given 만료된 판 번호, When 다음 묶음을 물으면, Then 지금 판의 첫 묶음과 새 판 번호가 온다
+- [ ] Given 집계가 멈춰 판이 2분 넘음, When 목록을 보면, Then 진행 중 방송이 시작 순으로 오고 `viewerCount`가 없다
+- [ ] Given 메인 화면, Then 카드마다 기본 썸네일·방송 제목·채널 이름·시청자 수가 보이고, 누르면 채널 페이지로 간다
+- [ ] Given 방송 중인 방송이 없음, When 메인 화면을 열면, Then "지금 방송 중인 채널이 없습니다"가 보인다
+- [ ] Given nginx, When `snapshot` 없는 목록을 1초 안에 두 번 요청하면, Then 두 번째는 캐시에서 온다(`X-Cache-Status: HIT`). `snapshot`이 있는 요청은 캐시하지 않는다
+
+PRD: docs/result/prd/viewer.md
+
+---
+
+## #42 시청자 수 집계와 방송 목록을 규모별로 잰다
+
+PRD viewer V1·V2의 측정 계획을 실행한다. 화면은 없고, 측정 결과가 데모다(#29·#31과 같은 방식). 1일.
+
+**선행**: #40, #41
+
+## 합격 기준 (측정 전에 정함, 바꾸지 않는다)
+
+- 집계 한 번: 시청 세션 10,000개에서 5초 안
+- 목록 API p95: 진행 중 방송 1,000개에서 100ms 안
+- Redis 메모리: 판 전체(최대 약 24판)가 진행 중 방송 1,000개에서 10MB 안
+
+## Acceptance Criteria
+- [ ] Given 진행 중 방송 100·1,000개와 시청 세션 1,000·10,000개(가짜 MediaMTX 응답), When 집계를 돌리면, Then 회차마다 걸린 시간이 기록되고 합격 기준과 비교된다
+- [ ] Given 같은 조건, When k6로 목록 API(첫 묶음·같은 판 다음 묶음)를 부르면, Then p95가 기록되고 합격 기준과 비교된다
+- [ ] Given 같은 조건, When 판이 쌓인 뒤 Redis 메모리를 재면, Then 기록되고 합격 기준과 비교된다
+- [ ] Given 측정, Then 시나리오·도구 버전·대상 커밋·원시 결과가 저장소(`perf/`)에 남고, 기준을 넘으면 원인과 다음 조치를 적는다
+
+PRD: docs/result/prd/viewer.md
