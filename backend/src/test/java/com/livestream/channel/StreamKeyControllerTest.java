@@ -1,5 +1,6 @@
 package com.livestream.channel;
 
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -34,6 +35,15 @@ class StreamKeyControllerTest {
 
     @MockitoBean
     private StreamKeyService streamKeyService;
+
+    // 스튜디오 경로에 끼는 약관 인터셉터(#35)가 묻는다. 이 테스트는 컨트롤러만 보므로 늘 "동의함"
+    @MockitoBean
+    private StudioTermsService studioTermsService;
+
+    @BeforeEach
+    void agreedToStudioTerms() {
+        given(studioTermsService.hasAgreed(anyLong())).willReturn(true);
+    }
 
     // 필터를 껐으므로 SecurityContextHolder에 직접 올린다. 테스트가 끝나면 spring-security-test가 비운다
     @BeforeEach
