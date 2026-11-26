@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router'
 import RootLayout from './layouts/RootLayout.tsx'
 import StudioLayout from './layouts/StudioLayout.tsx'
+import ChannelManagePage from './pages/ChannelManagePage.tsx'
 import ChannelPage from './pages/ChannelPage.tsx'
 import HomePage from './pages/HomePage.tsx'
 import LoginPage from './pages/LoginPage.tsx'
@@ -27,6 +28,7 @@ export const router = createBrowserRouter([
       { path: 'login', element: <LoginPage /> },
       { path: 'me', element: <MyChannelPage /> },
       { path: 'me/profile', element: <MyPage /> },
+      { path: 'me/manage', element: <ChannelManagePage /> },
       // flush: 메인 칸의 안쪽 여백 없이 너비·높이를 다 쓰는 화면(RootLayout이 읽는다)
       { path: 'channels/:channelId', element: <ChannelPage />, handle: { flush: true } },
       { path: '*', element: <NotFoundPage /> },

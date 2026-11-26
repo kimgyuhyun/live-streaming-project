@@ -31,6 +31,8 @@ function Header({ menuExpanded, onMenuClick }: Props) {
   const me = useQuery({ queryKey: ['me'], queryFn: fetchMe, retry: false })
   const [menuOpen, setMenuOpen] = useState(false)
   const { enterStudio, termsModal } = useStudioEntry()
+  // 운영자에게도 보인다. 개발 편의상 운영자도 스튜디오를 스트리머와 똑같이 쓴다
+  const canStream = me.data?.role === 'STREAMER' || me.data?.role === 'OPERATOR'
   const profileRef = useRef<HTMLDivElement>(null)
 
   const logoutMutation = useMutation({
@@ -89,7 +91,7 @@ function Header({ menuExpanded, onMenuClick }: Props) {
         {me.data ? (
           <>
             {/* 운영자에게도 보인다. 개발 편의상 운영자도 스튜디오를 스트리머와 똑같이 쓴다 */}
-            {(me.data.role === 'STREAMER' || me.data.role === 'OPERATOR') && (
+            {canStream && (
               // 약관에 동의하지 않았으면 이 화면에 동의 팝업을 띄운다(#35)
               <button className={styles.pillButton} type="button" onClick={enterStudio}>
                 <VideoIcon className={styles.pillIcon} />
@@ -122,6 +124,19 @@ function Header({ menuExpanded, onMenuClick }: Props) {
               {menuOpen && (
                 <div className={styles.menu}>
                   <p className={styles.menuName}>{me.data.nickname}</p>
+                  {/* 헤더의 스튜디오 버튼과 같다. 좁은 화면에서도 메뉴로 들어갈 수 있다 */}
+                  {canStream && (
+                    <button
+                      className={styles.menuItem}
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false)
+                        enterStudio()
+                      }}
+                    >
+                      스튜디오
+                    </button>
+                  )}
                   <Link className={styles.menuItem} to="/me" onClick={() => setMenuOpen(false)}>
                     내 채널
                   </Link>
