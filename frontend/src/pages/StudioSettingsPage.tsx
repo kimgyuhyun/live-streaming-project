@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router'
 import { fetchMyChannel, updateChannel, updateTitle, type ChannelResponse } from '../api/channels.ts'
 import { errorMessage } from '../api/client.ts'
+import form from '../styles/form.module.css'
+import ChatSettingsSections from './ChatSettingsSections.tsx'
 import StreamKeySection from './StreamKeySection.tsx'
+import styles from './StudioSettingsPage.module.css'
 
 // 스튜디오 > 방송 관리 > 설정. 로그인·역할·약관 확인은 StudioLayout이 먼저 한다
 function StudioSettingsPage() {
@@ -14,18 +16,15 @@ function StudioSettingsPage() {
   if (channel.isError) return <p role="alert">{errorMessage(channel.error)}</p>
 
   return (
-    <section>
-      <h1>방송 설정</h1>
-      <p>
-        <Link to={`/channels/${channel.data.id}`}>내 채널 페이지</Link>
-      </p>
+    <div className={styles.page}>
+      <h1 className={styles.srOnly}>방송 설정</h1>
       {/* 진행 중 방송이 있으면 송출 중(#11) */}
-      <p>연결 상태: {channel.data.live ? '송출 중' : '송출 없음'}</p>
+      <StreamKeySection channelId={channel.data.id} live={channel.data.live} />
+      <ChatSettingsSections />
       {/* 입력란은 처음 읽은 값으로 채운다. 저장하면 입력한 값이 곧 저장된 값이다 */}
       <TitleForm title={channel.data.title} />
       <ChannelForm channel={channel.data} />
-      <StreamKeySection channelId={channel.data.id} />
-    </section>
+    </div>
   )
 }
 
@@ -48,18 +47,34 @@ function TitleForm({ title: savedTitle }: { title: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>방송 제목</h2>
-      <label>
-        제목
-        <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={50} required />
-      </label>
-      {mutation.isError && <p role="alert">{errorMessage(mutation.error)}</p>}
-      {mutation.isSuccess && <p role="status">저장했습니다</p>}
-      <button type="submit" disabled={mutation.isPending}>
-        저장
-      </button>
-    </form>
+    <section className={styles.section} aria-labelledby="title-settings">
+      <h2 id="title-settings" className={styles.sectionTitle}>
+        방송 정보 설정
+      </h2>
+      <form className={styles.card} onSubmit={handleSubmit}>
+        <div className={styles.row}>
+          <label className={styles.label} htmlFor="broadcast-title">
+            방송 제목
+          </label>
+          <div className={styles.control}>
+            <div className={styles.inline}>
+              <input
+                id="broadcast-title"
+                className={`${form.input} ${styles.grow}`}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                maxLength={50}
+                required
+              />
+              <button className={styles.secondaryButton} type="submit" disabled={mutation.isPending}>
+                저장
+              </button>
+            </div>
+            <SaveResult mutation={mutation} />
+          </div>
+        </div>
+      </form>
+    </section>
   )
 }
 
@@ -82,23 +97,61 @@ function ChannelForm({ channel }: { channel: ChannelResponse }) {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>채널 정보</h2>
-      <label>
-        채널 이름
-        <input value={name} onChange={(e) => setName(e.target.value)} required />
-      </label>
-      <label>
-        소개
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
-      </label>
-      {mutation.isError && <p role="alert">{errorMessage(mutation.error)}</p>}
-      {mutation.isSuccess && <p role="status">저장했습니다</p>}
-      <button type="submit" disabled={mutation.isPending}>
-        저장
-      </button>
-    </form>
+    <section className={styles.section} aria-labelledby="channel-settings">
+      <h2 id="channel-settings" className={styles.sectionTitle}>
+        채널 정보 설정
+      </h2>
+      <form className={styles.card} onSubmit={handleSubmit}>
+        <div className={styles.row}>
+          <label className={styles.label} htmlFor="channel-name">
+            채널 이름
+          </label>
+          <input
+            id="channel-name"
+            className={form.input}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
+        <div className={`${styles.row} ${styles.rowTop}`}>
+          <label className={styles.label} htmlFor="channel-description">
+            소개
+          </label>
+          <div className={styles.control}>
+            <div className={styles.inline}>
+              <textarea
+                id="channel-description"
+                className={`${form.input} ${styles.textarea} ${styles.grow}`}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+              <button className={styles.secondaryButton} type="submit" disabled={mutation.isPending}>
+                저장
+              </button>
+            </div>
+            <SaveResult mutation={mutation} />
+          </div>
+        </div>
+      </form>
+    </section>
   )
+}
+
+function SaveResult({ mutation }: { mutation: { isError: boolean; isSuccess: boolean; error: unknown } }) {
+  if (mutation.isError)
+    return (
+      <p className={styles.error} role="alert">
+        {errorMessage(mutation.error)}
+      </p>
+    )
+  if (mutation.isSuccess)
+    return (
+      <p className={styles.status} role="status">
+        저장했습니다
+      </p>
+    )
+  return null
 }
 
 export default StudioSettingsPage

@@ -386,6 +386,24 @@ export function HelpIcon(props: IconProps) {
   )
 }
 
+export function EyeIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </Svg>
+  )
+}
+
+// 감은 눈: 아래로 휜 눈꺼풀과 속눈썹
+export function EyeClosedIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M3 10c2.5 3 5.5 4.5 9 4.5s6.5-1.5 9-4.5M6 13l-1.5 2.5M12 14.5V17M18 13l1.5 2.5" />
+    </Svg>
+  )
+}
+
 export function PlusIcon(props: IconProps) {
   return (
     <Svg {...props}>
