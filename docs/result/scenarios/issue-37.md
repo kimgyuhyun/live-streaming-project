@@ -378,3 +378,90 @@ AC 10:
 | --- | --- |
 | `FollowService`가 `DuplicateKeyException`을 잡지 않음(다른 예외로 바꿈) | `FollowService.follow — should not change the follower count when saving the follow hits a duplicate key`, `FollowIntegration — should complete every follow and unfollow without an error when one member sends them to the same channel at the same time` (이때 한 회원 동시 요청 5회차마다 `DuplicateKeyException` 3~9건. 기존 `…followerCount equal the follow rows…`는 검증자 지적대로 통과했다) |
 | `FollowButton`이 "팔로잉"을 눌러도 `follow`를 보냄 | `ChannelPage — should send unfollow for channel 7 when the member clicks 팔로잉` |
+
+### 재검증 (갭 보강 뒤, HEAD fa91a8c) — `harness:ac-verifier` 원문
+
+## 이슈 #37 AC 9·10 재검증 (커밋 `fa91a8c` 이후)
+
+AC 9와 AC 10이 이제 충족되어 12개 AC가 모두 ✅다. 커밋 `fa91a8c`는 테스트 4개 파일과 시나리오 문서만 바꿨다. 기능 코드는 `3a68bc9`와 같다. `git diff --stat 3a68bc9 HEAD -- backend/src/main frontend/src`(테스트 파일 제외)의 출력이 비어 있다.
+
+| AC | 판정 | 테스트 (파일:줄) | 구현 (파일:줄) | 근거 |
+| --- | --- | --- | --- | --- |
+| 9. 한 회원이 같은 채널에 팔로우·취소를 동시에 여러 번 보낸다 → 끝난 뒤 수 = 행 수 | ✅ 충족 | `should make followerCount equal the follow rows when one member sends follows and unfollows to the same channel at the same time many times` (FollowIntegrationTest.java:310)<br>`should complete every follow and unfollow without an error when one member sends them to the same channel at the same time` (FollowIntegrationTest.java:332)<br>`FollowService.follow — should not change the follower count when saving the follow hits a duplicate key` (FollowServiceTest.java:85) | 영향 행 수가 1일 때만 DB가 `follower_count ± 1`을 한다(FollowService.java:25-40, ChannelMapper.xml)<br>`DuplicateKeyException`은 "새로 안 들어감"으로 처리한다(FollowService.java:56-62) | :310은 `followerCount == 행 수`를 단언한다. :332는 같은 비율(팔로우 2 : 취소 1)로 20건을 동시에 보내고 `result`가 정확히 `{success=20}`인지 단언한다(`containsExactly(Map.entry("success", 20))`). 이전 지적은 요청이 전부 실패해도 0 == 0으로 통과한다는 것이었는데, 이 단언으로 막혔다. 단위 테스트(:85)는 insert가 `DuplicateKeyException`을 던질 때 예외가 밖으로 나오지 않고 `increaseFollowerCount`도 불리지 않는지 확인한다. 동시 실행에서 중복이 실제로 날지는 회차마다 다르다. 단위 테스트가 그 경로를 매번 확실하게 지킨다. 문서 "갭을 메운 결과"에는 catch를 없앤 변이에서 :85와 :332가 실패했다고 적혀 있다(회차마다 `DuplicateKeyException` 3~9건). 이 변이는 이번에 다시 돌리지 않았다. 이번 실행에서는 FollowIntegration 17/17, FollowService.follow 5/5가 통과했다. |
+| 10. "팔로우"를 누르면 "팔로잉"이 되고 팔로워 수가 1 늘며, 다시 누르면 되돌아간다 | ✅ 충족 | `should change the button to 팔로잉 when a member clicks 팔로우` (ChannelPage.test.tsx:201)<br>`should show 팔로워 4명 when a member clicks 팔로우 on a channel with 3 followers` (:210)<br>`should change the button back to 팔로우 when the member clicks 팔로잉` (:219)<br>`should show 팔로워 3명 when the member clicks 팔로잉 on a channel with 4 followers` (:229)<br>`should send follow for channel 7 when a member clicks 팔로우` (:239)<br>`should send unfollow for channel 7 when the member clicks 팔로잉` (:249)<br>`should show 팔로우 and 팔로워 3명 again when a member clicks 팔로우 and then 팔로잉 on a channel with 3 followers` (:260) | FollowButton.tsx:24-33: `next ? follow : unfollow`를 보내고, 성공하면 `['follow']`와 `['channel']` 캐시를 ±1 한다<br>ChannelPage.tsx `팔로워 {followerCount}명` | :239와 :249는 목 호출을 통째로 비교한다. 팔로우를 누르면 `follow`만 `[[7]]`로 불리고 `unfollow`는 `[]`여야 한다. 팔로잉을 누르면 그 반대다. 이전 지적은 팔로잉을 눌러도 `follow`를 보내는 구현이 통과한다는 것이었는데, 이 단언으로 막혔다. :260은 한 화면 안에서 팔로우를 누르면 팔로잉이 되고, 다시 누르면 팔로우로 돌아오며 팔로워 3명이 그대로 보이는지 확인한다. 1 증가는 :210이 맡는다. 문서 "갭을 메운 결과"에는 팔로잉을 눌러도 `follow`를 보내는 변이에서 :249가 실패했다고 적혀 있다. 이 변이도 이번에 다시 돌리지 않았다. 이번 실행에서는 ChannelPage 23/23이 통과했다. |
+
+### 전체 결과 (AC 12개)
+
+AC 12개 중 ✅ 12 / ⚠️ 0 / ❌ 0
+
+AC 1~8과 11·12는 첫 검증 판정을 그대로 유지한다. 그 뒤로 기능 코드와 해당 테스트가 바뀌지 않았다.
+
+### 실행한 명령
+
+1. `git status --short && git log --oneline -3 && git show --stat fa91a8c && git show fa91a8c -- backend frontend`
+   - 작업 트리에 커밋 안 된 변경이 없다. HEAD는 `fa91a8c`이고 테스트 4개 파일만 바뀌었다. 새 테스트 5개의 본문을 확인했다.
+2. `git diff fa91a8c~1 fa91a8c -- docs/result/scenarios/issue-37.md`
+   - 시나리오 5개 추가, "구현자 이견", "갭을 메운 결과"의 변이 표를 확인했다.
+3. `JAVA_HOME="$HOME/.jdks/liberica-21.0.7" ./gradlew test --tests "Follow*"`로 테스트를 돌리고, 결과 XML에서 testsuite 줄을 grep했다.
+   - BUILD SUCCESSFUL in 1m 5s.
+   - FollowIntegration 17, FollowController 5, FollowService.follow 5, .isFollowing 3, .unfollow 3. 실패와 오류는 0이다(결과 시각 2026-11-26T11:51Z).
+   - 새 테스트 2개도 결과 XML에 들어 있다.
+4. `npx vitest run src/pages/ChannelPage.test.tsx --reporter=verbose`
+   - 23/23 통과. 새 테스트 3개 모두 ✓.
+5. `git diff --stat 3a68bc9 HEAD -- backend/src/main frontend/src ':!*.test.tsx' ':!*.test.ts'`
+   - 출력이 없다. 기능 코드는 바뀌지 않았다.
+6. `grep -n` FollowIntegrationTest·FollowServiceTest·ChannelPage.test.tsx
+   - 표에 적은 줄 번호(:310, :332, :85, :201~:260)를 확인했다.
+
+관련 파일:
+- `C:/live-streaming-issue-37/backend/src/test/java/com/livestream/follow/FollowIntegrationTest.java`
+- `C:/live-streaming-issue-37/backend/src/test/java/com/livestream/follow/FollowServiceTest.java`
+- `C:/live-streaming-issue-37/frontend/src/pages/ChannelPage.test.tsx`
+- `C:/live-streaming-issue-37/docs/result/scenarios/issue-37.md`
+
+---
+
+## 리팩터
+
+대상: 이번 이슈가 바꾼 소스 16개(`git diff main...HEAD`, 테스트 제외). 기준선은 아래 보안 점검의 전체 스위트(전부 통과).
+
+**고친 것 없음.** 다섯 기준(중복·이름·단일 책임·불필요한 복잡도·컨벤션)으로 봤고, 고칠 근거가 있는 항목이 없었다.
+
+| 본 것 | 판단 |
+| --- | --- |
+| `api/follows.ts`의 `/channels/${channelId}/follow` 세 번 | 기존 `api/channels.ts`도 경로를 함수마다 그대로 쓴다(컨벤션). 묶으면 이 파일만 모양이 달라진다 |
+| `FollowButton`의 `['follow', channelId]` 쿼리 키 두 번 | 두 번. 세 번째(#38 팔로잉 화면 등)가 나올 때 뽑는다 |
+| `FollowService`의 채널 검사 | 세 메서드가 `checkFollowable` 하나를 쓴다. 이미 한 곳 |
+| `FollowService.insertIfAbsent`(`DuplicateKeyException` → false) | #35 `StudioTermsService`와 같은 모양. 공통화하면 두 도메인이 묶인다(두 번째일 뿐) |
+| CSS | 새 CSS 없음. `ChannelPage.module.css`의 `.button`·`.primary`·`.buttonIcon`을 그대로 쓴다 |
+| 계층·에러 처리 | 기존 채널 코드와 같은 모양(Controller → Service → MyBatis Mapper, `BusinessException(ErrorCode)`, 레코드 DTO). 패키지 `com.livestream.follow`는 PRD 작은 결정대로 |
+
+---
+
+## 보안 점검
+
+| 점검 | 명령·방법 | 결과 |
+| --- | --- | --- |
+| 타입 | `gradlew compileJava compileTestJava` + `npx tsc -b` | 오류 0 (백엔드 BUILD SUCCESSFUL, tsc 통과) |
+| 의존성 | `npm audit` (`securityExceptions` 대장 없음) | 0 vulnerabilities. 이번 이슈는 의존성을 바꾸지 않았다 |
+| 비밀값 | 바뀐 파일에서 `SECRET/TOKEN/PASSWORD/API_KEY…` 대입, 알려진 키 접두사 grep | 0건 |
+| `.env` | 작업 트리·브랜치 커밋에서 `.env` | 0건 |
+| 로그 | 바뀐 운영 코드의 `console.*`·`log.*`·`System.out` | 0건 (`FollowIntegrationTest`의 `System.out.printf`는 테스트 코드, defect-repro 수치 기록용) |
+
+| 분류 | 항목 | 판단 |
+| --- | --- | --- |
+| 🔴 즉시 수정 | 없음 | |
+| 🟡 권장 | **인기 채널의 `channel` 행 잠금** — `FollowService.follow`/`unfollow`가 `channel.follower_count`를 같은 트랜잭션에서 고쳐, 한 채널에 팔로우가 몰리면 그 행 잠금에서 줄을 선다(20명 동시 테스트는 1.5초 안에 끝났다). PRD가 정한 구조이고 정확성은 지켜진다. 대비책과 측정 계획: 한 채널에 동시 팔로우 100·1,000건을 k6로 보내 p95와 커넥션 풀 대기를 잰다(`load-test` 스킬). 넘치면 카운터를 Redis `INCR` + 주기 반영으로 옮기는 안을 그때 비교한다 | 다음 측정 이슈(#42와 함께)로 넘긴다 |
+| 🟡 권장 | **팔로우 토글 반복** — 한 회원이 팔로우·취소를 빠르게 반복하면 요청마다 쓰기 2건(`follow` + `channel`). nginx `/api/` IP당 10r/s(버스트 40, #31)가 이미 막는다. 회원 단위 제한은 없다 | 지금은 IP 제한으로 충분. 남용이 보이면 회원 단위 제한을 다른 이슈로 |
+| ⚪ 무시 | **자기 채널 팔로우 여부가 400** — 요청한 사람에게 "이 채널이 내 것"이라는 것만 알려 준다. 남의 정보는 드러나지 않는다 | 의도된 설계(시그니처 "판단이 갈린 곳") |
+| ⚪ 무시 | **없는 채널 404** — 채널 존재 여부는 공개 채널 조회(`GET /api/channels/{id}`)로 이미 알 수 있다 | 새로 드러나는 정보 없음 |
+
+추가로 본 것:
+
+- **IDOR** — 세 API 모두 회원 id를 세션(`@AuthenticationPrincipal`)에서만 읽는다. 경로의 값은 채널 id뿐이라 남의 팔로우를 바꾸거나 볼 수 없다.
+- **위조 요청(CSRF)** — `PUT`·`DELETE`는 `OriginValidationFilter`(GET·HEAD·OPTIONS·TRACE만 건너뜀)가 출처를 검사한다. 통합 테스트는 허용 출처를 붙여 보내 401이 출처 검사가 아니라 인증에서 나오는 것을 본다.
+- **캐시 섞임** — `GET /api/channels/{id}/follow`는 회원마다 다르다. nginx 캐시 location은 `^/api/channels/[1-9][0-9]*$`만 맞아 `/follow`는 캐시되지 않는다(`infra/nginx/nginx.conf:77`). 채널 조회 응답에는 회원별 값을 넣지 않았다.
+- **입력 검증** — 본문이 없다. 경로의 `channelId`는 `long`으로 묶여 숫자가 아니면 Spring이 400으로 끝낸다.
+- **에러 응답** — 새 오류는 `BusinessException(ErrorCode)`로만 나가 `{code, message}`뿐이다. `DuplicateKeyException`은 서비스가 삼켜 밖으로 나가지 않는다.
+
+재스캔: 고친 것이 없어 위 결과가 최종이다. 전체 스위트 백엔드 472·프론트 68 통과(실패 0).
