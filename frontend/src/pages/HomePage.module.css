@@ -1,0 +1,148 @@
+/*
+ * 메인 화면. 칸 제목 줄(제목 | 전체보기) 아래 카드 목록을 섹션마다 쌓는다.
+ * 사이드바를 접으면 메인 칸 너비가 바뀌므로 카드 개수는 화면 너비 대신 이 칸 너비로 정한다
+ */
+.page {
+  container: home / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* 화면 읽기 프로그램용 페이지 제목 */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+}
+
+.moreButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.moreButton:hover,
+.moreButton:focus-visible {
+  outline: none;
+  color: var(--color-text-muted);
+}
+
+/* 인기 LIVE: 칸 너비에 따라 한 줄에 1~4개 */
+.liveGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6) var(--space-4);
+}
+
+@container home (min-width: 36rem) {
+  .liveGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container home (min-width: 56rem) {
+  .liveGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container home (min-width: 76rem) {
+  .liveGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* 카테고리: 한 줄만 보인다. 칸이 좁아 다 못 들어가는 카드는 다음 줄로 넘기고 그 줄을 숨긴다 */
+.categoryRow {
+  display: grid;
+  /* auto-fit: 카드가 다 들어가고 자리가 남으면 빈 칸 없이 카드를 넓힌다 */
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  grid-template-rows: auto;
+  grid-auto-rows: 0;
+  column-gap: var(--space-4);
+  overflow: hidden;
+}
+
+.categoryCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.poster {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 3 / 4;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+}
+
+.posterIcon {
+  width: 3rem;
+  height: 3rem;
+  color: var(--color-link);
+}
+
+.categoryBadge {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.125rem var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-overlay);
+  color: var(--color-primary-text);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+.liveDot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: var(--color-live);
+}
+
+.categoryName {
+  overflow: hidden;
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.liveCount {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
