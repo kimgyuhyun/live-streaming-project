@@ -440,3 +440,46 @@ AC 10에 자동 검증이 필요하다면 이 정도가 가능합니다(선택 �
 | 내 채널 "채널 관리" 버튼에 `enterStudio`를 빼기 | `MyChannelPage — should show the terms popup when a streamer who has not agreed clicks 채널 관리` |
 
 동시 동의의 상태 코드(`should return 204 to both requests…`)는 변이로 확인하지 않았다. 두 요청이 실제로 부딪히는지가 실행마다 달라, `DuplicateKeyException` 처리를 빼도 매번 실패한다고 보장할 수 없다.
+
+---
+
+## 리팩터
+
+대상: 이번 이슈가 바꾼 소스 23개(`git diff main...HEAD`, 테스트 제외). 시작 기준선 백엔드 433·프론트 55 통과.
+
+**고친 것 없음.** 다섯 기준(중복·이름·단일 책임·불필요한 복잡도·컨벤션)으로 봤고, 고칠 근거가 있는 항목이 없었다.
+
+| 본 것 | 판단 |
+| --- | --- |
+| "스트리머 또는 운영자" 조건(`Header`·`MyChannelPage`), `.pillButton` CSS(같은 두 곳), 동의 뒤 `setQueryData(STUDIO_TERMS_KEY, …)`(`StudioPage`·`useStudioEntry`) | 각각 두 번. 세 번째가 나올 때 뽑는다 |
+| `StudioTermsInterceptor`가 서비스를 `Supplier`로 받음 | `@WebMvcTest` 슬라이스 때문에 필요(위 "구현하며 정한 것") |
+| 약관 버전·코드 | 백엔드 `StudioTerms` enum, 프론트 `studioTermsText.ts`에만 있다. 흩어진 리터럴 없음 |
+| CSS | 공통 변수만 쓴다. 새 색·간격 없음 |
+| 계층·에러 처리 | 기존 채널 코드와 같은 모양(Controller → Service → MyBatis Mapper, `BusinessException(ErrorCode)`, 레코드 DTO) |
+
+---
+
+## 보안 점검
+
+HEAD `b315a99` 기준(이번 이슈가 바꾼 백엔드 12개·프론트 11개 소스).
+
+| 점검 | 결과 |
+| --- | --- |
+| 타입 | `gradlew compileJava compileTestJava`, `npx tsc -b` 통과 |
+| 의존성 | `npm audit` 취약점 0. 이번 이슈는 의존성을 바꾸지 않았다 |
+| 비밀값 | 소스·`demo/setup.mjs`에 비밀값 패턴·알려진 키 접두사 없음. `.env`가 스테이지·이 브랜치 커밋에 없음 |
+| 로그 | 바뀐 파일에 `console.log`·`log.info/debug/warn` 없음(동의 기록·회원 정보를 남기지 않는다) |
+
+**🔴 즉시 수정: 없음. 🟡 권장 수정: 없음.**
+
+**⚪ 무시 가능 (판단 근거)**
+
+- **동의 API의 위조 요청** — `POST /api/studio/terms-agreement`는 안전하지 않은 메서드라 `OriginValidationFilter`(허용 출처 검사)를 거친다. 다른 사이트가 로그인한 스트리머 대신 동의시킬 수 없다.
+- **차단 우회** — 인터셉터 제외 경로는 정확히 `/api/studio/terms`·`/api/studio/terms-agreement` 둘이다. 끝 슬래시(`/terms/`)는 Spring 6 경로 매칭이 컨트롤러에 닿지 않게 하고(404), 세미콜론 경로는 Spring Security 방화벽이 거절한다. 회원·운영자는 인터셉터 전에 `hasRole("STREAMER")`에서 403이다.
+- **SQL** — `StudioTermsMapper.xml`은 `#{}` 바인딩만 쓴다(`${}` 문자열 끼워 넣기 없음). 약관 코드는 enum이라 정해진 두 값만 들어온다.
+- **입력 크기** — `terms` 목록 길이에 상한을 두지 않았다. 값은 enum 두 가지뿐이고 본문 크기는 서버 기본 제한을 따른다. 처리는 `containsAll` 한 번이다.
+- **오류 응답의 내부 정보** — 새 예외는 `BusinessException`(코드·문구)뿐이다. 동시 동의의 `DuplicateKeyException`은 서비스가 삼키고 밖으로 내보내지 않는다. 그 밖의 DB 오류는 기존과 같은 Spring Boot 기본 오류 응답(메시지·스택 미포함 기본값)이다.
+- **부분 저장** — `agree`에 트랜잭션을 걸지 않아 두 항목 중 하나만 저장될 수 있다. 그래도 `hasAgreed`가 false라 스튜디오는 열리지 않고, 다시 동의하면 채워진다(Green "구현하며 정한 것").
+- **XSS** — 약관 본문은 정적 문자열이고 React가 텍스트로 넣는다.
+
+예외 대장(`securityExceptions`)은 설정에 없다. 반복될 ⚪가 없어 만들지 않았다.
