@@ -1,0 +1,332 @@
+/*
+ * 스튜디오 > 방송 관리 > 설정. 칸 제목 + 카드를 위에서 아래로 쌓고, 카드 안은 "이름 | 입력" 줄로 나눈다.
+ * 좁은 화면에서는 이름 아래에 입력을 둔다
+ */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 70rem;
+  margin: 0 auto;
+}
+
+/* 화면 읽기 프로그램용 페이지 제목. 화면에는 칸 제목만 보인다 */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.sectionHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+@media (min-width: 768px) {
+  .card {
+    padding: var(--space-6);
+  }
+
+  .row {
+    grid-template-columns: 12rem minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  /* 여러 줄 입력칸이 있는 줄은 이름을 위에 붙인다 */
+  .rowTop {
+    align-items: start;
+  }
+
+  .rowTop > .label {
+    padding-top: var(--space-2);
+  }
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: 700;
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* 입력칸 + 버튼을 한 줄에. 좁으면 버튼이 다음 줄로 내려간다 */
+.inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.grow {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.value {
+  overflow-wrap: anywhere;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.accent {
+  color: var(--color-link);
+  font-weight: 700;
+}
+
+.link {
+  color: var(--color-link);
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.notes li::before {
+  content: '· ';
+}
+
+.status {
+  color: var(--color-link);
+  font-size: var(--font-size-sm);
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+/* 스트림 키 칸: 입력칸 모양 안에 값과 눈 버튼 */
+.keyField {
+  display: flex;
+  align-items: center;
+  height: var(--control-height);
+  padding-left: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+}
+
+.keyValue {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eyeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-height);
+  height: 100%;
+  border: 0;
+  border-left: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.eyeButton:hover:not(:disabled),
+.eyeButton:focus-visible {
+  outline: none;
+  color: var(--color-text);
+}
+
+.eyeButton:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.icon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+/* 버튼: 포인트(재발급)·보조(복사·저장) */
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.5rem;
+  height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primaryButton {
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+}
+
+.primaryButton:hover:not(:disabled),
+.primaryButton:focus-visible {
+  outline: none;
+  background: var(--color-primary-hover);
+}
+
+.secondaryButton {
+  background: var(--color-surface-raised);
+  color: var(--color-link);
+}
+
+.secondaryButton:hover:not(:disabled),
+.secondaryButton:focus-visible {
+  outline: none;
+  background: var(--color-border);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* 여러 줄 입력칸. form.input의 높이를 풀어 준다 */
+textarea.textarea {
+  height: auto;
+  min-height: 8rem;
+  padding: var(--space-2) var(--space-3);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+/* 라디오·체크박스 줄 */
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+}
+
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.choice input {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+/* 켜고 끄는 스위치. <input type="checkbox" role="switch"> */
+.switch {
+  position: relative;
+  width: 2.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  margin: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-raised);
+  appearance: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.switch::before {
+  content: '';
+  position: absolute;
+  top: 0.1875rem;
+  left: 0.1875rem;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 50%;
+  background: var(--color-text);
+  transition: transform 0.15s;
+}
+
+.switch:checked {
+  background: var(--color-primary);
+}
+
+.switch:checked::before {
+  transform: translateX(1rem);
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* 이름 옆 ? 설명 버튼 */
+.helpButton {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: help;
+}
+
+.helpButton:hover,
+.helpButton:focus-visible {
+  outline: none;
+  color: var(--color-text);
+}
+
+.helpIcon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
