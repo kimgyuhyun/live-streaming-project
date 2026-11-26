@@ -142,53 +142,53 @@ interface FollowButtonProps { channelId: number }
 
 ### 정상
 
-- [ ] [정상] `FollowService.follow` — should save the follow and add one to the follower count when the member has not followed the channel
-- [ ] [정상] `FollowService.unfollow` — should delete the follow and subtract one from the follower count when the member follows the channel
-- [ ] [정상] `FollowService.isFollowing` — should return true when the member follows the channel
-- [ ] [정상] `FollowService.isFollowing` — should return false when the member does not follow the channel
-- [ ] [정상] `ChannelService.find` — should return the follower count of the channel
-- [ ] [정상] `FollowController` — should return 204 when a member follows a channel
-- [ ] [정상] `FollowController` — should return 204 when a member unfollows a channel
-- [ ] [정상] `FollowController` — should return 200 with following true when the member follows the channel
-- [ ] [정상] `FollowIntegration` — should return 204 and then following true when a member follows another channel
-- [ ] [정상] `FollowIntegration` — should add one to followerCount of the channel lookup when a member follows the channel
-- [ ] [정상] `FollowIntegration` — should return 204 and then following false when the member unfollows the channel
-- [ ] [정상] `FollowIntegration` — should subtract one from followerCount of the channel lookup when the member unfollows the channel
-- [ ] [정상] `ChannelPage` — should show 팔로워 3명 when the channel has 3 followers
-- [ ] [정상] `ChannelPage` — should show 팔로잉 when the member already follows the channel
-- [ ] [정상] `ChannelPage` — should change the button to 팔로잉 when a member clicks 팔로우
-- [ ] [정상] `ChannelPage` — should show 팔로워 4명 when a member clicks 팔로우 on a channel with 3 followers
-- [ ] [정상] `ChannelPage` — should change the button back to 팔로우 when the member clicks 팔로잉
-- [ ] [정상] `ChannelPage` — should show 팔로워 3명 when the member clicks 팔로잉 on a channel with 4 followers
+- [x] [정상] `FollowService.follow` — should save the follow and add one to the follower count when the member has not followed the channel
+- [x] [정상] `FollowService.unfollow` — should delete the follow and subtract one from the follower count when the member follows the channel
+- [x] [정상] `FollowService.isFollowing` — should return true when the member follows the channel
+- [x] [정상] `FollowService.isFollowing` — should return false when the member does not follow the channel
+- [x] [정상] `ChannelService.find` — should return the follower count of the channel
+- [x] [정상] `FollowController` — should return 204 when a member follows a channel
+- [x] [정상] `FollowController` — should return 204 when a member unfollows a channel
+- [x] [정상] `FollowController` — should return 200 with following true when the member follows the channel
+- [x] [정상] `FollowIntegration` — should return 204 and then following true when a member follows another channel
+- [x] [정상] `FollowIntegration` — should add one to followerCount of the channel lookup when a member follows the channel
+- [x] [정상] `FollowIntegration` — should return 204 and then following false when the member unfollows the channel
+- [x] [정상] `FollowIntegration` — should subtract one from followerCount of the channel lookup when the member unfollows the channel
+- [x] [정상] `ChannelPage` — should show 팔로워 3명 when the channel has 3 followers
+- [x] [정상] `ChannelPage` — should show 팔로잉 when the member already follows the channel
+- [x] [정상] `ChannelPage` — should change the button to 팔로잉 when a member clicks 팔로우
+- [x] [정상] `ChannelPage` — should show 팔로워 4명 when a member clicks 팔로우 on a channel with 3 followers
+- [x] [정상] `ChannelPage` — should change the button back to 팔로우 when the member clicks 팔로잉
+- [x] [정상] `ChannelPage` — should show 팔로워 3명 when the member clicks 팔로잉 on a channel with 4 followers
 
 ### 경계
 
-- [ ] [경계] `FollowService.follow` — should not change the follower count when the member already follows the channel
-- [ ] [경계] `FollowService.unfollow` — should not change the follower count when the member does not follow the channel
-- [ ] [경계] `FollowIntegration` — should return followerCount 0 when nobody follows the channel
-- [ ] [경계] `FollowIntegration` — should return 204 and keep followerCount when the member follows the same channel again
-- [ ] [경계] `FollowIntegration` — should keep one follow row when the member follows the same channel again
-- [ ] [경계] `FollowIntegration` — should return 204 and keep followerCount at 0 when a member who does not follow unfollows the channel
-- [ ] [경계] `FollowIntegration` — should make followerCount equal the 10 follow rows when 20 members follow at the same time and 10 of them unfollow at the same time
-- [ ] [경계] `FollowIntegration` — should make followerCount equal the follow rows when one member sends follows and unfollows to the same channel at the same time many times
+- [x] [경계] `FollowService.follow` — should not change the follower count when the member already follows the channel
+- [x] [경계] `FollowService.unfollow` — should not change the follower count when the member does not follow the channel
+- [x] [경계] `FollowIntegration` — should return followerCount 0 when nobody follows the channel
+- [x] [경계] `FollowIntegration` — should return 204 and keep followerCount when the member follows the same channel again
+- [x] [경계] `FollowIntegration` — should keep one follow row when the member follows the same channel again
+- [x] [경계] `FollowIntegration` — should return 204 and keep followerCount at 0 when a member who does not follow unfollows the channel
+- [x] [경계] `FollowIntegration` — should make followerCount equal the 10 follow rows when 20 members follow at the same time and 10 of them unfollow at the same time
+- [x] [경계] `FollowIntegration` — should make followerCount equal the follow rows when one member sends follows and unfollows to the same channel at the same time many times
 
 ### 예외
 
-- [ ] [예외] `FollowService.follow` — should throw CANNOT_FOLLOW_OWN_CHANNEL without saving when the member owns the channel
-- [ ] [예외] `FollowService.follow` — should throw CHANNEL_NOT_FOUND without saving when the channel does not exist
-- [ ] [예외] `FollowService.unfollow` — should throw CANNOT_FOLLOW_OWN_CHANNEL without deleting when the member owns the channel
-- [ ] [예외] `FollowService.isFollowing` — should throw CANNOT_FOLLOW_OWN_CHANNEL when the member asks about their own channel
-- [ ] [예외] `FollowController` — should return 400 with code CANNOT_FOLLOW_OWN_CHANNEL when service rejects the own channel
-- [ ] [예외] `FollowController` — should return 404 with code CHANNEL_NOT_FOUND when service reports the channel does not exist
-- [ ] [예외] `FollowIntegration` — should return 400 with code CANNOT_FOLLOW_OWN_CHANNEL when the streamer follows their own channel
-- [ ] [예외] `FollowIntegration` — should save no follow row and keep followerCount when the streamer follows their own channel
-- [ ] [예외] `FollowIntegration` — should return 404 with code CHANNEL_NOT_FOUND when a member follows a channel that does not exist
-- [ ] [예외] `FollowIntegration` — should return 401 when a visitor who is not logged in follows a channel
-- [ ] [예외] `FollowIntegration` — should return 401 when a visitor who is not logged in unfollows a channel
-- [ ] [예외] `FollowIntegration` — should return 401 when a visitor who is not logged in asks whether they follow a channel
-- [ ] [예외] `ChannelPage` — should not show the follow button when the streamer opens their own channel
-- [ ] [예외] `ChannelPage` — should go to the login page when a visitor who is not logged in clicks 팔로우
-- [ ] [예외] `ChannelPage` — should keep 팔로우 and the follower count when the follow request fails
+- [x] [예외] `FollowService.follow` — should throw CANNOT_FOLLOW_OWN_CHANNEL without saving when the member owns the channel
+- [x] [예외] `FollowService.follow` — should throw CHANNEL_NOT_FOUND without saving when the channel does not exist
+- [x] [예외] `FollowService.unfollow` — should throw CANNOT_FOLLOW_OWN_CHANNEL without deleting when the member owns the channel
+- [x] [예외] `FollowService.isFollowing` — should throw CANNOT_FOLLOW_OWN_CHANNEL when the member asks about their own channel
+- [x] [예외] `FollowController` — should return 400 with code CANNOT_FOLLOW_OWN_CHANNEL when service rejects the own channel
+- [x] [예외] `FollowController` — should return 404 with code CHANNEL_NOT_FOUND when service reports the channel does not exist
+- [x] [예외] `FollowIntegration` — should return 400 with code CANNOT_FOLLOW_OWN_CHANNEL when the streamer follows their own channel
+- [x] [예외] `FollowIntegration` — should save no follow row and keep followerCount when the streamer follows their own channel
+- [x] [예외] `FollowIntegration` — should return 404 with code CHANNEL_NOT_FOUND when a member follows a channel that does not exist
+- [x] [예외] `FollowIntegration` — should return 401 when a visitor who is not logged in follows a channel
+- [x] [예외] `FollowIntegration` — should return 401 when a visitor who is not logged in unfollows a channel
+- [x] [예외] `FollowIntegration` — should return 401 when a visitor who is not logged in asks whether they follow a channel
+- [x] [예외] `ChannelPage` — should not show the follow button when the streamer opens their own channel
+- [x] [예외] `ChannelPage` — should go to the login page when a visitor who is not logged in clicks 팔로우
+- [x] [예외] `ChannelPage` — should keep 팔로우 and the follower count when the follow request fails
 
 ### Red 기록
 
@@ -201,6 +201,39 @@ interface FollowButtonProps { channelId: number }
   - `FollowIntegration` 401 세 개: `SecurityConfig`의 `anyRequest().authenticated()`가 이미 막는다(`GET /api/channels/*`의 `permitAll`은 한 단계 경로만).
   - `FollowIntegration — should return followerCount 0 when nobody follows the channel`: `ChannelService`가 stub으로 0을 넣는다.
   - `FollowIntegration — …one member sends follows and unfollows…`: stub이라 아무것도 바뀌지 않아 0 = 0. 방어 전 구현(defect-repro)으로 깨지는 것을 Green에서 기록한다.
+
+### Green 기록
+
+**동시성 재현 (defect-repro, 2026-11-26)** — 매퍼·컨트롤러를 먼저 만들고 `FollowService`에 방어 전 구현 두 가지를 차례로 넣어 `FollowIntegrationTest`를 돌렸다. Testcontainers Oracle(`gvenzl/oracle-free:23.26.4-slim-faststart`), 스레드마다 서비스를 불러 각자 커밋(테스트 트랜잭션 없음), 커넥션 풀은 기본(10). 숫자 열 방어 = "영향 행 수가 1일 때만 + DB가 `follower_count ± 1`".
+
+| 구현 | 20명 동시 팔로우 → 10명 동시 취소: `followerCount` / `follow` 행 | 한 회원 동시 팔로우·취소(20건 × 5회, 팔로우 2 : 취소 1): `followerCount` / 행 | 함께 깨진 테스트 |
+| --- | --- | --- | --- |
+| 방어 전 1 — 영향 행 수는 보지만 값을 읽고 더해 쓴다(`findById` → `setFollowerCount(n ± 1)`, 임시 매퍼 메서드) | **−2 / 10** (1차), **2 / 10** (2차) — 갱신 유실 | 통과(0 / 0, 2회) | — |
+| 방어 전 2 — DB가 `± 1`을 하지만 영향 행 수를 보지 않고 늘 `± 1` | 통과(10 / 10) | **30 / 0** | 다시 팔로우 `followerCount` 2(기대 1), 안 한 채널 취소 −1(기대 0) |
+| 방어 후 — 영향 행 수가 1일 때만 `follower_count = follower_count ± 1`, 같은 트랜잭션 | **10 / 10** | **같음**(통과) | 없음 |
+
+- 모든 회차에서 스레드 실패는 0(`success=20`·`success=10`). 방어 전 1은 성공 응답을 주면서 숫자만 틀렸다.
+- **테스트 보강(커밋 `test: make the one-member follow race catch blind count updates`)** — Red에서 쓴 한 회원 테스트는 팔로우·취소를 반씩 보냈다. 방어 전 2를 넣었더니 +1과 −1이 같은 수라 합이 0이 되어 **통과했다**(행도 0). 이 테스트가 지켜야 할 결함을 잡지 못하므로 비율을 팔로우 2 : 취소 1로 바꿨다(시나리오 문장은 그대로). 바꾼 뒤 방어 전 2에서 30 / 0으로 실패했다.
+- 방어 전 1이 한 회원 테스트를 통과한 것은, 같은 회원의 팔로우끼리는 기본 키 잠금으로, 취소끼리는 행 잠금으로 줄을 서서 영향 행 수가 1인 경우가 겹치지 않기 때문이다. 이 테스트는 "영향 행 수" 방어를, 20명 테스트는 "원자적 ±1" 방어를 지킨다.
+- 임시 매퍼 메서드(`setFollowerCount`)와 방어 전 코드는 지웠다.
+
+**구현 없이 통과했던 테스트의 변이 확인**
+
+| 변이 | 실패한 테스트 |
+| --- | --- |
+| `SecurityConfig`에 `/api/channels/*/follow` `permitAll()` | `FollowIntegration` 401 세 개 |
+| `FollowButton`이 팔로워 수를 `onSuccess` 대신 `onMutate`에서 고침 | `ChannelPage — should keep 팔로우 and the follower count when the follow request fails` |
+
+- `FollowIntegration — should return followerCount 0 when nobody follows the channel`은 변이로 깨뜨릴 곳이 없다(열 기본값 0·매핑 누락 모두 0). 새 채널이 0에서 시작하는 경계를 문서로 남기는 테스트다.
+
+**구현하며 정한 것 (시그니처 밖의 세부)**
+
+- 동시에 같은 회원의 팔로우가 두 번 오면 늦은 `MERGE`가 기본 키(`pk_follow`)에 걸린다. `FollowService`가 `DuplicateKeyException`을 "새로 들어가지 않음"으로 친다(#35 `StudioTermsService`와 같은 처리). 같은 트랜잭션 안에서 잡으므로 Oracle은 그 문장만 되돌린다.
+- 잠금 순서는 팔로우·취소 모두 `follow` 행 → `channel` 행이라 서로 엇갈려 잠그지 않는다.
+- 화면: `pages/FollowButton.tsx`가 `ChannelPage.module.css`의 버튼 모양을 그대로 쓴다("팔로우"는 강조 색, "팔로잉"은 기본 버튼). 팔로우 여부 조회는 `retry: false`(401·400은 다시 물어도 같다). 내 채널(400)과 그 밖의 조회 오류는 버튼을 그리지 않는다. 누르는 동안 버튼을 잠근다.
+- 기존 테스트 손질(컴파일): `StudioPage.test.tsx`의 채널 응답에 `followerCount: 0`.
+- 커버리지 명령(`coverage`)이 설정에 없어 측정하지 않았다.
+- 실행: 전체 스위트가 3분 넘게 걸려(Oracle 컨테이너) 시나리오마다 전체를 돌리지 않았다. 백엔드는 계층별(매퍼 SQL·컨트롤러 → 서비스 방어 전 2종 → 방어 후)로 `Follow*`·`ChannelServiceTest`를 돌리고, 끝에 전체 스위트를 한 번 돌렸다. 프론트는 `ChannelPage.test.tsx` → 전체.
 
 ---
 

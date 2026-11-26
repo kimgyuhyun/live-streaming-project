@@ -35,7 +35,7 @@ beforeEach(() => {
   fetchMeMock.mockReset().mockResolvedValue({ id: 1, email: 's@example.test', nickname: '하늘', role: 'STREAMER' })
   fetchMyChannelMock
     .mockReset()
-    .mockResolvedValue({ id: 7, name: '하늘', description: '', live: false, title: '하늘의 방송', demo: false })
+    .mockResolvedValue({ id: 7, name: '하늘', description: '', live: false, title: '하늘의 방송', demo: false, followerCount: 0 })
   fetchStreamKeyMock.mockReset().mockResolvedValue({ keyPrefix: null, obsServer: 'rtmp://localhost/live' })
   fetchStudioTermsMock.mockReset()
 })

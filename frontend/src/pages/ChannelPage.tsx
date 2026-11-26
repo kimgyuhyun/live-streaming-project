@@ -6,12 +6,13 @@ import { ApiError, errorMessage } from '../api/client.ts'
 import ChannelVideos from '../components/ChannelVideos.tsx'
 import ChatPanel from '../components/ChatPanel.tsx'
 import type { LayoutContext } from '../layouts/RootLayout.tsx'
-import { GiftIcon, HeartIcon, MoreHorizontalIcon, PlusCircleIcon, UserIcon } from '../components/icons.tsx'
+import { GiftIcon, MoreHorizontalIcon, PlusCircleIcon, UserIcon } from '../components/icons.tsx'
 import { pollInterval, useBroadcastView } from './broadcastView.ts'
 import styles from './ChannelPage.module.css'
+import FollowButton from './FollowButton.tsx'
 import { ChatOpenButtons, PlayerArea } from './LivePlayer.tsx'
 
-// 팔로우·구독·구독 선물은 아직 기능이 없어 모양만 있다(팔로워 수도 늘 0)
+// 구독·구독 선물·더 보기는 아직 기능이 없어 모양만 있다. 팔로우는 FollowButton(#37)
 function ChannelPage() {
   const channelId = Number(useParams().channelId)
   const channel = useQuery({
@@ -62,13 +63,10 @@ function ChannelPage() {
             <UserIcon className={styles.avatar} />
             <div className={styles.streamerText}>
               <p className={styles.streamerName}>{channel.data.name}</p>
-              <p className={styles.followers}>팔로워 0명</p>
+              <p className={styles.followers}>팔로워 {channel.data.followerCount}명</p>
             </div>
             <div className={styles.actions}>
-              <button className={`${styles.button} ${styles.primary}`} type="button">
-                <HeartIcon className={styles.buttonIcon} />
-                팔로우
-              </button>
+              <FollowButton channelId={channelId} />
               <button className={styles.button} type="button">
                 <PlusCircleIcon className={styles.buttonIcon} />
                 구독
