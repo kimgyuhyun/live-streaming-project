@@ -84,6 +84,13 @@ async function prepare(i, operator, demoPassword) {
     demo = await login(email, demoPassword, `${label} 다시 로그인`)
   }
 
+  // 스튜디오 API(채널 조회·키 발급)는 약관에 동의해야 열린다(#35). 이미 동의했어도 204
+  const agree = await call('POST', '/studio/terms-agreement', {
+    cookie: demo.cookie,
+    body: { terms: ['STUDIO_TERMS', 'CONTENT_GUIDELINE'] },
+  })
+  await expectStatus(agree, [204], `${label} 스튜디오 약관 동의`)
+
   const channelRes = await call('GET', '/studio/channel', { cookie: demo.cookie })
   await expectStatus(channelRes, [200], `${label} 채널 조회`)
   const channelId = (await channelRes.json()).id

@@ -11,6 +11,7 @@ import com.livestream.member.LoginRequest;
 import com.livestream.member.MemberService;
 import com.livestream.member.Role;
 import com.livestream.member.SignUpRequest;
+import java.util.EnumSet;
 import com.sun.net.httpserver.HttpServer;
 import jakarta.servlet.http.Cookie;
 import java.net.InetSocketAddress;
@@ -63,6 +64,10 @@ class StreamKeyReissueIntegrationTest {
     @Autowired
     private StreamerApplicationReviewService reviewService;
 
+    // 스튜디오 API는 약관에 동의해야 열린다(#35)
+    @Autowired
+    private StudioTermsService studioTermsService;
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
@@ -95,6 +100,7 @@ class StreamKeyReissueIntegrationTest {
         long applicationId = jdbcTemplate.queryForObject(
                 "SELECT id FROM streamer_application WHERE member_id = ? AND status = 'PENDING'", Long.class, memberId);
         reviewService.approve(applicationId);
+        studioTermsService.agree(memberId, EnumSet.allOf(StudioTerms.class));
         return jdbcTemplate.queryForObject("SELECT id FROM channel WHERE member_id = ?", Long.class, memberId);
     }
 

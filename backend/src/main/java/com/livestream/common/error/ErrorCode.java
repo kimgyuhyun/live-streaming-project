@@ -21,7 +21,9 @@ public enum ErrorCode {
     CHANNEL_APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "스트리머 신청을 찾을 수 없습니다"),
     CHANNEL_APPLICATION_ALREADY_DECIDED(HttpStatus.CONFLICT, "이미 처리된 스트리머 신청입니다"),
     CHANNEL_NOT_FOUND(HttpStatus.NOT_FOUND, "채널을 찾을 수 없습니다"),
-    CHANNEL_NOT_OWNER(HttpStatus.FORBIDDEN, "내 채널만 고칠 수 있습니다");
+    CHANNEL_NOT_OWNER(HttpStatus.FORBIDDEN, "내 채널만 고칠 수 있습니다"),
+    STUDIO_TERMS_NOT_AGREED(HttpStatus.FORBIDDEN, "스튜디오 약관에 동의해야 합니다"),
+    STUDIO_TERMS_REQUIRED(HttpStatus.BAD_REQUEST, "필수 약관에 모두 동의해 주세요");
 
     private final HttpStatus status;
     private final String message;

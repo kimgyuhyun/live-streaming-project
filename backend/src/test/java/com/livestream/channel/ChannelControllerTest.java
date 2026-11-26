@@ -18,6 +18,7 @@ import com.livestream.member.LoginMember;
 import com.livestream.member.Role;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -47,6 +48,15 @@ class ChannelControllerTest {
 
     @MockitoBean
     private ChannelService channelService;
+
+    // 스튜디오 경로에 끼는 약관 인터셉터(#35)가 묻는다. 이 테스트는 컨트롤러만 보므로 늘 "동의함"
+    @MockitoBean
+    private StudioTermsService studioTermsService;
+
+    @BeforeEach
+    void agreedToStudioTerms() {
+        given(studioTermsService.hasAgreed(anyLong())).willReturn(true);
+    }
 
     // 필터를 껐으므로 SecurityContextHolder에 직접 올린다. 테스트가 끝나면 spring-security-test가 비운다
     private static void logInAsStreamer() {

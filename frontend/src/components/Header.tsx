@@ -5,6 +5,7 @@ import { logout } from '../api/auth.ts'
 import { fetchMe } from '../api/members.ts'
 import tip from '../styles/tooltip.module.css'
 import styles from './Header.module.css'
+import { useStudioEntry } from './useStudioEntry.tsx'
 import {
   BellIcon,
   KeyIcon,
@@ -29,6 +30,7 @@ function Header({ menuExpanded, onMenuClick }: Props) {
   // 401이면 비로그인으로 본다. 다시 시도해도 결과가 같다
   const me = useQuery({ queryKey: ['me'], queryFn: fetchMe, retry: false })
   const [menuOpen, setMenuOpen] = useState(false)
+  const { enterStudio, termsModal } = useStudioEntry()
   const profileRef = useRef<HTMLDivElement>(null)
 
   const logoutMutation = useMutation({
@@ -88,11 +90,13 @@ function Header({ menuExpanded, onMenuClick }: Props) {
           <>
             {/* 운영자에게도 보인다(편의상). 스튜디오 화면과 API는 여전히 스트리머만 쓸 수 있다 */}
             {(me.data.role === 'STREAMER' || me.data.role === 'OPERATOR') && (
-              <Link className={styles.pillButton} to="/studio">
+              // 약관에 동의하지 않았으면 이 화면에 동의 팝업을 띄운다(#35)
+              <button className={styles.pillButton} type="button" onClick={enterStudio}>
                 <VideoIcon className={styles.pillIcon} />
                 스튜디오
-              </Link>
+              </button>
             )}
+            {termsModal}
             <button className={`${styles.iconButton} ${styles.wide}`} type="button" aria-label="지갑">
               <WalletIcon className={styles.icon} />
             </button>

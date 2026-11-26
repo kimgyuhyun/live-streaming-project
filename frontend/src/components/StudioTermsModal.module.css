@@ -1,0 +1,196 @@
+/* 화면 위에 덮는 팝업(docs/design.md 1절 예외: 모달). 뒤는 어둡게 */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--color-overlay);
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 32rem;
+  max-height: calc(100vh - var(--space-8));
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.head {
+  display: grid;
+  grid-template-columns: 2rem 1fr 2rem;
+  align-items: center;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  grid-column: 2;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  text-align: center;
+}
+
+.close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.close:hover,
+.close:focus-visible {
+  outline: none;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+}
+
+.closeIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-4);
+  overflow-y: auto;
+}
+
+.intro {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 1.125rem;
+  height: 1.125rem;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.all {
+  font-weight: 700;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+
+.item + .item {
+  border-top: 1px solid var(--color-border);
+}
+
+.itemHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.more {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-link);
+  font-size: var(--font-size-sm);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* 펼친 약관 본문. 길면 이 안에서 스크롤 */
+.doc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 12rem;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  overflow-y: auto;
+}
+
+.version {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.cancel,
+.join {
+  height: var(--control-height);
+  border: 0;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cancel {
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+}
+
+.cancel:hover {
+  background: var(--color-border);
+}
+
+.join {
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+}
+
+.join:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.join:disabled {
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  cursor: default;
+}

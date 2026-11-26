@@ -1,20 +1,28 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { fetchMyChannel, updateChannel, updateTitle, type ChannelResponse } from '../api/channels.ts'
 import { errorMessage } from '../api/client.ts'
 import { fetchMe } from '../api/members.ts'
+import { fetchStudioTerms } from '../api/studioTerms.ts'
+import StudioTermsModal from '../components/StudioTermsModal.tsx'
+import { STUDIO_TERMS_KEY } from '../components/useStudioEntry.tsx'
 import StreamKeySection from './StreamKeySection.tsx'
 
 function StudioPage() {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   // RootLayout과 같은 쿼리를 쓴다. 401이면 비로그인으로 본다
   const me = useQuery({ queryKey: ['me'], queryFn: fetchMe, retry: false })
   const isStreamer = me.data?.role === 'STREAMER'
+  // 약관에 동의하기 전에는 스튜디오 API가 403이다(#35). 동의 여부를 먼저 묻는다
+  const terms = useQuery({ queryKey: STUDIO_TERMS_KEY, queryFn: fetchStudioTerms, enabled: isStreamer })
+  const agreed = terms.data?.agreed === true
   // 연결 상태(live)가 송출을 켜고 끈 뒤 몇 초 안에 바뀌도록 5초마다 다시 읽는다
   const channel = useQuery({
     queryKey: ['myChannel'],
     queryFn: fetchMyChannel,
-    enabled: isStreamer,
+    enabled: isStreamer && agreed,
     refetchInterval: 5000,
   })
 
@@ -27,6 +35,17 @@ function StudioPage() {
     )
   }
   if (!isStreamer) return <p>스트리머만 쓸 수 있습니다</p>
+  if (terms.isPending) return null
+  if (terms.isError) return <p role="alert">{errorMessage(terms.error)}</p>
+  // 주소로 바로 들어와도 팝업을 띄운다. 취소하면 스튜디오에 남지 않고 홈으로 간다
+  if (!agreed) {
+    return (
+      <StudioTermsModal
+        onClose={() => navigate('/')}
+        onAgreed={() => queryClient.setQueryData(STUDIO_TERMS_KEY, { agreed: true })}
+      />
+    )
+  }
   if (channel.isPending) return null
   if (channel.isError) return <p role="alert">{errorMessage(channel.error)}</p>
 
