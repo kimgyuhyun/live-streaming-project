@@ -312,10 +312,11 @@ class FollowIntegrationTest {
             long channelId = newChannel();
             long memberId = signUp(newEmail());
 
-            // 짝수 번째는 팔로우, 홀수 번째는 취소. 20개를 동시에 5번
+            // 세 개 중 두 개는 팔로우, 하나는 취소. 20개를 동시에 5번.
+            // 팔로우·취소 수가 같으면 영향 행 수를 보지 않고 늘 ±1 하는 구현도 합이 0이 되어 통과한다(defect-repro에서 확인)
             for (int round = 0; round < 5; round++) {
                 Map<String, Integer> result = runAtOnce(20, i -> {
-                    if (i % 2 == 0) {
+                    if (i % 3 != 0) {
                         followService.follow(memberId, channelId);
                     } else {
                         followService.unfollow(memberId, channelId);
