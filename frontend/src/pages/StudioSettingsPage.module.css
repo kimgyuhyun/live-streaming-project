@@ -147,6 +147,11 @@
   font-size: var(--font-size-sm);
 }
 
+/* 팝업 안 경고 문구 */
+.warning {
+  color: var(--color-danger);
+}
+
 /* 스트림 키 칸: 입력칸 모양 안에 값과 눈 버튼 */
 .keyField {
   display: flex;

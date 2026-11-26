@@ -65,6 +65,7 @@
 | 툴팁(마우스를 올리면 뜨는 설명) | `src/styles/tooltip.module.css` | 플레이어 버튼, 헤더 ☰, 채팅 접기, 소셜 로그인, 동영상 카드 제목 |
 | 폼 입력칸·라벨·버튼·에러 문구 | `src/styles/form.module.css` | 로그인, 회원가입. 마이페이지·스튜디오 폼도 이것을 쓴다 |
 | 가운데 카드 틀 | `src/components/AuthCard.tsx` | 로그인, 회원가입 |
+| 확인 팝업(취소 / 확인) | `src/components/ConfirmModal.tsx` | 스튜디오 설정: 스트림 키 보기·재발급 |
 | 선 아이콘 | `src/components/icons.tsx` | 헤더, 사이드바, 내 채널, 방송 화면 |
 | 플레이어(컨트롤, 단축키: 스페이스 재생/정지·`t` 넓은 화면·`f` 전체 화면) | `src/pages/LivePlayer.tsx` | 방송 화면 |
 | 플레이어 설정 메뉴(해상도·라디오 모드·재생 문제 제보) | `src/pages/PlayerSettings.tsx` | 방송 화면 |

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { errorMessage } from '../api/client.ts'
 import { fetchStreamKey, issueStreamKey } from '../api/streamKey.ts'
+import ConfirmModal from '../components/ConfirmModal.tsx'
 import { EyeClosedIcon, EyeIcon } from '../components/icons.tsx'
 import tip from '../styles/tooltip.module.css'
 import styles from './StudioSettingsPage.module.css'
@@ -23,6 +24,8 @@ function StreamKeySection({ channelId, live }: { channelId: number; live: boolea
   const [revealed, setRevealed] = useState(false)
   const [copied, setCopied] = useState<CopyTarget | null>(null)
   const [copyFailed, setCopyFailed] = useState(false)
+  // 키 보기·재발급은 팝업에서 한 번 더 확인받는다
+  const [confirming, setConfirming] = useState<'reveal' | 'reissue' | null>(null)
 
   if (streamKey.isPending) return null
   if (streamKey.isError) return <p role="alert">{errorMessage(streamKey.error)}</p>
@@ -41,6 +44,13 @@ function StreamKeySection({ channelId, live }: { channelId: number; live: boolea
       setCopied(null)
       setCopyFailed(true)
     }
+  }
+
+  function issue() {
+    setConfirming(null)
+    setRevealed(false)
+    setCopied(null)
+    mutation.mutate()
   }
 
   return (
@@ -88,7 +98,7 @@ function StreamKeySection({ channelId, live }: { channelId: number; live: boolea
                   disabled={!obsStreamKey}
                   aria-label={revealed ? '스트림 키 숨기기' : '스트림 키 보기'}
                   data-tooltip={obsStreamKey ? (revealed ? '숨기기' : '보기') : '발급 직후에만 볼 수 있습니다'}
-                  onClick={() => setRevealed((r) => !r)}
+                  onClick={() => (revealed ? setRevealed(false) : setConfirming('reveal'))}
                 >
                   {revealed ? <EyeIcon className={styles.icon} /> : <EyeClosedIcon className={styles.icon} />}
                 </button>
@@ -106,11 +116,7 @@ function StreamKeySection({ channelId, live }: { channelId: number; live: boolea
                 className={styles.primaryButton}
                 type="button"
                 disabled={mutation.isPending}
-                onClick={() => {
-                  setRevealed(false)
-                  setCopied(null)
-                  mutation.mutate()
-                }}
+                onClick={() => (prefix ? setConfirming('reissue') : issue())}
               >
                 {prefix ? '재발급' : '발급'}
               </button>
@@ -154,6 +160,32 @@ function StreamKeySection({ channelId, live }: { channelId: number; live: boolea
           </div>
         </div>
       </div>
+
+      {confirming === 'reveal' && (
+        <ConfirmModal
+          title="스트림 키 표시 안내"
+          confirmLabel="스트림 키 보기"
+          onClose={() => setConfirming(null)}
+          onConfirm={() => {
+            setConfirming(null)
+            setRevealed(true)
+          }}
+        >
+          <p className={styles.warning}>스트림 키를 다른 사람과 공유하거나 방송 중에 노출되면 안됩니다.</p>
+          <p>
+            스트림 키가 노출되면 다른 사람이 내 채널 방송을 시작할 수 있습니다. 위 내용을 이해한 후 스트림 키를 보려면
+            '스트림 키 보기'를 클릭해주세요.
+          </p>
+        </ConfirmModal>
+      )}
+      {confirming === 'reissue' && (
+        <ConfirmModal title="스트림 키 재발급 안내" confirmLabel="재발급" onClose={() => setConfirming(null)} onConfirm={issue}>
+          <p>
+            방송을 시작하려면 새로 발급된 스트림 키로 스트리밍 소프트웨어에 업데이트 해야 합니다. 스트림 키를
+            재발급하려면 <strong>재발급</strong>을 클릭해주세요.
+          </p>
+        </ConfirmModal>
+      )}
     </section>
   )
 }
