@@ -314,24 +314,3 @@ textarea.textarea {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
-
-/* 이름 옆 ? 설명 버튼 */
-.helpButton {
-  display: inline-flex;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--color-text-muted);
-  cursor: help;
-}
-
-.helpButton:hover,
-.helpButton:focus-visible {
-  outline: none;
-  color: var(--color-text);
-}
-
-.helpIcon {
-  width: 0.875rem;
-  height: 0.875rem;
-}

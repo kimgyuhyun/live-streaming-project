@@ -4,6 +4,7 @@ import { DownloadIcon, FolderIcon, ImageIcon, PencilIcon, SettingsIcon } from '.
 import styles from './StudioDashboardPage.module.css'
 
 const SETTINGS_PATH = '/studio/broadcast/settings'
+const BROADCAST_PATH = '/studio/broadcast/live'
 
 // 방송 소프트웨어는 각 회사의 공식 내려받기 페이지로 보낸다. 로고는 쓰지 않고 글자로 둔다
 const SOFTWARE = [
@@ -69,7 +70,7 @@ function StudioDashboardPage() {
                 <p className={styles.stepText}>방송 시작과 종료를 스트리밍 소프트웨어에서 진행해주세요.</p>
               </li>
             </ol>
-            <Link className={styles.primaryButton} to={SETTINGS_PATH}>
+            <Link className={styles.primaryButton} to={BROADCAST_PATH}>
               방송하기
             </Link>
           </section>
