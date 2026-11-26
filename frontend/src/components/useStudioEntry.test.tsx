@@ -77,6 +77,26 @@ describe('useStudioEntry', () => {
     expect(await screen.findByText('스튜디오 화면')).not.toBeNull()
   })
 
+  it('should close the popup and stay on the page when 취소 is clicked', async () => {
+    fetchMock.mockResolvedValue({ agreed: false })
+    renderEntry()
+    fireEvent.click(screen.getByRole('button', { name: '스튜디오로' }))
+
+    fireEvent.click(await screen.findByRole('button', { name: '취소' }))
+
+    expect([screen.queryByRole('dialog'), screen.queryByText('지금 화면') !== null]).toEqual([null, true])
+  })
+
+  it('should close the popup and stay on the page when the close button is clicked', async () => {
+    fetchMock.mockResolvedValue({ agreed: false })
+    renderEntry()
+    fireEvent.click(screen.getByRole('button', { name: '스튜디오로' }))
+
+    fireEvent.click(await screen.findByRole('button', { name: '닫기' }))
+
+    expect([screen.queryByRole('dialog'), screen.queryByText('지금 화면') !== null]).toEqual([null, true])
+  })
+
   it('should go to /studio without the popup when the terms check is rejected with 403', async () => {
     fetchMock.mockRejectedValue(new ApiError(403, { code: 'FORBIDDEN', message: '권한이 없습니다' }))
     renderEntry()

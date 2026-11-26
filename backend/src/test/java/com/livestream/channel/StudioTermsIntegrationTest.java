@@ -14,6 +14,7 @@ import com.livestream.member.MemberService;
 import com.livestream.member.Role;
 import com.livestream.member.SignUpRequest;
 import jakarta.servlet.http.Cookie;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -224,6 +225,44 @@ class StudioTermsIntegrationTest {
             Cookie session = loggedIn(email);
 
             agree(session, "{\"terms\":[\"STUDIO_TERMS\"]}")
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("STUDIO_TERMS_REQUIRED"));
+
+            assertThat(rowsOf(memberId)).isZero();
+        }
+
+        @Test
+        @DisplayName("should return 204 to both requests when the streamer sends two agreements at the same time")
+        void bothConcurrentAgreementsSucceed() throws Exception {
+            Cookie session = streamerSession();
+            CountDownLatch start = new CountDownLatch(1);
+            Callable<Integer> request = () -> {
+                start.await();
+                return agree(session, BOTH).andReturn().getResponse().getStatus();
+            };
+            ExecutorService pool = Executors.newFixedThreadPool(2);
+            List<Integer> statuses = new ArrayList<>();
+            try {
+                List<Future<Integer>> results = List.of(pool.submit(request), pool.submit(request));
+                start.countDown();
+                for (Future<Integer> result : results) {
+                    statuses.add(result.get());
+                }
+            } finally {
+                pool.shutdown();
+            }
+
+            assertThat(statuses).containsOnly(204);
+        }
+
+        @Test
+        @DisplayName("should return 400 with code STUDIO_TERMS_REQUIRED and save nothing when the request misses STUDIO_TERMS")
+        void rejectsMissingStudioTerms() throws Exception {
+            String email = newEmail();
+            long memberId = streamer(email);
+            Cookie session = loggedIn(email);
+
+            agree(session, "{\"terms\":[\"CONTENT_GUIDELINE\"]}")
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value("STUDIO_TERMS_REQUIRED"));
 

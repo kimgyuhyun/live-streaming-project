@@ -121,6 +121,18 @@ class StudioTermsServiceTest {
         }
 
         @Test
+        @DisplayName("should save nothing when CONTENT_GUIDELINE is missing")
+        void savesNothingWhenContentGuidelineMissing() {
+            try {
+                service.agree(MEMBER_ID, List.of(StudioTerms.STUDIO_TERMS));
+            } catch (BusinessException expected) {
+                // 거절 자체는 위 테스트가 본다. 여기서는 저장 여부만 본다
+            }
+
+            assertThat(mapper.findByMember(MEMBER_ID)).isEmpty();
+        }
+
+        @Test
         @DisplayName("should throw STUDIO_TERMS_REQUIRED without saving when the terms list is empty")
         void throwsWhenEmpty() {
             assertThatThrownBy(() -> service.agree(MEMBER_ID, List.of()))

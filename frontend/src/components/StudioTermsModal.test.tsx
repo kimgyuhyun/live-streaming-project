@@ -68,6 +68,20 @@ describe('StudioTermsModal', () => {
     expect((joinButton() as HTMLButtonElement).disabled).toBe(true)
   })
 
+  it('should keep 스튜디오 가입 disabled when only CONTENT_GUIDELINE is checked', () => {
+    renderModal()
+
+    fireEvent.click(guidelineBox())
+
+    expect((joinButton() as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('should keep 스튜디오 가입 disabled when nothing is checked', () => {
+    renderModal()
+
+    expect((joinButton() as HTMLButtonElement).disabled).toBe(true)
+  })
+
   it('should uncheck every item when 모두 동의하기 is clicked while all items are checked', () => {
     renderModal()
     fireEvent.click(allBox())

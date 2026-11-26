@@ -14,17 +14,29 @@ vi.mock('../api/studioTerms.ts', () => ({
 
 afterEach(cleanup)
 
+function renderPage() {
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={['/me']}>
+        <MyChannelPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
+
 describe('MyChannelPage', () => {
   it('should show the terms popup when a streamer who has not agreed clicks 방송하기', async () => {
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <MemoryRouter initialEntries={['/me']}>
-          <MyChannelPage />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    )
+    renderPage()
 
     fireEvent.click(await screen.findByText('방송하기'))
+
+    expect(await screen.findByRole('dialog', { name: '약관 동의' })).not.toBeNull()
+  })
+
+  it('should show the terms popup when a streamer who has not agreed clicks 채널 관리', async () => {
+    renderPage()
+
+    fireEvent.click(await screen.findByText('채널 관리'))
 
     expect(await screen.findByRole('dialog', { name: '약관 동의' })).not.toBeNull()
   })
