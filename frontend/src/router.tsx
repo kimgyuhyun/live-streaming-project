@@ -4,6 +4,7 @@ import RootLayout from './layouts/RootLayout.tsx'
 import StudioLayout from './layouts/StudioLayout.tsx'
 import ChannelManagePage from './pages/ChannelManagePage.tsx'
 import ChannelPage from './pages/ChannelPage.tsx'
+import FollowingPage from './pages/FollowingPage.tsx'
 import HomePage from './pages/HomePage.tsx'
 import LivesPage from './pages/LivesPage.tsx'
 import LoginPage from './pages/LoginPage.tsx'
@@ -21,6 +22,7 @@ import StudioRestrictionsPage from './pages/StudioRestrictionsPage.tsx'
 import StudioSettingsPage from './pages/StudioSettingsPage.tsx'
 import StudioVideoAnalyticsPage from './pages/StudioVideoAnalyticsPage.tsx'
 import StudioVideosPage from './pages/StudioVideosPage.tsx'
+import WatchHistoryPage from './pages/WatchHistoryPage.tsx'
 
 export const router = createBrowserRouter([
   {
@@ -39,6 +41,8 @@ export const router = createBrowserRouter([
         children: [
           { path: 'me/profile', element: <MyPage /> },
           { path: 'me/points', element: <MyPointsPage /> },
+          { path: 'me/history', element: <WatchHistoryPage /> },
+          { path: 'me/following', element: <FollowingPage /> },
         ],
       },
       // flush: 메인 칸의 안쪽 여백 없이 너비·높이를 다 쓰는 화면(RootLayout이 읽는다)
