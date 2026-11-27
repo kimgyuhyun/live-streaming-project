@@ -1,0 +1,174 @@
+/*
+ * 내 계정 화면(최근 시청 영상·팔로잉 채널) 공통. 제목 아래 판 하나에 목록을 놓는다.
+ * 판 너비에 따라 카드 수를 정한다(메뉴 카드가 옆에 있어 화면 너비와 다르다)
+ */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+}
+
+.panel {
+  container: account-panel / inline-size;
+  padding: var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+@media (min-width: 768px) {
+  .panel {
+    padding: var(--space-6);
+  }
+}
+
+.empty {
+  padding: var(--space-8) 0;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* 최근 시청 영상: 판 너비에 따라 한 줄에 1~4개 */
+.videoGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6) var(--space-4);
+}
+
+@container account-panel (min-width: 30rem) {
+  .videoGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container account-panel (min-width: 44rem) {
+  .videoGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container account-panel (min-width: 56rem) {
+  .videoGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.videoCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.thumbnail {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 9;
+  margin-bottom: var(--space-2);
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+}
+
+.thumbnailIcon {
+  width: 2rem;
+  height: 2rem;
+  color: var(--color-text-muted);
+}
+
+/* 영상 길이: 썸네일 오른쪽 아래에 덮는다(docs/design.md 1절 예외) */
+.duration {
+  position: absolute;
+  right: var(--space-2);
+  bottom: var(--space-2);
+  padding: 0.0625rem var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--color-overlay);
+  color: var(--color-primary-text);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 제목은 두 줄까지 */
+.videoTitle {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.channelName,
+.meta {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* 팔로잉 채널: 동그란 프로필 + 이름을 가로로 늘어놓고, 넘치면 다음 줄로 */
+.followGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+}
+
+.follow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 5.5rem;
+}
+
+.followAvatar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 5.5rem;
+  height: 5.5rem;
+  border: 3px solid transparent;
+  border-radius: 50%;
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+}
+
+/* 방송 중: 빨간 테두리 + 아래 LIVE 표시 */
+.followLive {
+  border-color: var(--color-live);
+}
+
+.followIcon {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.liveTag {
+  position: absolute;
+  bottom: -0.375rem;
+  left: 50%;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--color-live);
+  color: var(--color-primary-text);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  transform: translateX(-50%);
+}
+
+.followName {
+  width: 100%;
+  overflow: hidden;
+  font-size: var(--font-size-sm);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

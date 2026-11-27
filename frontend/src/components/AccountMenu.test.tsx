@@ -27,6 +27,13 @@ describe('AccountMenu', () => {
     expect(screen.getByRole('link', { name: '내 포인트' }).getAttribute('href')).toBe('/me/points')
   })
 
+  it('should link 최근 시청 영상 and 팔로잉 채널', () => {
+    renderMenu('/me/points')
+
+    expect(screen.getByRole('link', { name: '최근 시청 영상' }).getAttribute('href')).toBe('/me/history')
+    expect(screen.getByRole('link', { name: '팔로잉 채널' }).getAttribute('href')).toBe('/me/following')
+  })
+
   it('should keep only the account menus', () => {
     renderMenu('/me/points')
 
