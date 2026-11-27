@@ -485,3 +485,12 @@ export function UploadIcon(props: IconProps) {
     </Svg>
   )
 }
+
+// 상자 + 바깥 화살표(다른 화면으로 나감)
+export function ExternalLinkIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4" />
+    </Svg>
+  )
+}
