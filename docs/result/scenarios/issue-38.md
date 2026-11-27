@@ -140,6 +140,16 @@ export function fetchFollowing(offset: number): Promise<FollowingResponse>
 - [ ] [예외] `FollowingPage` — should go to the login page when the following list returns 401
 - [ ] [예외] `Sidebar` — should go to the login page when a visitor who is not logged in clicks 팔로잉
 
+### Red 기록
+
+- 만든 stub: `follow/FollowingChannel`·`FollowingResponse`(record), `FollowMapper.findFollowing`(선언만, SQL 없음), `FollowService.following`·`FollowController.following`(본문 `UnsupportedOperationException`), 프론트 `api/follows.ts`의 `FollowingChannel`·`FollowingResponse`·`fetchFollowing`(`throw`).
+- 기존 테스트 손질: `FollowingPage.test.tsx`의 예시 데이터 순서 테스트 1개를 이 이슈의 시나리오 8개로 바꿨다(화면이 예시 데이터 대신 응답을 그린다). `sampleAccount.test.ts`의 `sortFollowing` 테스트 2개를 뺐다 — 정렬은 서버가 한다. `sortFollowing`·`SAMPLE_FOLLOWING`은 Green에서 화면이 응답으로 바뀌면 쓰는 곳이 없어 지운다.
+- 실행: 단위·컨트롤러는 파일마다(`FollowServiceTest`·`FollowControllerTest`), 통합(`FollowIntegrationTest`)은 컨테이너 기동 때문에 다 쓰고 파일 단위로 한 번, 프론트는 두 파일을 한 번.
+- 결과: 시나리오 28개 = 백엔드 18개(서비스 6 · 컨트롤러 3 · 통합 9) + 프론트 10개(`FollowingPage` 8 · `Sidebar` 2). `check-scenarios.mjs` 불일치 0.
+  - 백엔드 17개 실패 — 서비스 5개는 stub의 not implemented, 음수 offset 1개는 단언(`BusinessException` 기대, `UnsupportedOperationException`), 컨트롤러 3개·통합 8개는 stub의 not implemented.
+  - 프론트 10개 전부 단언 실패(응답의 채널 이름·"더 보기"·로그인 화면을 찾지 못함).
+- **구현 없이 통과한 1개** — `FollowIntegration.following — should return 401 when a visitor who is not logged in asks for the following list`. `SecurityConfig`의 `anyRequest().authenticated()`가 이미 막는다. Green에서 변이로 확인한다.
+
 ---
 
 ## AC 대조

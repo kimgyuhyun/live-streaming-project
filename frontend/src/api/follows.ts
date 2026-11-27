@@ -19,3 +19,22 @@ export async function follow(channelId: number): Promise<void> {
 export async function unfollow(channelId: number): Promise<void> {
   await api<null>(`/channels/${channelId}/follow`, { method: 'DELETE' })
 }
+
+// 팔로잉 목록 한 줄(#38). title은 방송 제목(정한 적 없으면 "{name}의 방송")
+export interface FollowingChannel {
+  channelId: number
+  name: string
+  live: boolean
+  title: string
+}
+
+export interface FollowingResponse {
+  items: FollowingChannel[]
+  hasMore: boolean
+}
+
+// 내가 팔로우한 채널을 방송 중 먼저, 최근 팔로우 순으로 offset부터 20개. 비로그인이면 401(ApiError)
+export function fetchFollowing(offset: number): Promise<FollowingResponse> {
+  void offset
+  throw new Error('not implemented')
+}

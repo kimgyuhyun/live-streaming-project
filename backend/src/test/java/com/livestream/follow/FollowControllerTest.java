@@ -2,9 +2,11 @@ package com.livestream.follow;
 
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -23,6 +25,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.test.context.TestSecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
 
 // 로그인 필요(401)는 보안 필터가 정한다. FollowIntegrationTest에서 본다
@@ -95,6 +98,48 @@ class FollowControllerTest {
             mockMvc.perform(put(PATH, CHANNEL_ID))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.code").value("CHANNEL_NOT_FOUND"));
+        }
+    }
+
+    @Nested
+    @DisplayName("FollowController.following")
+    class Following {
+
+        private static final String FOLLOWING_PATH = "/api/me/following";
+
+        @Test
+        @DisplayName("should return 200 with items and hasMore of the logged-in member")
+        void returnsFollowing() throws Exception {
+            given(followService.following(MEMBER_ID, 0)).willReturn(new FollowingResponse(
+                    List.of(new FollowingChannel(CHANNEL_ID, "하늘", true, "새벽 잡담")), true));
+
+            mockMvc.perform(get(FOLLOWING_PATH))
+                    .andExpect(status().isOk())
+                    .andExpect(content().json("""
+                            {"items": [{"channelId": 5, "name": "하늘", "live": true, "title": "새벽 잡담"}], "hasMore": true}
+                            """, JsonCompareMode.STRICT));
+        }
+
+        @Test
+        @DisplayName("should pass offset 20 to the service when the request has offset=20")
+        void passesOffset() throws Exception {
+            given(followService.following(MEMBER_ID, 20)).willReturn(new FollowingResponse(List.of(), false));
+
+            mockMvc.perform(get(FOLLOWING_PATH).param("offset", "20"))
+                    .andExpect(status().isOk());
+
+            verify(followService).following(MEMBER_ID, 20);
+        }
+
+        @Test
+        @DisplayName("should use offset 0 when the request has no offset")
+        void defaultsOffset() throws Exception {
+            given(followService.following(MEMBER_ID, 0)).willReturn(new FollowingResponse(List.of(), false));
+
+            mockMvc.perform(get(FOLLOWING_PATH))
+                    .andExpect(status().isOk());
+
+            verify(followService).following(MEMBER_ID, 0);
         }
     }
 }

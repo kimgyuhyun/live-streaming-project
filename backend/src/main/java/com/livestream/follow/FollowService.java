@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class FollowService {
 
+    public static final int FOLLOWING_PAGE_SIZE = 20;
+
     private final FollowMapper followMapper;
     private final ChannelMapper channelMapper;
 
@@ -42,6 +44,11 @@ public class FollowService {
     public boolean isFollowing(long memberId, long channelId) {
         checkFollowable(memberId, channelId);
         return followMapper.exists(memberId, channelId);
+    }
+
+    // 21개를 물어 20개를 돌려주고, 21번째가 있으면 hasMore true. offset이 음수면 INVALID_INPUT(#38)
+    public FollowingResponse following(long memberId, int offset) {
+        throw new UnsupportedOperationException("not implemented");
     }
 
     private void checkFollowable(long memberId, long channelId) {
