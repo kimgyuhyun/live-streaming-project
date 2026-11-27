@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 // 팔로우는 회원만. 비로그인은 SecurityConfig의 anyRequest().authenticated()가 401로 막는다
@@ -35,5 +36,12 @@ class FollowController {
     @GetMapping("/api/channels/{channelId}/follow")
     FollowStatusResponse status(@PathVariable long channelId, @AuthenticationPrincipal LoginMember loginMember) {
         return new FollowStatusResponse(followService.isFollowing(loginMember.id(), channelId));
+    }
+
+    // 내가 팔로우한 채널(#38). offset이 없으면 0
+    @GetMapping("/api/me/following")
+    FollowingResponse following(@RequestParam(defaultValue = "0") int offset,
+                                @AuthenticationPrincipal LoginMember loginMember) {
+        return followService.following(loginMember.id(), offset);
     }
 }

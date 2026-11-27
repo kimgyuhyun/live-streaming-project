@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -17,6 +18,8 @@ import com.livestream.member.MemberService;
 import com.livestream.member.Role;
 import com.livestream.member.SignUpRequest;
 import jakarta.servlet.http.Cookie;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -38,8 +41,10 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 // 진짜 Oracle·Redis 컨테이너와 보안 필터·Spring Session 필터를 모두 거친다.
@@ -404,6 +409,166 @@ class FollowIntegrationTest {
 
             mockMvc.perform(get(FOLLOW_PATH, channelId))
                     .andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Nested
+    @DisplayName("FollowIntegration.following")
+    class Following {
+
+        private static final String FOLLOWING_PATH = "/api/me/following";
+        private static final LocalDateTime BASE = LocalDateTime.of(2026, 11, 1, 10, 0);
+
+        // 이름이 정해진 채널을 빠르게 만든다(신청·승인 흐름 없이 채널 행만). 목록 테스트는 채널이 많이 필요하다
+        private long channelNamed(String name) {
+            long ownerId = signUp(newEmail());
+            jdbcTemplate.update("INSERT INTO channel (member_id, name) VALUES (?, ?)", ownerId, name);
+            return jdbcTemplate.queryForObject("SELECT id FROM channel WHERE member_id = ?", Long.class, ownerId);
+        }
+
+        // minutes가 클수록 나중에 팔로우한 것
+        private void followedAt(long memberId, long channelId, int minutes) {
+            jdbcTemplate.update("INSERT INTO follow (member_id, channel_id, created_at) VALUES (?, ?, ?)",
+                    memberId, channelId, Timestamp.valueOf(BASE.plusMinutes(minutes)));
+        }
+
+        private void startBroadcast(long channelId) {
+            jdbcTemplate.update("INSERT INTO broadcast (channel_id) VALUES (?)", channelId);
+        }
+
+        private ResultActions following(Cookie session, Integer offset) throws Exception {
+            MockHttpServletRequestBuilder request = get(FOLLOWING_PATH).cookie(session);
+            if (offset != null) {
+                request.param("offset", String.valueOf(offset));
+            }
+            return mockMvc.perform(request);
+        }
+
+        private List<String> namesOf(ResultActions result) throws Exception {
+            String body = result.andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            List<String> names = new ArrayList<>();
+            objectMapper.readTree(body).get("items").forEach(item -> names.add(item.get("name").asText()));
+            return names;
+        }
+
+        // 회원 하나가 채널 count개를 1분 간격으로 팔로우한다
+        private void followMany(long memberId, int count) {
+            for (int i = 0; i < count; i++) {
+                followedAt(memberId, channelNamed("다수" + unique()), i);
+            }
+        }
+
+        @Test
+        @DisplayName("should list Y, Z, X when the member followed X, Y, Z in that order and only Y is live")
+        void listsLiveFirstThenRecent() throws Exception {
+            String email = newEmail();
+            long memberId = signUp(email);
+            long x = channelNamed("X" + unique());
+            long y = channelNamed("Y" + unique());
+            long z = channelNamed("Z" + unique());
+            followedAt(memberId, x, 1);
+            followedAt(memberId, y, 2);
+            followedAt(memberId, z, 3);
+            startBroadcast(y);
+
+            List<String> names = namesOf(following(loggedIn(email), null));
+
+            assertThat(names).extracting(name -> name.substring(0, 1)).containsExactly("Y", "Z", "X");
+        }
+
+        @Test
+        @DisplayName("should return live true and the broadcast title for a live channel")
+        void returnsLiveAndTitle() throws Exception {
+            String email = newEmail();
+            long memberId = signUp(email);
+            long channelId = channelNamed("방송" + unique());
+            jdbcTemplate.update("UPDATE channel SET title = ? WHERE id = ?", "새벽 잡담", channelId);
+            followedAt(memberId, channelId, 1);
+            startBroadcast(channelId);
+
+            following(loggedIn(email), null)
+                    .andExpect(status().isOk())
+                    .andExpect(content().json("""
+                            {"items": [{"channelId": %d, "live": true, "title": "새벽 잡담"}]}
+                            """.formatted(channelId)));
+        }
+
+        @Test
+        @DisplayName("should not list a channel that only another member follows")
+        void listsOnlyMine() throws Exception {
+            String email = newEmail();
+            long memberId = signUp(email);
+            long otherId = signUp(newEmail());
+            String mine = "내것" + unique();
+            followedAt(memberId, channelNamed(mine), 1);
+            followedAt(otherId, channelNamed("남의것" + unique()), 2);
+
+            assertThat(namesOf(following(loggedIn(email), null))).containsExactly(mine);
+        }
+
+        @Test
+        @DisplayName("should return 20 channels and hasMore true on the first request when the member follows 21 channels")
+        void firstPageOfTwentyOne() throws Exception {
+            String email = newEmail();
+            followMany(signUp(email), 21);
+
+            following(loggedIn(email), null)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.items.length()").value(20))
+                    .andExpect(jsonPath("$.hasMore").value(true));
+        }
+
+        @Test
+        @DisplayName("should return 1 channel and hasMore false for offset=20 when the member follows 21 channels")
+        void secondPageOfTwentyOne() throws Exception {
+            String email = newEmail();
+            followMany(signUp(email), 21);
+
+            following(loggedIn(email), 20)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.items.length()").value(1))
+                    .andExpect(jsonPath("$.hasMore").value(false));
+        }
+
+        @Test
+        @DisplayName("should return no items and hasMore false when the member follows no channel")
+        void emptyWhenNothingFollowed() throws Exception {
+            following(memberSession(), null)
+                    .andExpect(status().isOk())
+                    .andExpect(content().json("""
+                            {"items": [], "hasMore": false}
+                            """, JsonCompareMode.STRICT));
+        }
+
+        @Test
+        @DisplayName("should treat a channel whose broadcast has ended as offline")
+        void endedBroadcastIsOffline() throws Exception {
+            String email = newEmail();
+            long memberId = signUp(email);
+            long channelId = channelNamed("끝남" + unique());
+            jdbcTemplate.update("INSERT INTO broadcast (channel_id, ended_at) VALUES (?, SYSTIMESTAMP)", channelId);
+            followedAt(memberId, channelId, 1);
+
+            following(loggedIn(email), null)
+                    .andExpect(status().isOk())
+                    .andExpect(content().json("""
+                            {"items": [{"channelId": %d, "live": false}]}
+                            """.formatted(channelId)));
+        }
+
+        @Test
+        @DisplayName("should return 401 when a visitor who is not logged in asks for the following list")
+        void rejectsAnonymous() throws Exception {
+            mockMvc.perform(get(FOLLOWING_PATH))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @DisplayName("should return 400 with code INVALID_INPUT when offset is negative")
+        void rejectsNegativeOffset() throws Exception {
+            following(memberSession(), -1)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
         }
     }
 }

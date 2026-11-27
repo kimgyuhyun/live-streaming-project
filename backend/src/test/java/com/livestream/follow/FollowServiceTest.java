@@ -2,6 +2,7 @@ package com.livestream.follow;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.inOrder;
@@ -13,7 +14,9 @@ import com.livestream.channel.Channel;
 import com.livestream.channel.ChannelMapper;
 import com.livestream.common.error.BusinessException;
 import com.livestream.common.error.ErrorCode;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -189,6 +192,79 @@ class FollowServiceTest {
                     .isInstanceOf(BusinessException.class)
                     .extracting("code")
                     .isEqualTo(ErrorCode.CANNOT_FOLLOW_OWN_CHANNEL);
+        }
+    }
+
+    @Nested
+    @DisplayName("FollowService.following")
+    class Following {
+
+        private static final int PAGE = FollowService.FOLLOWING_PAGE_SIZE;
+
+        private List<FollowingChannel> rows(int count) {
+            return IntStream.rangeClosed(1, count)
+                    .mapToObj(i -> new FollowingChannel(i, "채널" + i, false, "제목" + i))
+                    .toList();
+        }
+
+        @Test
+        @DisplayName("should return every channel from the mapper with hasMore false when the mapper finds 3 channels")
+        void returnsAllWhenFew() {
+            given(followMapper.findFollowing(MEMBER_ID, 0, PAGE + 1)).willReturn(rows(3));
+
+            FollowingResponse response = followService.following(MEMBER_ID, 0);
+
+            assertThat(response).isEqualTo(new FollowingResponse(rows(3), false));
+        }
+
+        @Test
+        @DisplayName("should ask the mapper for 21 channels from the given offset")
+        void asksForOneMore() {
+            given(followMapper.findFollowing(anyLong(), anyInt(), anyInt())).willReturn(List.of());
+
+            followService.following(MEMBER_ID, 20);
+
+            verify(followMapper).findFollowing(MEMBER_ID, 20, 21);
+        }
+
+        @Test
+        @DisplayName("should return 20 channels with hasMore true when the mapper finds 21 channels")
+        void cutsAtTwentyWhenMore() {
+            given(followMapper.findFollowing(MEMBER_ID, 0, PAGE + 1)).willReturn(rows(21));
+
+            FollowingResponse response = followService.following(MEMBER_ID, 0);
+
+            assertThat(response).isEqualTo(new FollowingResponse(rows(20), true));
+        }
+
+        @Test
+        @DisplayName("should return hasMore false when the mapper finds exactly 20 channels")
+        void noMoreAtExactlyTwenty() {
+            given(followMapper.findFollowing(MEMBER_ID, 0, PAGE + 1)).willReturn(rows(20));
+
+            FollowingResponse response = followService.following(MEMBER_ID, 0);
+
+            assertThat(response).isEqualTo(new FollowingResponse(rows(20), false));
+        }
+
+        @Test
+        @DisplayName("should return the channel name followed by 의 방송 as the title when the channel has never set a title")
+        void defaultsTitle() {
+            given(followMapper.findFollowing(MEMBER_ID, 0, PAGE + 1))
+                    .willReturn(List.of(new FollowingChannel(7, "하늘", true, null)));
+
+            FollowingResponse response = followService.following(MEMBER_ID, 0);
+
+            assertThat(response.items()).containsExactly(new FollowingChannel(7, "하늘", true, "하늘의 방송"));
+        }
+
+        @Test
+        @DisplayName("should throw INVALID_INPUT when the offset is negative")
+        void rejectsNegativeOffset() {
+            assertThatThrownBy(() -> followService.following(MEMBER_ID, -1))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("code")
+                    .isEqualTo(ErrorCode.INVALID_INPUT);
         }
     }
 }

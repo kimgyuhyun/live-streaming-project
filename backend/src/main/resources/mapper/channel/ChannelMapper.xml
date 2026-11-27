@@ -16,14 +16,19 @@
           AND NOT EXISTS (SELECT 1 FROM channel c WHERE c.member_id = m.id)
     </insert>
 
-    <!-- live: 진행 중 방송(ended_at IS NULL)이 있으면 1(#11).
-         조건을 uk_broadcast_live_channel과 같은 식으로 써서 그 인덱스로 찾는다 -->
+    <!-- live: 진행 중 방송(ended_at IS NULL)이 있으면 1(#11). 채널 별칭은 c.
+         조건을 uk_broadcast_live_channel과 같은 식으로 써서 그 인덱스로 찾는다.
+         팔로잉 목록(FollowMapper.xml)도 이 식을 include한다(#38) -->
+    <sql id="live">
+        CASE WHEN EXISTS (
+            SELECT 1 FROM broadcast b WHERE (CASE WHEN b.ended_at IS NULL THEN b.channel_id END) = c.id
+        ) THEN 1 ELSE 0 END
+    </sql>
+
     <sql id="columns">
         c.id, c.member_id, c.name, c.description, c.stream_key_hash, c.stream_key_prefix, c.title, c.demo,
         c.follower_count,
-        CASE WHEN EXISTS (
-            SELECT 1 FROM broadcast b WHERE (CASE WHEN b.ended_at IS NULL THEN b.channel_id END) = c.id
-        ) THEN 1 ELSE 0 END AS live
+        <include refid="live"/> AS live
     </sql>
 
     <select id="findById" resultType="com.livestream.channel.Channel">

@@ -172,3 +172,47 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* 방송 중인 채널의 방송 제목(#38). 이름 아래 한 줄, 넘치면 줄임 */
+.followTitle {
+  width: 100%;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 더 보기(#38): 양옆 가는 선 가운데 버튼(ChannelVideos의 더보기와 같은 모양) */
+.more {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.more::before,
+.more::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.moreButton {
+  height: 2rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.moreButton:hover,
+.moreButton:focus-visible {
+  background: var(--color-surface-raised);
+}

@@ -34,6 +34,8 @@ export const router = createBrowserRouter([
       { path: 'login', element: <LoginPage /> },
       { path: 'me', element: <MyChannelPage /> },
       { path: 'me/manage', element: <ChannelManagePage /> },
+      // 사이드바 "팔로잉"(#38). 내 계정 메뉴의 /me/following과 같은 화면
+      { path: 'following', element: <FollowingPage /> },
       // 내 계정 화면: 사이트 사이드바 대신 왼쪽 내 계정 메뉴(AccountLayout)
       {
         element: <AccountLayout />,
