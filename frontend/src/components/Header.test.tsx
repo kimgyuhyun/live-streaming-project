@@ -31,6 +31,12 @@ describe('Header', () => {
     expect(await screen.findByRole('dialog', { name: '약관 동의' })).not.toBeNull()
   })
 
+  it('should link the wallet icon to my points page', async () => {
+    renderWithRoutes()
+
+    expect((await screen.findByRole('link', { name: '내 포인트' })).getAttribute('href')).toBe('/me/points')
+  })
+
   it('should show 스튜디오 above 내 채널 in the profile menu', async () => {
     renderWithRoutes()
 

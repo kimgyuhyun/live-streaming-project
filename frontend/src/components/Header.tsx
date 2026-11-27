@@ -99,9 +99,10 @@ function Header({ menuExpanded, onMenuClick }: Props) {
               </button>
             )}
             {termsModal}
-            <button className={`${styles.iconButton} ${styles.wide}`} type="button" aria-label="지갑">
+            {/* 별풍선·치즈 같은 후원 재화 이름을 정하기 전이라 "포인트"로 둔다 */}
+            <Link className={`${styles.iconButton} ${styles.wide}`} to="/me/points" aria-label="내 포인트">
               <WalletIcon className={styles.icon} />
-            </button>
+            </Link>
             <button className={`${styles.iconButton} ${styles.wide}`} type="button" aria-label="알림">
               <BellIcon className={styles.icon} />
             </button>

@@ -8,6 +8,7 @@ import LivesPage from './pages/LivesPage.tsx'
 import LoginPage from './pages/LoginPage.tsx'
 import MyChannelPage from './pages/MyChannelPage.tsx'
 import MyPage from './pages/MyPage.tsx'
+import MyPointsPage from './pages/MyPointsPage.tsx'
 import NotFoundPage from './pages/NotFoundPage.tsx'
 import SignUpPage from './pages/SignUpPage.tsx'
 import StudioBroadcastPage from './pages/StudioBroadcastPage.tsx'
@@ -31,6 +32,7 @@ export const router = createBrowserRouter([
       { path: 'me', element: <MyChannelPage /> },
       { path: 'me/profile', element: <MyPage /> },
       { path: 'me/manage', element: <ChannelManagePage /> },
+      { path: 'me/points', element: <MyPointsPage /> },
       // flush: 메인 칸의 안쪽 여백 없이 너비·높이를 다 쓰는 화면(RootLayout이 읽는다)
       { path: 'channels/:channelId', element: <ChannelPage />, handle: { flush: true } },
       { path: '*', element: <NotFoundPage /> },
