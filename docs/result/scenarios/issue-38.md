@@ -165,6 +165,15 @@ export function fetchFollowing(offset: number): Promise<FollowingResponse>
 - 실행: 전체 스위트가 몇 분 걸려(Oracle 컨테이너) 시나리오마다 전체를 돌리지 않았다. 백엔드는 계층별로 `FollowServiceTest`·`FollowControllerTest` → `FollowIntegrationTest`·`Channel*`, 프론트는 전체(26파일 157개 통과), 끝에 백엔드 전체를 한 번 돌렸다.
 - 백엔드 전체 1회차: 490개 중 1개 실패 — `NginxChannelCacheTest — should return a fresh answer from Spring when the same channel is requested after 1 second`(nginx 1초 캐시 만료를 시간으로 재는 테스트, 이 이슈가 건드리지 않은 경로). 따로 다시 돌리자 통과했다. 시간에 기대는 기존 테스트의 흔들림으로 본다.
 
+### Refactor 기록
+
+- 기준선: Green 끝의 전체 통과(프론트 157개, 백엔드 490개 — `NginxChannelCacheTest` 시간 흔들림 1개는 단독 재실행 통과).
+- 대상: `git diff main...HEAD`의 소스 13개(테스트 제외). 다섯 기준으로 보고 **고칠 것이 없다**고 판단해 코드를 바꾸지 않았다(refactor 커밋 없음).
+  - 제목 기본값 `"{name}의 방송"` — `ChannelService.find`와 `FollowService.withDefaultTitle` 두 곳. 중복은 세 번째부터 뽑는다.
+  - "더 보기" 버튼 CSS — `ChannelVideos.module.css`와 `AccountPages.module.css` 두 곳(색·간격은 모두 변수). 같은 이유로 공통 부품으로 뽑지 않았다. 세 번째 화면이 생기면 `docs/design.md` 5절 공통 부품으로 올린다.
+  - 매직 넘버 — 20은 `FollowService.FOLLOWING_PAGE_SIZE` 상수, 프론트는 서버의 `hasMore`와 받은 개수만 써서 20을 모른다.
+  - `ChannelMapper.xml`의 `<sql id="live">` 추출은 이미 Green에서 했다(이슈가 정한 "식 재사용").
+
 ---
 
 ## AC 대조
@@ -180,3 +189,138 @@ export function fetchFollowing(offset: number): Promise<FollowingResponse>
 **커버리지:** AC 5개 / 시나리오 28개 / 미커버 0개
 
 AC에 없는데 추가한 것: 음수 offset 거절(`INVALID_INPUT`) 2개 — 입력 검증, 판단이 갈린 곳 참고. 제목 기본값 1개 — 확정 사양 4절 규칙을 이 응답에도 지킨다.
+
+---
+
+## AC 검증
+
+> `harness:ac-verifier` 출력 원문(2026-11-27). 구현자는 고치지 않는다.
+
+## 이슈 #38 AC 검증 (브랜치 feat/viewer/issue-38, main과 비교)
+
+5개 AC가 모두 충족됐습니다. 이번에 직접 돌린 테스트는 모두 통과했습니다.
+- 백엔드 follow 패키지: 오늘 15:36에 돌렸고 `#38` 대상 nested 클래스 기준으로 서비스 6, 컨트롤러 3, 통합 9개가 failures 0, errors 0입니다.
+- 프론트: `FollowingPage`·`Sidebar` 두 파일에서 10개가 통과했습니다.
+
+### AC 1 — X·Y·Z 순으로 팔로우했고 Y만 방송 중이면 Y, Z, X 순이다
+✅ 충족
+- 테스트: `should list Y, Z, X when the member followed X, Y, Z in that order and only Y is live` (C:\live-streaming-project\backend\src\test\java\com\livestream\follow\FollowIntegrationTest.java:461-477)
+- 구현: `findFollowing`의 `ORDER BY live DESC, f.created_at DESC, f.channel_id DESC` (C:\live-streaming-project\backend\src\main\resources\mapper\follow\FollowMapper.xml). live 식은 `ChannelMapper.xml`의 `<sql id="live">`를 include하며, 식 자체는 diff상 바뀌지 않았습니다.
+- 근거: 팔로우 시각을 1·2·3분으로 다르게 넣고 Y에만 진행 중 broadcast를 넣었습니다. 순서를 `containsExactly("Y","Z","X")`로 단언합니다(:476).
+  - 이 순서는 "방송 중 먼저 + 오래된 순"(Y,X,Z)과도, "최근 순만"(Z,Y,X)과도 다릅니다. 그래서 두 규칙을 모두 구분해 냅니다.
+  - 보조 근거: 끝난 방송은 오프라인으로 처리합니다(:543-557). 남이 팔로우한 채널은 목록에서 빠집니다(:496-507). 프론트는 서버가 준 순서를 그대로 씁니다(C:\live-streaming-project\frontend\src\pages\FollowingPage.test.tsx:43-53).
+
+### AC 2 — 21개를 팔로우하면 첫 요청은 20개와 hasMore true, offset=20은 1개와 hasMore false다
+✅ 충족 (아래 제안대로 조이면 더 단단해짐)
+- 테스트:
+  - `should return 20 channels and hasMore true on the first request…` (FollowIntegrationTest.java:509-519)
+  - `should return 1 channel and hasMore false for offset=20…` (:521-531)
+  - 서비스 단위 테스트(C:\live-streaming-project\backend\src\test\java\com\livestream\follow\FollowServiceTest.java): 21개는 20개와 true(:231), 정확히 20개는 false(:241), 3개는 false(:211), 매퍼에 21개를 요청함(:221)
+  - 컨트롤러: offset 20을 넘김, 값이 없으면 0 (C:\live-streaming-project\backend\src\test\java\com\livestream\follow\FollowControllerTest.java:124, :135)
+  - 프론트: "더 보기"를 누르면 offset 20으로 다음 묶음을 이어 붙임(FollowingPage.test.tsx:83-94), hasMore가 false면 "더 보기"를 숨김(:103-109)
+- 구현:
+  - `FollowService.following`은 `findFollowing(memberId, offset, 21)`로 21개를 물어 20개로 자르고 `rows.size() > 20`으로 hasMore를 정합니다(C:\live-streaming-project\backend\src\main\java\com\livestream\follow\FollowService.java). SQL은 `OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY`입니다.
+  - 프론트 `getNextPageParam`은 지금까지 받은 개수의 합을 다음 offset으로 씁니다(C:\live-streaming-project\frontend\src\pages\FollowingPage.tsx).
+- 경계: 19개 이하(3개), 정확히 20개, 21개를 모두 서비스 단위에서 봅니다. hasMore 판단은 서비스가 하므로 경계를 서비스에서 보는 것이 맞습니다.
+- 약한 점: offset=20 테스트는 개수와 hasMore만 단언합니다. 그 1개가 첫 묶음에 없던 채널(가장 먼저 팔로우한 채널)인지는 확인하지 않습니다. 두 묶음이 겹치지 않는다는 점은 단언으로 확인되지 않은 상태입니다. 동률 정렬(`channel_id DESC`)은 구현돼 있습니다.
+
+### AC 3 — 팔로우한 채널이 없으면 "팔로우한 채널이 없습니다"가 보인다
+✅ 충족
+- 테스트:
+  - `should show 팔로우한 채널이 없습니다 when the member follows no channel` (FollowingPage.test.tsx:96-101): `findByText('팔로우한 채널이 없습니다.')`
+  - 백엔드: `should return no items and hasMore false…` (FollowIntegrationTest.java:533-541): `{"items": [], "hasMore": false}`를 STRICT로 단언
+- 구현: FollowingPage.tsx에서 `isSuccess`이고 목록이 비면 `<p className={styles.empty}>팔로우한 채널이 없습니다.</p>`를 그립니다.
+
+### AC 4 — 비로그인이면 API는 401, 사이드바 "팔로잉"을 누르면 로그인 화면으로 간다
+✅ 충족
+- 테스트:
+  - API 401: `should return 401 when a visitor who is not logged in asks for the following list` (FollowIntegrationTest.java:559-564). 보안 필터까지 실제로 거칩니다.
+  - 사이드바: `should go to the login page when a visitor who is not logged in clicks 팔로잉` (C:\live-streaming-project\frontend\src\components\Sidebar.test.tsx:57-64, 파일 안 줄 기준). 진짜 `Sidebar`와 진짜 `FollowingPage`를 쓰고 `fetchFollowing`만 401로 바꿉니다.
+  - 화면 단독: FollowingPage.test.tsx:111-116
+- 구현:
+  - `SecurityConfig`의 `.anyRequest().authenticated()`(:61)에 걸립니다. `/api/me/**`를 허용하는 줄은 없습니다(grep 결과 permitAll은 :50-58의 다른 경로뿐).
+  - 사이드바: C:\live-streaming-project\frontend\src\components\Sidebar.tsx:17에 `to: '/following'`이 있고, `to`가 있으면 NavLink로 그립니다(:44-53).
+  - 라우터: C:\live-streaming-project\frontend\src\router.tsx:38에 `{ path: 'following', element: <FollowingPage /> }`
+  - 401 처리: FollowingPage.tsx에서 `ApiError`이고 status가 401이면 `<Navigate to="/login" replace />`
+  - 실제 API 경로에서도 401이 같은 모양으로 오는지 확인했습니다. `api()`는 응답이 ok가 아니면 `ApiError(res.status, body)`를 던집니다(C:\live-streaming-project\frontend\src\api\client.ts:33). 그래서 목으로 넣은 `ApiError(401)`과 실제 동작이 같습니다.
+- 참고: 401 테스트는 구현 전부터 통과하던 테스트입니다. 시나리오 문서의 Green 기록에는 permitAll을 넣어 실패하는 것을 봤다는 변이 확인이 있지만, 저는 그 변이를 다시 해 보지 않았습니다.
+
+### AC 5 — 채널을 누르면 그 채널 페이지로 가고, 방송 중인 채널에는 방송 중 표시와 방송 제목이 보인다
+✅ 충족
+- 테스트:
+  - 클릭하면 채널 화면으로 감(FollowingPage.test.tsx:74-81). 링크 주소가 `/channels/{id}`인지는 :43-53에서 href로 단언합니다.
+  - 방송 중이면 LIVE와 제목이 보임(:55-64). 오프라인이면 둘 다 없음(:66-72).
+  - 백엔드: 방송 중 채널은 `live: true`와 방송 제목을 줌(FollowIntegrationTest.java:479-494). 제목을 정한 적 없으면 `"{이름}의 방송"`(FollowServiceTest.java:251)
+- 구현:
+  - FollowingPage.tsx: 칸 전체가 `<Link to={`/channels/${channel.channelId}`}>`이고, `channel.live`이면 LIVE 표시와 `<span className={styles.followTitle}>{channel.title}</span>`을 그립니다.
+  - router.tsx:51에 `channels/:channelId`가 있습니다.
+  - FollowService의 `withDefaultTitle`이 제목 기본값을 채웁니다.
+
+## 요약
+AC 5개 중 ✅ 5 / ⚠️ 0 / ❌ 0
+
+## 추가 시나리오 제안 (조이는 용도, 필수 아님)
+- [ ] [경계] `FollowIntegration.following` — should return the earliest followed channel for offset=20 when the member follows 21 channels
+  - AC 2에서 두 묶음이 겹치지 않는지 확인하는 용도입니다. 지금 :521-531은 개수만 봅니다.
+
+## 가짜 테스트 목록
+발견하지 못했습니다.
+- 예외 단언은 구체적입니다. `BusinessException`과 `code == INVALID_INPUT`까지 봅니다(FollowServiceTest.java:262-268).
+- 프론트의 `expect(await screen.findByText(...)).not.toBeNull()`은 겉보기에 약해 보입니다. 하지만 `findBy*`가 못 찾으면 예외를 던지므로 실제로는 검증이 됩니다.
+- 컨트롤러 `returnsFollowing`은 목이 돌려준 값을 단언합니다. 다만 컨트롤러가 맡은 JSON 직렬화 모양을 STRICT로 보는 것이므로 목 검사로만 끝나지는 않습니다.
+
+## 확인하지 않은 것
+- 백엔드 전체 스위트와 프론트 전체 스위트는 돌리지 않았습니다. follow 패키지와 프론트 두 파일만 돌렸습니다.
+- `ChannelMapper.xml`의 live 식을 `<sql id="live">`로 꺼낸 리팩터링이 채널 테스트(`Channel*`)를 깨지 않는지는 제가 확인하지 않았습니다. `--tests "com.livestream.channel.ChannelMapper*"` 필터는 결과 파일이 하나도 생기지 않았습니다. AC 1의 live 판정은 통합 테스트로 확인했습니다.
+
+## 실행한 명령 목록
+1. `cat .claude/harness.json && gh issue view 38 && git diff main...HEAD --stat` → 설정 확인, AC 5개 확인, 변경 파일 20개
+2. `cat docs/result/scenarios/issue-38.md` → 시나리오 28개와 AC 대조표 확인
+3. `git diff main...HEAD -- backend/src/main frontend/src/api …/Sidebar.tsx …/FollowingPage.tsx …/router.tsx` → 구현 diff 읽음
+4. `cat -n …/FollowIntegrationTest.java` → 통합 테스트 9개 본문 확인(:415-573)
+5. `git diff main...HEAD -- FollowServiceTest/FollowControllerTest` + `grep -n DisplayName…` → 서비스 6개, 컨트롤러 3개의 본문과 줄 번호 확인
+6. `cat -n FollowingPage.test.tsx Sidebar.test.tsx` → 프론트 테스트 10개 본문 확인
+7. `cat -n Sidebar.tsx client.ts router.tsx` → 사이드바 `to`, ApiError가 던져지는 조건, `/following`과 `channels/:channelId` 라우트 확인(AccountLayout grep은 경로를 잘못 줘서 exit 2, 판정에 쓰지 않음)
+8. `docker compose ps; docker info; grep anyRequest… SecurityConfig.java` → Docker 28.4.0 동작 중, `anyRequest().authenticated()`가 :61에 있음
+9. `npx vitest run src/pages/FollowingPage.test.tsx src/components/Sidebar.test.tsx` → 2 files, 10 passed
+10. `JAVA_HOME=… ./gradlew test --tests "com.livestream.follow.*" --tests "com.livestream.channel.ChannelMapper*"` → BUILD SUCCESSFUL. 결과 파일은 follow 테스트 것만 생김
+11. `grep` 결과 XML (`FollowControllerTest$Following`, `FollowIntegrationTest$Following`, `FollowServiceTest$Following`) → 각각 3, 9, 6개이고 failures 0, errors 0. 타임스탬프가 오늘 06:35-06:36Z라 이번 실행 결과임
+
+### 구현자 이견
+
+- 판정에는 이견이 없다. "확인하지 않은 것"에 대한 사실 보충만 남긴다.
+  - `ChannelMapper.xml` 식 추출 뒤 채널 테스트: Green에서 `--tests "FollowIntegrationTest" --tests "Channel*"`로 돌려 통과했고, 백엔드 전체(490개)도 돌렸다(1개 실패는 `NginxChannelCacheTest`의 시간 흔들림, 단독 재실행 통과 — Green 기록 참고). `ChannelMapper*` 필터에 결과가 없던 것은 그 이름의 테스트 클래스가 없어서다(매퍼는 통합 테스트로 확인한다).
+- 추가 시나리오 제안(offset=20의 1개가 가장 먼저 팔로우한 채널인지)은 이번에 넣지 않는다. 검증자도 필수가 아니라고 했고, AC 문장은 개수와 `hasMore`만 정한다. 동률 정렬(`channel_id DESC`)과 서비스 단위의 21개 자르기가 겹침을 막는다. 리팩터·보안 단계 뒤에도 남겨 두는 후속 후보로 적는다.
+
+---
+
+## 보안 점검
+
+> `/harness:security-review 38` (2026-11-27). 대상: `git diff main...HEAD`.
+
+**수집 결과**
+
+- 타입: `./gradlew compileJava compileTestJava` 통과, `npx tsc -b` 오류 0.
+- 의존성: `npm audit` 0건. 이 이슈는 의존성을 바꾸지 않았다(`securityExceptions` 대장은 설정에 없다).
+- 비밀값: 바뀐 소스에서 비밀값 패턴·알려진 접두사 0건. 이 브랜치가 커밋한 `.env` 없음.
+- 로그: 더한 줄에 `console.*`·로거 호출 없음.
+
+**🔴 즉시 수정 필요 — 없음**
+
+**🟡 권장 수정**
+
+| 파일·줄 | 무엇 | 왜 이 분류 | 어떻게 |
+| --- | --- | --- | --- |
+| `FollowController.following`(`@RequestParam int offset`) | `?offset=abc`처럼 숫자가 아닌 값은 `MethodArgumentTypeMismatchException`이 되는데 `GlobalExceptionHandler`가 잡지 않아 프로젝트의 `{code, message}` 모양이 아닌 Spring 기본 에러 응답으로 나간다(실행해 확인하지는 않았다). 기존 `/api/channels/{channelId}`의 `long` 경로 변수도 같다 | 보안 위험은 아니다(스택은 Boot 기본값상 응답에 넣지 않는다). 응답 모양의 일관성 문제이고 기존 경로와 같은 동작이라 이 이슈 범위를 넘는다 | 별도 작업으로 `GlobalExceptionHandler`에 `MethodArgumentTypeMismatchException` → `INVALID_INPUT`(400)을 더한다 |
+
+**⚪ 무시 가능(판단 근거)**
+
+- **IDOR(남의 목록 보기)** — 요청에 회원을 고르는 값이 없다. `FollowController`가 세션의 `LoginMember.id()`만 서비스에 넘긴다(이슈 결정). 통합 테스트 `…not list a channel that only another member follows`가 지킨다.
+- **비로그인 접근** — `SecurityConfig`의 `anyRequest().authenticated()`로 401. 변이 확인(permitAll 추가 → 401 테스트 실패)을 Green 기록에 남겼다.
+- **SQL 주입** — `findFollowing`의 값은 전부 `#{}` 바인딩(`memberId`·`offset`·`limit`). `${}` 없음. `limit`은 서버 상수(21)다.
+- **nginx 캐시로 남의 목록이 보이는 문제** — 캐시는 `location ~ ^/api/channels/[1-9][0-9]*$`만 한다. `/api/me/following`은 `/api/` location으로 가 캐시되지 않는다.
+- **큰 offset** — 정렬 대상은 그 회원이 팔로우한 행뿐이라 비용이 회원 한 명의 팔로우 수에 묶인다. `int`를 넘는 값은 형 변환에서 400. nginx `/api/` 속도 제한도 그대로 걸린다.
+- **응답에 담긴 값** — 채널 id·이름·방송 중 여부·제목. 모두 공개 채널 조회에 이미 나오는 값이다. 팔로우한 시각은 정렬에만 쓰고 응답에 넣지 않는다.
+- **프론트** — 응답 문자열은 JSX 텍스트로만 그린다(`dangerouslySetInnerHTML` 없음). 401이면 `/login`으로 `replace` 이동, 다른 출처로 보내는 경로 없음.
+
+**처리** — 🔴가 없어 고친 것은 없다. 재스캔은 위 수집 결과가 곧 최종 상태다(코드 변경 없음).
