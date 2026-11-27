@@ -5,7 +5,6 @@ import {
   HeartIcon,
   MonitorIcon,
   PersonIcon,
-  PlusCircleIcon,
   RefreshIcon,
   VideoIcon,
   WalletIcon,
@@ -25,7 +24,7 @@ type Item = {
 }
 
 // 내 계정 화면의 왼쪽 메뉴. 내 프로필·스튜디오·내 채널·내 포인트만 이동한다.
-// 내 구독(유료 구독은 후원 다음 확장 후보)·최근 시청 영상·팔로잉 채널은 모양만 있다
+// 최근 시청 영상·팔로잉 채널은 모양만 있다
 const GROUPS: { title?: string; items: Item[] }[] = [
   { items: [{ label: '내 프로필', Icon: PersonIcon, to: '/me/profile' }] },
   {
@@ -34,7 +33,6 @@ const GROUPS: { title?: string; items: Item[] }[] = [
       { label: '조타 스튜디오', Icon: MonitorIcon, studio: true },
       { label: '내 채널', Icon: VideoIcon, to: '/me', external: true },
       { label: '내 포인트', Icon: WalletIcon, to: '/me/points' },
-      { label: '내 구독', Icon: PlusCircleIcon },
       { label: '최근 시청 영상', Icon: RefreshIcon },
       { label: '팔로잉 채널', Icon: HeartIcon },
     ],

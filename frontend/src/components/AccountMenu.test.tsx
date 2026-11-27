@@ -31,7 +31,7 @@ describe('AccountMenu', () => {
     renderMenu('/me/points')
 
     const labels = screen.getAllByRole('listitem').map((item) => item.textContent)
-    expect(labels).toEqual(['내 프로필', '조타 스튜디오', '내 채널', '내 포인트', '내 구독', '최근 시청 영상', '팔로잉 채널'])
+    expect(labels).toEqual(['내 프로필', '조타 스튜디오', '내 채널', '내 포인트', '최근 시청 영상', '팔로잉 채널'])
   })
 
   it('should mark the current page', () => {
