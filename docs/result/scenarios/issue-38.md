@@ -324,3 +324,14 @@ AC 5개 중 ✅ 5 / ⚠️ 0 / ❌ 0
 - **프론트** — 응답 문자열은 JSX 텍스트로만 그린다(`dangerouslySetInnerHTML` 없음). 401이면 `/login`으로 `replace` 이동, 다른 출처로 보내는 경로 없음.
 
 **처리** — 🔴가 없어 고친 것은 없다. 재스캔은 위 수집 결과가 곧 최종 상태다(코드 변경 없음).
+
+## Red 예외 판정
+
+자율 루프는 `red_has_passing_test`(구현 없이 통과한 테스트 1개)로 이 이슈를 SKIP했다. 사람이 다시 확인해 받아들였다.
+
+- 대상: `FollowIntegration.following — should return 401 when a visitor who is not logged in asks for the following list`
+- 구현 전에 통과한 이유: `SecurityConfig`의 `anyRequest().authenticated()`가 새 경로 `/api/me/following`도 이미 막는다. 이 AC(비로그인 401)는 구현 전부터 지켜지고 있었고, 이 테스트는 그것이 깨지지 않게 고정한다. `follow` 쪽 기존 401 테스트들(`rejectsAnonymousFollow` 등)과 같은 성격이다.
+- 가짜가 아님을 다시 확인(구현자 기록과 별도로 실행):
+  1. `SecurityConfig`에 `.requestMatchers("/api/me/following").permitAll()`을 넣고 `./gradlew test --tests "FollowIntegrationTest"` → 26개 중 이 테스트 1개만 실패
+  2. 되돌리고 같은 명령 → 통과
+- 판정: 테스트는 그대로 둔다. 고칠 코드 없음.
