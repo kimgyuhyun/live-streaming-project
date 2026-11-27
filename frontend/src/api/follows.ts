@@ -35,6 +35,5 @@ export interface FollowingResponse {
 
 // 내가 팔로우한 채널을 방송 중 먼저, 최근 팔로우 순으로 offset부터 20개. 비로그인이면 401(ApiError)
 export function fetchFollowing(offset: number): Promise<FollowingResponse> {
-  void offset
-  throw new Error('not implemented')
+  return api<FollowingResponse>(`/me/following?offset=${offset}`)
 }

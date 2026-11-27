@@ -42,6 +42,6 @@ class FollowController {
     @GetMapping("/api/me/following")
     FollowingResponse following(@RequestParam(defaultValue = "0") int offset,
                                 @AuthenticationPrincipal LoginMember loginMember) {
-        throw new UnsupportedOperationException("not implemented");
+        return followService.following(loginMember.id(), offset);
     }
 }

@@ -10,11 +10,11 @@ type Item = {
   to?: string
 }
 
-// 전체 방송만 이동한다. 나머지는 아직 기능이 없어 모양만 있다
+// 카테고리는 아직 기능이 없어 모양만 있다. 팔로잉은 비로그인이면 팔로잉 화면이 로그인 화면으로 보낸다(#38)
 const ITEMS: Item[] = [
   { label: '전체 방송', shortLabel: '방송', Icon: BroadcastIcon, to: '/lives' },
   { label: '카테고리', shortLabel: '카테고리', Icon: GridIcon },
-  { label: '팔로잉', shortLabel: '팔로잉', Icon: HeartIcon },
+  { label: '팔로잉', shortLabel: '팔로잉', Icon: HeartIcon, to: '/following' },
 ]
 
 type Props = {

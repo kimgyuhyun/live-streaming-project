@@ -105,40 +105,40 @@ export function fetchFollowing(offset: number): Promise<FollowingResponse>
 
 ### 정상
 
-- [ ] [정상] `FollowService.following` — should return every channel from the mapper with hasMore false when the mapper finds 3 channels
-- [ ] [정상] `FollowService.following` — should ask the mapper for 21 channels from the given offset
-- [ ] [정상] `FollowController.following` — should return 200 with items and hasMore of the logged-in member
-- [ ] [정상] `FollowController.following` — should pass offset 20 to the service when the request has offset=20
-- [ ] [정상] `FollowIntegration.following` — should list Y, Z, X when the member followed X, Y, Z in that order and only Y is live
-- [ ] [정상] `FollowIntegration.following` — should return live true and the broadcast title for a live channel
-- [ ] [정상] `FollowIntegration.following` — should not list a channel that only another member follows
-- [ ] [정상] `FollowingPage` — should list the channels in the order the server returns
-- [ ] [정상] `FollowingPage` — should show LIVE and the broadcast title for a live channel
-- [ ] [정상] `FollowingPage` — should not show LIVE or the title for an offline channel
-- [ ] [정상] `FollowingPage` — should go to the channel page when a channel is clicked
-- [ ] [정상] `FollowingPage` — should append the next channels fetched with offset 20 when 더 보기 is clicked
-- [ ] [정상] `Sidebar` — should open the following page when 팔로잉 is clicked
+- [x] [정상] `FollowService.following` — should return every channel from the mapper with hasMore false when the mapper finds 3 channels
+- [x] [정상] `FollowService.following` — should ask the mapper for 21 channels from the given offset
+- [x] [정상] `FollowController.following` — should return 200 with items and hasMore of the logged-in member
+- [x] [정상] `FollowController.following` — should pass offset 20 to the service when the request has offset=20
+- [x] [정상] `FollowIntegration.following` — should list Y, Z, X when the member followed X, Y, Z in that order and only Y is live
+- [x] [정상] `FollowIntegration.following` — should return live true and the broadcast title for a live channel
+- [x] [정상] `FollowIntegration.following` — should not list a channel that only another member follows
+- [x] [정상] `FollowingPage` — should list the channels in the order the server returns
+- [x] [정상] `FollowingPage` — should show LIVE and the broadcast title for a live channel
+- [x] [정상] `FollowingPage` — should not show LIVE or the title for an offline channel
+- [x] [정상] `FollowingPage` — should go to the channel page when a channel is clicked
+- [x] [정상] `FollowingPage` — should append the next channels fetched with offset 20 when 더 보기 is clicked
+- [x] [정상] `Sidebar` — should open the following page when 팔로잉 is clicked
 
 ### 경계
 
-- [ ] [경계] `FollowService.following` — should return 20 channels with hasMore true when the mapper finds 21 channels
-- [ ] [경계] `FollowService.following` — should return hasMore false when the mapper finds exactly 20 channels
-- [ ] [경계] `FollowService.following` — should return the channel name followed by 의 방송 as the title when the channel has never set a title
-- [ ] [경계] `FollowController.following` — should use offset 0 when the request has no offset
-- [ ] [경계] `FollowIntegration.following` — should return 20 channels and hasMore true on the first request when the member follows 21 channels
-- [ ] [경계] `FollowIntegration.following` — should return 1 channel and hasMore false for offset=20 when the member follows 21 channels
-- [ ] [경계] `FollowIntegration.following` — should return no items and hasMore false when the member follows no channel
-- [ ] [경계] `FollowIntegration.following` — should treat a channel whose broadcast has ended as offline
-- [ ] [경계] `FollowingPage` — should show 팔로우한 채널이 없습니다 when the member follows no channel
-- [ ] [경계] `FollowingPage` — should not show 더 보기 when hasMore is false
+- [x] [경계] `FollowService.following` — should return 20 channels with hasMore true when the mapper finds 21 channels
+- [x] [경계] `FollowService.following` — should return hasMore false when the mapper finds exactly 20 channels
+- [x] [경계] `FollowService.following` — should return the channel name followed by 의 방송 as the title when the channel has never set a title
+- [x] [경계] `FollowController.following` — should use offset 0 when the request has no offset
+- [x] [경계] `FollowIntegration.following` — should return 20 channels and hasMore true on the first request when the member follows 21 channels
+- [x] [경계] `FollowIntegration.following` — should return 1 channel and hasMore false for offset=20 when the member follows 21 channels
+- [x] [경계] `FollowIntegration.following` — should return no items and hasMore false when the member follows no channel
+- [x] [경계] `FollowIntegration.following` — should treat a channel whose broadcast has ended as offline
+- [x] [경계] `FollowingPage` — should show 팔로우한 채널이 없습니다 when the member follows no channel
+- [x] [경계] `FollowingPage` — should not show 더 보기 when hasMore is false
 
 ### 예외
 
-- [ ] [예외] `FollowService.following` — should throw INVALID_INPUT when the offset is negative
-- [ ] [예외] `FollowIntegration.following` — should return 401 when a visitor who is not logged in asks for the following list
-- [ ] [예외] `FollowIntegration.following` — should return 400 with code INVALID_INPUT when offset is negative
-- [ ] [예외] `FollowingPage` — should go to the login page when the following list returns 401
-- [ ] [예외] `Sidebar` — should go to the login page when a visitor who is not logged in clicks 팔로잉
+- [x] [예외] `FollowService.following` — should throw INVALID_INPUT when the offset is negative
+- [x] [예외] `FollowIntegration.following` — should return 401 when a visitor who is not logged in asks for the following list
+- [x] [예외] `FollowIntegration.following` — should return 400 with code INVALID_INPUT when offset is negative
+- [x] [예외] `FollowingPage` — should go to the login page when the following list returns 401
+- [x] [예외] `Sidebar` — should go to the login page when a visitor who is not logged in clicks 팔로잉
 
 ### Red 기록
 
@@ -149,6 +149,21 @@ export function fetchFollowing(offset: number): Promise<FollowingResponse>
   - 백엔드 17개 실패 — 서비스 5개는 stub의 not implemented, 음수 offset 1개는 단언(`BusinessException` 기대, `UnsupportedOperationException`), 컨트롤러 3개·통합 8개는 stub의 not implemented.
   - 프론트 10개 전부 단언 실패(응답의 채널 이름·"더 보기"·로그인 화면을 찾지 못함).
 - **구현 없이 통과한 1개** — `FollowIntegration.following — should return 401 when a visitor who is not logged in asks for the following list`. `SecurityConfig`의 `anyRequest().authenticated()`가 이미 막는다. Green에서 변이로 확인한다.
+
+### Green 기록
+
+- 순서: 서비스(음수 offset → 21개 묻기 → 20개 자르기·`hasMore` → 제목 기본값) → 컨트롤러 → SQL(`FollowMapper.xml`의 `findFollowing`) → 프론트(`fetchFollowing` → `FollowingPage` → 라우터 `/following` → 사이드바 연결).
+- **진행 중 여부 식 재사용** — `ChannelMapper.xml`의 `columns` 안에 있던 `EXISTS` 식을 `<sql id="live">`로 꺼내 `columns`가 include하고, `FollowMapper.xml`이 `<include refid="com.livestream.channel.ChannelMapper.live"/>`로 같은 식을 쓴다. 식 자체는 한 글자도 바꾸지 않았다(채널 별칭 `c`). 채널 테스트(`Channel*`)가 그대로 통과한다.
+- **변이 확인** — `SecurityConfig`에 `.requestMatchers("/api/me/following").permitAll()`을 넣자 `FollowIntegration.following — …401…`이 실패했다(1/26). 되돌렸다.
+- **구현하며 정한 것(시그니처 밖의 세부)**
+  - 정렬 `ORDER BY live DESC, f.created_at DESC, f.channel_id DESC` + `OFFSET … ROWS FETCH NEXT 21 ROWS ONLY`(Oracle 12c+ 문법, 판단이 갈린 곳의 동률 처리).
+  - 화면은 `useInfiniteQuery`. 다음 offset = 지금까지 받은 개수. `retry: false`(401은 다시 물어도 같다). 401이면 `<Navigate to="/login" replace>` — 뒤로 가기로 팔로잉 화면에 돌아와 다시 튕기지 않게 `replace`.
+  - 각 채널 칸 전체가 `/channels/{id}` 링크다. 방송 중이면 기존 빨간 테두리·LIVE 표시에 더해 이름 아래 방송 제목(한 줄, 줄임). 스타일은 `AccountPages.module.css`에 `.followTitle`·`.more`·`.moreButton`을 더했다(`ChannelVideos`의 더보기와 같은 모양, 기존 변수만).
+  - `/me/following`(내 계정 메뉴)은 그대로 두고 같은 컴포넌트를 쓴다. 이제 두 경로 모두 진짜 목록이다.
+  - 예시 데이터 `SAMPLE_FOLLOWING`·`sortFollowing`·`FollowingChannel`(sampleAccount.ts)은 쓰는 곳이 없어져 지웠다.
+- 커버리지 명령(`coverage`)이 설정에 없어 측정하지 않았다.
+- 실행: 전체 스위트가 몇 분 걸려(Oracle 컨테이너) 시나리오마다 전체를 돌리지 않았다. 백엔드는 계층별로 `FollowServiceTest`·`FollowControllerTest` → `FollowIntegrationTest`·`Channel*`, 프론트는 전체(26파일 157개 통과), 끝에 백엔드 전체를 한 번 돌렸다.
+- 백엔드 전체 1회차: 490개 중 1개 실패 — `NginxChannelCacheTest — should return a fresh answer from Spring when the same channel is requested after 1 second`(nginx 1초 캐시 만료를 시간으로 재는 테스트, 이 이슈가 건드리지 않은 경로). 따로 다시 돌리자 통과했다. 시간에 기대는 기존 테스트의 흔들림으로 본다.
 
 ---
 

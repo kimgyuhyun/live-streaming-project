@@ -22,4 +22,17 @@
         ) THEN 1 ELSE 0 END
         FROM dual
     </select>
+
+    <!-- 팔로잉 목록(#38): 방송 중 먼저, 묶음 안에서는 팔로우한 시각 최근 순. 같은 시각이면 channel_id 큰 순
+         (offset으로 나눠 읽어도 순서가 매번 같아야 겹치거나 빠지지 않는다). 진행 중 여부는 ChannelMapper.xml의 식 그대로 -->
+    <select id="findFollowing" resultType="com.livestream.follow.FollowingChannel">
+        SELECT c.id AS channel_id, c.name,
+               <include refid="com.livestream.channel.ChannelMapper.live"/> AS live,
+               c.title
+        FROM follow f
+        JOIN channel c ON c.id = f.channel_id
+        WHERE f.member_id = #{memberId}
+        ORDER BY live DESC, f.created_at DESC, f.channel_id DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
 </mapper>
