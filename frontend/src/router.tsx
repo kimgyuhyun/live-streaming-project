@@ -1,4 +1,5 @@
 import { createBrowserRouter } from 'react-router'
+import AccountLayout from './layouts/AccountLayout.tsx'
 import RootLayout from './layouts/RootLayout.tsx'
 import StudioLayout from './layouts/StudioLayout.tsx'
 import ChannelManagePage from './pages/ChannelManagePage.tsx'
@@ -30,9 +31,16 @@ export const router = createBrowserRouter([
       { path: 'signup', element: <SignUpPage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'me', element: <MyChannelPage /> },
-      { path: 'me/profile', element: <MyPage /> },
       { path: 'me/manage', element: <ChannelManagePage /> },
-      { path: 'me/points', element: <MyPointsPage /> },
+      // 내 계정 화면: 사이트 사이드바 대신 왼쪽 내 계정 메뉴(AccountLayout)
+      {
+        element: <AccountLayout />,
+        handle: { hideSidebar: true },
+        children: [
+          { path: 'me/profile', element: <MyPage /> },
+          { path: 'me/points', element: <MyPointsPage /> },
+        ],
+      },
       // flush: 메인 칸의 안쪽 여백 없이 너비·높이를 다 쓰는 화면(RootLayout이 읽는다)
       { path: 'channels/:channelId', element: <ChannelPage />, handle: { flush: true } },
       { path: '*', element: <NotFoundPage /> },
