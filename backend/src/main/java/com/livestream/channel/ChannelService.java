@@ -69,7 +69,9 @@ public class ChannelService {
                 channel.getFollowerCount(), viewerCountOf(channel));
     }
 
+    // 방송 중일 때만 판을 읽는다(#39). 읽는 쪽은 MediaMTX를 부르지 않는다(PRD viewer V1)
     private long viewerCountOf(Channel channel) {
-        throw new UnsupportedOperationException("not implemented");
+        Long liveBroadcastId = channel.getLiveBroadcastId();
+        return liveBroadcastId == null ? 0 : viewerCountReader.viewerCount(liveBroadcastId);
     }
 }

@@ -32,7 +32,7 @@ export function pollInterval(live: boolean | undefined): number | false {
 
 // 방송 중이면 "N명 시청 중", 아니면 null(보이지 않는다)(#39)
 export function viewerCountLabel(live: boolean, viewerCount: number): string | null {
-  throw new Error('not implemented')
+  return live ? `${viewerCount}명 시청 중` : null
 }
 
 // nginx /hls/ → MediaMTX. 원본 화질 하나(화질 자동 전환은 하지 않는다)

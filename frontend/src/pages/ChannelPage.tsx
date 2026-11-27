@@ -7,7 +7,7 @@ import ChannelVideos from '../components/ChannelVideos.tsx'
 import ChatPanel from '../components/ChatPanel.tsx'
 import type { LayoutContext } from '../layouts/RootLayout.tsx'
 import { GiftIcon, MoreHorizontalIcon, PlusCircleIcon, UserIcon } from '../components/icons.tsx'
-import { pollInterval, useBroadcastView } from './broadcastView.ts'
+import { pollInterval, useBroadcastView, viewerCountLabel } from './broadcastView.ts'
 import styles from './ChannelPage.module.css'
 import FollowButton from './FollowButton.tsx'
 import { ChatOpenButtons, PlayerArea } from './LivePlayer.tsx'
@@ -38,6 +38,7 @@ function ChannelPage() {
     // 그 밖의 오류는 본문의 message(nginx 요청 수 제한 429 등, #31). 본문이 없으면 errorMessage가 일반 문구를 준다
     return <p>{notFound ? '채널을 찾을 수 없습니다' : errorMessage(channel.error)}</p>
   }
+  const viewerLabel = viewerCountLabel(channel.data.live, channel.data.viewerCount)
 
   return (
     <div className={styles.watch}>
@@ -58,6 +59,8 @@ function ChannelPage() {
             <span className={styles.channelName}>{channel.data.name}</span>
             {/* 운영자가 붙인 데모 표시(확정 사양 10절). 방송 중이든 아니든 보인다 */}
             {channel.data.demo && <span className={styles.tag}>데모 채널</span>}
+            {/* 지금 시청자 수(#39). 위의 5초 폴링 응답으로 갱신된다 */}
+            {viewerLabel && <span>{viewerLabel}</span>}
           </p>
           <div className={styles.streamer}>
             <UserIcon className={styles.avatar} />

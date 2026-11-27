@@ -163,42 +163,42 @@ export function viewerCountLabel(live: boolean, viewerCount: number): string | n
 
 ### 정상
 
-- [ ] [정상] `MediaMtxClient.findHlsSessions` — should return the path and remote address of each session
-- [ ] [정상] `MediaMtxClient.findHlsSessions` — should read every page when the session list has 3 pages
-- [ ] [정상] `ViewerCounter.aggregate` — should write A=3 and B=1 without C when live channels A and B have 3 and 1 sessions and channel C without a live broadcast has 2
-- [ ] [정상] `ChannelService.find` — should return the viewer count of the live broadcast when the channel is live
-- [ ] [정상] `ViewerCountIntegration` — should store A=3 and B=1 by broadcast id without C in the current snapshot when live A, live B and offline C have 3, 1 and 2 sessions
-- [ ] [정상] `ViewerCountIntegration` — should return viewerCount 3 from the channel lookup of A after aggregating 3 sessions on A
-- [ ] [정상] `ViewerCountIntegration` — should return viewerCount 0 from the channel lookup of a channel that is not live even when its path has sessions
-- [ ] [정상] `ViewerCountIntegration` — should write a new snapshot in the next round after a round in which MediaMTX failed
-- [ ] [정상] `ChannelPage` — should show 3명 시청 중 when the live channel has 3 viewers
-- [ ] [정상] `ChannelPage` — should show 5명 시청 중 after the next poll returns 5 viewers
-- [ ] [정상] `viewerCountLabel` — should return null when the channel is offline
+- [x] [정상] `MediaMtxClient.findHlsSessions` — should return the path and remote address of each session
+- [x] [정상] `MediaMtxClient.findHlsSessions` — should read every page when the session list has 3 pages
+- [x] [정상] `ViewerCounter.aggregate` — should write A=3 and B=1 without C when live channels A and B have 3 and 1 sessions and channel C without a live broadcast has 2
+- [x] [정상] `ChannelService.find` — should return the viewer count of the live broadcast when the channel is live
+- [x] [정상] `ViewerCountIntegration` — should store A=3 and B=1 by broadcast id without C in the current snapshot when live A, live B and offline C have 3, 1 and 2 sessions
+- [x] [정상] `ViewerCountIntegration` — should return viewerCount 3 from the channel lookup of A after aggregating 3 sessions on A
+- [x] [정상] `ViewerCountIntegration` — should return viewerCount 0 from the channel lookup of a channel that is not live even when its path has sessions
+- [x] [정상] `ViewerCountIntegration` — should write a new snapshot in the next round after a round in which MediaMTX failed
+- [x] [정상] `ChannelPage` — should show 3명 시청 중 when the live channel has 3 viewers
+- [x] [정상] `ChannelPage` — should show 5명 시청 중 after the next poll returns 5 viewers
+- [x] [정상] `viewerCountLabel` — should return null when the channel is offline
 
 ### 경계
 
-- [ ] [경계] `MediaMtxClient.findHlsSessions` — should return no sessions after a single request when the list reports 0 pages
-- [ ] [경계] `ViewerCounter.aggregate` — should write 0 for live channel D when D has no session
-- [ ] [경계] `ViewerCounter.aggregate` — should leave out sessions whose path is not live and a channel id
-- [ ] [경계] `ViewerCounter.aggregate` — should not read the session list when another server holds the round lock
-- [ ] [경계] `ChannelService.find` — should return viewerCount 0 without reading viewer counts when the channel is not live
-- [ ] [경계] `ViewerCountIntegration` — should store 0 for live channel D with no session in the current snapshot
-- [ ] [경계] `ViewerCountIntegration` — should count the sessions from both pages when MediaMTX returns the session list in 2 pages
-- [ ] [경계] `ViewerCountIntegration` — should read the MediaMTX session list once when two counters aggregate at the same time
-- [ ] [경계] `ViewerCountIntegration` — should not read the session list again when a second counter runs before the lock expires
-- [ ] [경계] `ViewerCountIntegration` — should hold the round lock for at most 4 seconds
-- [ ] [경계] `ViewerCountIntegration` — should let the other counter aggregate in the next round after the lock of the stopped counter expires
-- [ ] [경계] `ViewerCountIntegration` — should make the snapshot expire 2 minutes after it is written
-- [ ] [경계] `ViewerCountIntegration` — should return viewerCount 0 for a live channel when the current snapshot has expired
-- [ ] [경계] `ViewerCountIntegration` — should return viewerCount 0 for a live channel when no snapshot has been made
-- [ ] [경계] `ChannelPage` — should show 0명 시청 중 when the live channel has no viewer
-- [ ] [경계] `ChannelPage` — should stop showing 시청 중 when the broadcast ends while watching
+- [x] [경계] `MediaMtxClient.findHlsSessions` — should return no sessions after a single request when the list reports 0 pages
+- [x] [경계] `ViewerCounter.aggregate` — should write 0 for live channel D when D has no session
+- [x] [경계] `ViewerCounter.aggregate` — should leave out sessions whose path is not live and a channel id
+- [x] [경계] `ViewerCounter.aggregate` — should not read the session list when another server holds the round lock
+- [x] [경계] `ChannelService.find` — should return viewerCount 0 without reading viewer counts when the channel is not live
+- [x] [경계] `ViewerCountIntegration` — should store 0 for live channel D with no session in the current snapshot
+- [x] [경계] `ViewerCountIntegration` — should count the sessions from both pages when MediaMTX returns the session list in 2 pages
+- [x] [경계] `ViewerCountIntegration` — should read the MediaMTX session list once when two counters aggregate at the same time
+- [x] [경계] `ViewerCountIntegration` — should not read the session list again when a second counter runs before the lock expires
+- [x] [경계] `ViewerCountIntegration` — should hold the round lock for at most 4 seconds
+- [x] [경계] `ViewerCountIntegration` — should let the other counter aggregate in the next round after the lock of the stopped counter expires
+- [x] [경계] `ViewerCountIntegration` — should make the snapshot expire 2 minutes after it is written
+- [x] [경계] `ViewerCountIntegration` — should return viewerCount 0 for a live channel when the current snapshot has expired
+- [x] [경계] `ViewerCountIntegration` — should return viewerCount 0 for a live channel when no snapshot has been made
+- [x] [경계] `ChannelPage` — should show 0명 시청 중 when the live channel has no viewer
+- [x] [경계] `ChannelPage` — should stop showing 시청 중 when the broadcast ends while watching
 
 ### 예외
 
-- [ ] [예외] `MediaMtxClient.findHlsSessions` — should throw when the MediaMTX API responds with an error
-- [ ] [예외] `ViewerCounter.aggregate` — should not throw and not write a snapshot when the MediaMTX call fails
-- [ ] [예외] `ViewerCountIntegration` — should keep viewerCount of the previous snapshot when MediaMTX fails in the next round
+- [x] [예외] `MediaMtxClient.findHlsSessions` — should throw when the MediaMTX API responds with an error
+- [x] [예외] `ViewerCounter.aggregate` — should not throw and not write a snapshot when the MediaMTX call fails
+- [x] [예외] `ViewerCountIntegration` — should keep viewerCount of the previous snapshot when MediaMTX fails in the next round
 
 ### Red 기록
 
@@ -212,6 +212,20 @@ export function viewerCountLabel(live: boolean, viewerCount: number): string | n
   - 프론트 5개 — `viewerCountLabel`은 `not implemented`, 화면 4개는 "N명 시청 중"을 찾지 못해 실패.
 - 전체 스위트(Red): 백엔드 516개 중 66개 실패 = 이번 이슈 25개 + `ChannelService` stub 때문에 함께 실패한 기존 41개(`ChannelServiceTest` 13·`ChannelIntegrationTest` 16·`FollowIntegrationTest` 8·`BroadcastIntegrationTest` 2·`StudioTermsIntegrationTest` 2 — 모두 채널 응답을 만드는 경로). 프론트 162개 중 5개 실패(이번 이슈 것만).
 - `npx tsc -b`: stub의 안 쓰는 인자 두 개(`TS6133`)만 나온다. Green에서 사라진다.
+
+### Green 기록
+
+- 순서: `ChannelService.viewerCountOf`(방송 중일 때만 판을 읽는다) + `ChannelMapper.xml`의 `live_broadcast_id` → `MediaMtxClient.findHlsSessions`(페이지 루프) → `BroadcastMapper.xml`의 `findLiveBroadcasts` → `ViewerSnapshot`(잠금·판 쓰기·읽기) → `ViewerCounter.aggregate` → `ViewerCountScheduler`(5초) → 프론트 `viewerCountLabel` → `ChannelPage` 메타 줄.
+- **Red에서 함께 깨졌던 기존 41개** — 첫 구현(`viewerCountOf`)으로 모두 돌아왔다.
+- **구현하며 정한 것(시그니처 밖의 세부)**
+  - 진행 중 방송 id는 채널 조회 SQL에 스칼라 하위 질의로 더했다. 조건을 `live` 식과 같은 `CASE WHEN b.ended_at IS NULL THEN b.channel_id END = c.id`로 써 `uk_broadcast_live_channel` 색인을 탄다. `live` 식은 그대로다.
+  - 판 쓰기 = `INCR viewers:seq` → `HSET viewers:{판}:count`(방송ID → 수, 문자열) → `EXPIRE 2분` → `SET viewers:current`. 쓸 값이 없으면(진행 중 방송 0개) 해시는 만들지 않고 `current`만 바꾼다.
+  - 잠금 = `SET viewers:lock 1 NX EX 4`. 값은 쓰지 않는다(풀지 않으므로 주인을 가릴 일이 없다).
+  - 로그: 회차마다 `시청자 수 집계 sessions={} broadcasts={} elapsedMs={}`(INFO), MediaMTX 실패는 `시청자 수 집계 실패 cause={예외 이름} elapsedMs={}`(WARN). 세션 주소·예외 메시지는 남기지 않는다(`BroadcastReconciler`와 같은 이유).
+  - 화면: "N명 시청 중"을 제목 아래 메타 줄(채널 이름·데모 표시 옆)에 글자로만 넣었다. 새 스타일·색 없음(`.meta`의 `gap`·글자 크기를 그대로 쓴다).
+- 커버리지 명령(`coverage`)이 설정에 없어 측정하지 않았다.
+- 실행: 백엔드는 이번 이슈 네 파일(`ChannelServiceTest`·`MediaMtxClientTest`·`ViewerCounterTest`·`ViewerCountIntegrationTest`)을 돌린 뒤 전체를 한 번, 프론트는 전체(26파일 162개 통과)와 `tsc -b`(오류 0)·`lint`(경고 0).
+- 백엔드 전체: 516개 중 1개 실패 — `NginxChannelCacheTest — should ask Spring again when the same channel is requested after 1 second`(nginx 컨테이너와 가짜 Spring으로 1초 캐시 만료를 2.1초 기다려 재는 테스트. 이 이슈의 코드를 지나지 않는다). 단독 재실행 통과. #38 기록의 같은 클래스 시간 흔들림과 같은 것으로 본다.
 
 ---
 
@@ -241,4 +255,26 @@ AC에 없는데 추가한 것:
 
 ## 수동 확인
 
-(Green 뒤에 로컬 도커에서 기록한다)
+AC 10 — 로컬 도커에서 실제 시청(2026-11-28, KST).
+
+**방법**
+
+- 이 브랜치(Green)로 `docker compose up -d --build api-1 api-2 nginx`. 데모 방송(`demo` 컨테이너)은 그대로 송출 중이다. 진행 중 방송 3개(데모 채널 62 포함).
+- 호스트에서 1초마다 `curl http://localhost:8000/api/channels/62`의 `viewerCount`를 시각과 함께 기록했다(nginx 1초 캐시를 거친 값 — 시청자가 보는 값과 같다).
+- 시청: 데스크톱 앱의 브라우저 창(실제 Chromium, hls.js 재생)으로 `http://localhost:8000/channels/62`를 열고, 화면 글자를 읽은 뒤 탭을 닫았다. 그 사이 다른 시청자는 없었다(열기 전 `viewerCount` 0, MediaMTX 세션 0).
+
+**관측**
+
+| 시각 | 한 일 / 본 것 |
+| --- | --- |
+| 07:28:00~07:28:13 | `viewerCount` 0 (기준) |
+| 07:28:13~07:28:18 | 방송 화면 열기(창을 여는 호출이 이 사이에 끝났다) |
+| 07:28:16 | api-2 집계 로그 `sessions=1 broadcasts=3 elapsedMs=18` |
+| 07:28:17 | `viewerCount` 1 — **열고 약 4초 안**(10초 안 ✅) |
+| 07:28:40 무렵 | 열어 둔 화면의 글자에 `1명 시청 중`이 보였다 |
+| 07:28:48~07:28:49 | 탭 닫기 |
+| 07:29:25 | `viewerCount` 0 — **닫고 약 36초 뒤**(1분 안 ✅) |
+
+- 집계는 두 서버 중 그 회차 잠금을 잡은 쪽이 했다(로그가 api-1·api-2에 번갈아 나온다. 같은 5초 안에 두 번 세지 않았다).
+- 닫은 뒤 36초는 PRD V1 Consequences의 "세션이 약 30초 남고 + 5초"와 맞는다.
+- 이 시간 api 로그에 WARN·ERROR는 시작 때 원래 있던 둘(Flyway 버전 권고, 기본 사용자 설정)뿐이다. 집계 로그에 주소는 없다.
