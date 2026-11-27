@@ -14,4 +14,7 @@ public interface BroadcastMapper {
     void endLive(long channelId);
 
     List<Long> findLiveChannelIds();
+
+    // 진행 중 방송 전부(#39 시청자 수 집계)
+    List<LiveBroadcast> findLiveBroadcasts();
 }

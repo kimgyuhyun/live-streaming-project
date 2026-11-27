@@ -1,7 +1,8 @@
 import { api } from './client.ts'
 
 // live는 방송 중 여부(진행 중 방송이 있으면 true). title은 방송 제목, 정한 적 없으면 "{name}의 방송".
-// demo는 운영자가 데모 표시를 붙인 채널이면 true. followerCount는 그 채널을 팔로우한 회원 수(#37)
+// demo는 운영자가 데모 표시를 붙인 채널이면 true. followerCount는 그 채널을 팔로우한 회원 수(#37).
+// viewerCount는 지금 시청자 수(#39). 방송 중이 아니면 0
 export interface ChannelResponse {
   id: number
   name: string
@@ -10,6 +11,7 @@ export interface ChannelResponse {
   title: string
   demo: boolean
   followerCount: number
+  viewerCount: number
 }
 
 export interface UpdateChannelRequest {

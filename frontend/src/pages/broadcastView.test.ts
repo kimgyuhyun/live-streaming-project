@@ -1,6 +1,13 @@
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { hlsUrl, LIVE_POLL_INTERVAL_MS, nextBroadcastView, pollInterval, useBroadcastView } from './broadcastView.ts'
+import {
+  hlsUrl,
+  LIVE_POLL_INTERVAL_MS,
+  nextBroadcastView,
+  pollInterval,
+  useBroadcastView,
+  viewerCountLabel,
+} from './broadcastView.ts'
 
 describe('nextBroadcastView', () => {
   it('should choose live when the first channel response is live', () => {
@@ -88,5 +95,11 @@ describe('pollInterval', () => {
 describe('hlsUrl', () => {
   it('should build /hls/live/{channelId}/index.m3u8 for the channel', () => {
     expect(hlsUrl(7)).toBe('/hls/live/7/index.m3u8')
+  })
+})
+
+describe('viewerCountLabel', () => {
+  it('should return null when the channel is offline', () => {
+    expect(viewerCountLabel(false, 3)).toBeNull()
   })
 })

@@ -18,6 +18,8 @@ public class Channel {
     private boolean demo;
     // 팔로워 수(#37). 팔로우가 실제로 들어가거나 지워질 때만 ±1
     private long followerCount;
+    // 진행 중 방송의 id(#39). 방송 중이 아니면 null. 조회 SQL이 함께 읽는다
+    private Long liveBroadcastId;
 
     public Channel() {
     }
@@ -106,5 +108,13 @@ public class Channel {
 
     public void setFollowerCount(long followerCount) {
         this.followerCount = followerCount;
+    }
+
+    public Long getLiveBroadcastId() {
+        return liveBroadcastId;
+    }
+
+    public void setLiveBroadcastId(Long liveBroadcastId) {
+        this.liveBroadcastId = liveBroadcastId;
     }
 }

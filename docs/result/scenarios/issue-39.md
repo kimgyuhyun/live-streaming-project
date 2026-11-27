@@ -119,7 +119,10 @@ class ViewerCountScheduler {
 // api/channels.ts — ChannelResponse에 더한다
 //   viewerCount: number   // 지금 시청자 수(#39). 방송 중이 아니면 0
 
-// pages/ChannelPage.tsx — 제목 아래 메타 줄(채널 이름 옆)에 방송 중일 때만 "{viewerCount}명 시청 중".
+// pages/broadcastView.ts — 화면 상태를 고르는 순수 함수(프론트 컨벤션). 방송 중이면 "{viewerCount}명 시청 중", 아니면 null
+export function viewerCountLabel(live: boolean, viewerCount: number): string | null
+
+// pages/ChannelPage.tsx — 제목 아래 메타 줄(채널 이름 옆)에 viewerCountLabel(live, viewerCount)이 null이 아니면 그 문구.
 //   값은 이미 5초마다 다시 묻는 채널 조회 응답에서 읽는다(새 요청 없음)
 // (props 변경 없음)
 ```
@@ -170,7 +173,7 @@ class ViewerCountScheduler {
 - [ ] [정상] `ViewerCountIntegration` — should write a new snapshot in the next round after a round in which MediaMTX failed
 - [ ] [정상] `ChannelPage` — should show 3명 시청 중 when the live channel has 3 viewers
 - [ ] [정상] `ChannelPage` — should show 5명 시청 중 after the next poll returns 5 viewers
-- [ ] [정상] `ChannelPage` — should not show 시청 중 when the channel is offline
+- [ ] [정상] `viewerCountLabel` — should return null when the channel is offline
 
 ### 경계
 
@@ -197,6 +200,19 @@ class ViewerCountScheduler {
 - [ ] [예외] `ViewerCounter.aggregate` — should not throw and not write a snapshot when the MediaMTX call fails
 - [ ] [예외] `ViewerCountIntegration` — should keep viewerCount of the previous snapshot when MediaMTX fails in the next round
 
+### Red 기록
+
+- 만든 stub: `channel/ViewerCountReader`(인터페이스), `Channel.liveBroadcastId`(필드), `ChannelResponse.viewerCount`, `ChannelService`의 생성자 인자 `ViewerCountReader`와 `viewerCountOf`(본문 `UnsupportedOperationException`), `broadcast/LiveBroadcast`(record), `BroadcastMapper.findLiveBroadcasts`(선언만, SQL 없음), `MediaMtxClient.findHlsSessions`·`HlsSessions`·`HlsSession`, `ViewerSnapshot`(키 상수 + 세 메서드 `UnsupportedOperationException`), `ViewerCounter.aggregate`, 프론트 `ChannelResponse.viewerCount` 타입과 `broadcastView.ts`의 `viewerCountLabel`(`throw`).
+- **시나리오 한 줄을 바꿨다** — `[정상] ChannelPage — should not show 시청 중 when the channel is offline`을 `[정상] viewerCountLabel — should return null when the channel is offline`로 옮겼다. 화면에서 "안 보인다"만 보는 테스트는 구현이 없어도 통과한다(아무것도 안 그리니까). 프론트 컨벤션대로 화면 상태를 고르는 규칙을 순수 함수로 뽑아 그 함수의 결과를 본다. 화면 쪽 "안 보임"은 `…stop showing 시청 중 when the broadcast ends…`가 "먼저 보였다가 사라진다"로 본다. 시그니처 절에 `viewerCountLabel`을 더했다.
+- **`ChannelService` stub이 기존 테스트를 깨뜨린다(의도)** — 응답을 만드는 `toResponse`가 `viewerCountOf`를 부르고, 그 stub이 던진다. "방송 중이 아니면 0"을 stub에서 미리 0으로 채우면 그 시나리오가 구현 없이 통과한다(#37의 `followerCount` stub이 그랬다). 그래서 채널 응답을 만드는 기존 테스트(`ChannelServiceTest` 13개, 채널 조회를 쓰는 통합 테스트)가 Red 동안 함께 실패한다. Green의 첫 구현에서 모두 돌아온다.
+- 기존 테스트 손질(컴파일): `new ChannelResponse(...)`에 `viewerCount` 0(`ChannelControllerTest`·`ChannelOperatorControllerTest`·`ChannelServiceTest`), `new ChannelService(channelMapper)` → 가짜 `ViewerCountReader`를 넘긴다. 프론트 테스트 고정값 넷(`ChannelManagePage`·`StudioBroadcastPage`·`StudioFollowersPage`·`StudioLayout`)에 `viewerCount: 0`, `ChannelPage.test.tsx`의 `channel()`에 `viewerCount` 인자.
+- 실행: 단위(`ViewerCounterTest`·`MediaMtxClientTest`·`ChannelServiceTest`)는 한 번에, 통합(`ViewerCountIntegrationTest`)은 컨테이너 기동 때문에 다 쓰고 파일 단위로 한 번, 프론트는 두 파일을 한 번.
+- 결과: 시나리오 30개 = 백엔드 25개(클라이언트 4 · 집계 5 · 서비스 2 · 통합 14) + 프론트 5개(`ChannelPage` 4 · `viewerCountLabel` 1). **30개 전부 실패, 구현 없이 통과한 것 0개.** `check-scenarios.mjs` 불일치 0(종료 0).
+  - 백엔드 25개 — 모두 stub의 not implemented에 닿았다(단언 `HttpServerErrorException` 기대 1개는 `UnsupportedOperationException`을 받아 실패, 동시 집계 1개는 `ExecutionException`, 판 없음 1개는 채널 조회가 `ServletException`).
+  - 프론트 5개 — `viewerCountLabel`은 `not implemented`, 화면 4개는 "N명 시청 중"을 찾지 못해 실패.
+- 전체 스위트(Red): 백엔드 516개 중 66개 실패 = 이번 이슈 25개 + `ChannelService` stub 때문에 함께 실패한 기존 41개(`ChannelServiceTest` 13·`ChannelIntegrationTest` 16·`FollowIntegrationTest` 8·`BroadcastIntegrationTest` 2·`StudioTermsIntegrationTest` 2 — 모두 채널 응답을 만드는 경로). 프론트 162개 중 5개 실패(이번 이슈 것만).
+- `npx tsc -b`: stub의 안 쓰는 인자 두 개(`TS6133`)만 나온다. Green에서 사라진다.
+
 ---
 
 ## AC 대조
@@ -211,7 +227,7 @@ class ViewerCountScheduler {
 | 6. 잠금을 쥔 쪽이 멈춰 만료 → 다음 회차에 다른 쪽이 집계 | `[경계] ViewerCountIntegration — …other counter aggregate in the next round after the lock…expires`·`…lock for at most 4 seconds` |
 | 7. MediaMTX 실패 → 예외가 나가지 않고 이전 판 값이 그대로 | `[예외] ViewerCounter.aggregate — …not throw and not write a snapshot…`<br>`[예외] ViewerCountIntegration — …keep viewerCount of the previous snapshot…`<br>`[정상] ViewerCountIntegration — …new snapshot in the next round after…failed`<br>`[예외] MediaMtxClient.findHlsSessions — …throw…error` |
 | 8. 판이 2분 넘게 새로 안 생김 → `viewerCount` 0 | `[경계] ViewerCountIntegration — …current snapshot has expired`·`…expire 2 minutes after it is written`·`…no snapshot has been made` |
-| 9. 방송 중이면 "N명 시청 중", 오프라인이면 안 보임 | `[정상] ChannelPage — …3명 시청 중…`·`…5명 시청 중 after the next poll…`·`…not show 시청 중…offline`<br>`[경계] ChannelPage — …0명 시청 중…`·`…stop showing 시청 중 when the broadcast ends…` |
+| 9. 방송 중이면 "N명 시청 중", 오프라인이면 안 보임 | `[정상] ChannelPage — …3명 시청 중…`·`…5명 시청 중 after the next poll…`<br>`[정상] viewerCountLabel — …null when the channel is offline`<br>`[경계] ChannelPage — …0명 시청 중…`·`…stop showing 시청 중 when the broadcast ends…` |
 | 10. 로컬 도커 실제 시청: 열면 10초 안에 +1, 닫으면 1분 안에 −1 | 수동 확인 — 아래 "수동 확인" 절에 시각과 관측값을 기록한다(자동 테스트 없음) |
 
 **커버리지:** AC 10개(자동 9 + 수동 1) / 시나리오 30개 / 미커버 0개

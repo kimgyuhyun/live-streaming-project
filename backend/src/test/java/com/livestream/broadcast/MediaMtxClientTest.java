@@ -3,7 +3,9 @@ package com.livestream.broadcast;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.queryParam;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -57,6 +59,69 @@ class MediaMtxClientTest {
         return "{\"name\":\"" + name + "\",\"confName\":\"all_others\",\"ready\":" + available + ","
                 + "\"available\":" + available + ",\"online\":" + available + ","
                 + "\"source\":{\"type\":\"rtmpConn\",\"id\":\"x\"},\"tracks\":[\"H264\"],\"readers\":[]}";
+    }
+
+    // 1.21 /v3/hlssessions/list 모양(로컬 도커 실측, #39). 페이지 번호는 0부터, 세션이 없으면 pageCount 0
+    private static String sessionPage(int pageCount, String... items) {
+        return "{\"itemCount\":" + items.length + ",\"pageCount\":" + pageCount + ",\"items\":["
+                + String.join(",", items) + "]}";
+    }
+
+    private static String session(String path, String remoteAddr) {
+        return "{\"id\":\"s\",\"created\":\"2026-11-27T22:05:39Z\",\"remoteAddr\":\"" + remoteAddr + "\","
+                + "\"path\":\"" + path + "\",\"query\":\"\",\"user\":\"\",\"expiresAt\":null,"
+                + "\"userAgent\":\"curl/8.14.1\",\"isCDN\":false,\"outboundBytes\":413}";
+    }
+
+    @Nested
+    @DisplayName("MediaMtxClient.findHlsSessions")
+    class FindHlsSessions {
+
+        private static final String SESSIONS = API + "/v3/hlssessions/list";
+
+        @Test
+        @DisplayName("should return the path and remote address of each session")
+        void returnsPathAndRemoteAddress() {
+            server.expect(requestTo(startsWith(SESSIONS))).andExpect(method(HttpMethod.GET))
+                    .andRespond(withSuccess(sessionPage(1, session("live/7", "172.18.0.9:41000"),
+                            session("live/8", "172.18.0.9:41002")), MediaType.APPLICATION_JSON));
+
+            assertThat(client.findHlsSessions()).containsExactly(
+                    new MediaMtxClient.HlsSession("live/7", "172.18.0.9:41000"),
+                    new MediaMtxClient.HlsSession("live/8", "172.18.0.9:41002"));
+        }
+
+        @Test
+        @DisplayName("should read every page when the session list has 3 pages")
+        void readsEveryPage() {
+            server.expect(requestTo(startsWith(SESSIONS))).andExpect(queryParam("page", "0"))
+                    .andRespond(withSuccess(sessionPage(3, session("live/7", "a:1")), MediaType.APPLICATION_JSON));
+            server.expect(requestTo(startsWith(SESSIONS))).andExpect(queryParam("page", "1"))
+                    .andRespond(withSuccess(sessionPage(3, session("live/7", "a:2")), MediaType.APPLICATION_JSON));
+            server.expect(requestTo(startsWith(SESSIONS))).andExpect(queryParam("page", "2"))
+                    .andRespond(withSuccess(sessionPage(3, session("live/8", "a:3")), MediaType.APPLICATION_JSON));
+
+            assertThat(client.findHlsSessions()).extracting(MediaMtxClient.HlsSession::remoteAddr)
+                    .containsExactly("a:1", "a:2", "a:3");
+        }
+
+        @Test
+        @DisplayName("should return no sessions after a single request when the list reports 0 pages")
+        void returnsNothingForZeroPages() {
+            // 두 번째 요청이 오면 MockRestServiceServer가 예상하지 못한 요청으로 실패시킨다
+            server.expect(requestTo(startsWith(SESSIONS))).andExpect(queryParam("page", "0"))
+                    .andRespond(withSuccess(sessionPage(0), MediaType.APPLICATION_JSON));
+
+            assertThat(client.findHlsSessions()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("should throw when the MediaMTX API responds with an error")
+        void throwsOnApiError() {
+            server.expect(requestTo(startsWith(SESSIONS))).andRespond(withServerError());
+
+            assertThatThrownBy(() -> client.findHlsSessions()).isInstanceOf(HttpServerErrorException.class);
+        }
     }
 
     @Nested
