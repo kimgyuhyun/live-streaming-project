@@ -108,6 +108,15 @@ class ChannelControllerTest {
                     .andExpect(jsonPath("$.code").value("CHANNEL_NOT_FOUND"))
                     .andExpect(jsonPath("$.message").value("채널을 찾을 수 없습니다"));
         }
+
+        @Test
+        @DisplayName("should return 400 with code INVALID_INPUT when the channel id is not a number")
+        void rejectsNonNumericId() throws Exception {
+            mockMvc.perform(get("/api/channels/{channelId}", "abc"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"))
+                    .andExpect(jsonPath("$.message").value("입력값이 올바르지 않습니다"));
+        }
     }
 
     @Nested
