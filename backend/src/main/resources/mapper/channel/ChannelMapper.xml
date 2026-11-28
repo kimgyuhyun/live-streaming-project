@@ -28,7 +28,9 @@
     <sql id="columns">
         c.id, c.member_id, c.name, c.description, c.stream_key_hash, c.stream_key_prefix, c.title, c.demo,
         c.follower_count,
-        <include refid="live"/> AS live
+        <include refid="live"/> AS live,
+        <!-- 진행 중 방송의 id(#39 시청자 수는 방송 id로 센다). live와 같은 식으로 uk_broadcast_live_channel을 탄다 -->
+        (SELECT b.id FROM broadcast b WHERE (CASE WHEN b.ended_at IS NULL THEN b.channel_id END) = c.id) AS live_broadcast_id
     </sql>
 
     <select id="findById" resultType="com.livestream.channel.Channel">

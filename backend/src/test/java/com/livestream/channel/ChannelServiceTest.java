@@ -24,12 +24,14 @@ class ChannelServiceTest {
     private static final long OTHER_MEMBER_ID = 2L;
 
     private ChannelMapper channelMapper;
+    private ViewerCountReader viewerCountReader;
     private ChannelService channelService;
 
     @BeforeEach
     void setUp() {
         channelMapper = mock(ChannelMapper.class);
-        channelService = new ChannelService(channelMapper);
+        viewerCountReader = mock(ViewerCountReader.class);
+        channelService = new ChannelService(channelMapper, viewerCountReader);
     }
 
     private Channel savedChannel(String description) {
@@ -49,7 +51,7 @@ class ChannelServiceTest {
 
             ChannelResponse response = channelService.find(CHANNEL_ID);
 
-            assertThat(response).isEqualTo(new ChannelResponse(CHANNEL_ID, "방송채널", "안녕하세요", false, "방송채널의 방송", false, 0));
+            assertThat(response).isEqualTo(new ChannelResponse(CHANNEL_ID, "방송채널", "안녕하세요", false, "방송채널의 방송", false, 0, 0));
         }
 
         @Test
@@ -120,6 +122,29 @@ class ChannelServiceTest {
         }
 
         @Test
+        @DisplayName("should return the viewer count of the live broadcast when the channel is live")
+        void returnsViewerCountOfLiveBroadcast() {
+            Channel channel = savedChannel("");
+            channel.setLive(true);
+            channel.setLiveBroadcastId(41L);
+            given(channelMapper.findById(CHANNEL_ID)).willReturn(Optional.of(channel));
+            given(viewerCountReader.viewerCount(41L)).willReturn(3L);
+
+            assertThat(channelService.find(CHANNEL_ID).viewerCount()).isEqualTo(3);
+        }
+
+        @Test
+        @DisplayName("should return viewerCount 0 without reading viewer counts when the channel is not live")
+        void returnsZeroViewersWhenOffline() {
+            given(channelMapper.findById(CHANNEL_ID)).willReturn(Optional.of(savedChannel("")));
+
+            ChannelResponse response = channelService.find(CHANNEL_ID);
+
+            assertThat(response.viewerCount()).isZero();
+            verify(viewerCountReader, never()).viewerCount(anyLong());
+        }
+
+        @Test
         @DisplayName("should throw CHANNEL_NOT_FOUND when the channel does not exist")
         void rejectsMissingChannel() {
             given(channelMapper.findById(CHANNEL_ID)).willReturn(Optional.empty());
@@ -141,7 +166,7 @@ class ChannelServiceTest {
             given(channelMapper.findByMemberId(OWNER_ID)).willReturn(Optional.of(savedChannel("소개")));
 
             assertThat(channelService.findMine(OWNER_ID))
-                    .isEqualTo(new ChannelResponse(CHANNEL_ID, "방송채널", "소개", false, "방송채널의 방송", false, 0));
+                    .isEqualTo(new ChannelResponse(CHANNEL_ID, "방송채널", "소개", false, "방송채널의 방송", false, 0, 0));
         }
 
         @Test
@@ -169,7 +194,7 @@ class ChannelServiceTest {
                     new UpdateChannelRequest("새이름", "새 소개"));
 
             verify(channelMapper).update(CHANNEL_ID, "새이름", "새 소개");
-            assertThat(response).isEqualTo(new ChannelResponse(CHANNEL_ID, "새이름", "새 소개", false, "새이름의 방송", false, 0));
+            assertThat(response).isEqualTo(new ChannelResponse(CHANNEL_ID, "새이름", "새 소개", false, "새이름의 방송", false, 0, 0));
         }
 
         @Test

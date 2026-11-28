@@ -12,6 +12,11 @@
         WHERE channel_id = #{channelId} AND ended_at IS NULL
     </update>
 
+    <!-- 시청자 수 집계(#39). 판은 방송 id로 센다 -->
+    <select id="findLiveBroadcasts" resultType="com.livestream.broadcast.LiveBroadcast">
+        SELECT id, channel_id FROM broadcast WHERE ended_at IS NULL
+    </select>
+
     <select id="findLiveChannelIds" resultType="long">
         SELECT channel_id FROM broadcast WHERE ended_at IS NULL
     </select>

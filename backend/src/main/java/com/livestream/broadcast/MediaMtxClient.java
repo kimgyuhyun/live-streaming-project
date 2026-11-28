@@ -1,6 +1,7 @@
 package com.livestream.broadcast;
 
 import com.livestream.channel.PublisherDisconnector;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -41,6 +42,21 @@ class MediaMtxClient implements PublisherDisconnector {
         return paths.items().stream().filter(PathItem::available).map(PathItem::name).toList();
     }
 
+    // 시청 세션 전부(#39). ?page=0부터 응답의 pageCount 직전 페이지까지 읽는다(MediaMTX 페이지 번호는 0부터).
+    // API 오류는 RestClientException 그대로 던진다
+    List<HlsSession> findHlsSessions() {
+        List<HlsSession> sessions = new ArrayList<>();
+        int page = 0;
+        HlsSessions current;
+        do {
+            current = restClient.get().uri("/v3/hlssessions/list?page={page}", page)
+                    .retrieve().body(HlsSessions.class);
+            sessions.addAll(current.items());
+            page++;
+        } while (page < current.pageCount());
+        return sessions;
+    }
+
     // 필요한 필드만 읽는다. query(키가 들어 있다)는 받지 않는다
     record RtmpConnections(List<RtmpConnection> items) {
     }
@@ -52,5 +68,12 @@ class MediaMtxClient implements PublisherDisconnector {
     }
 
     record PathItem(String name, boolean available) {
+    }
+
+    // 시청 세션은 path·remoteAddr만 읽는다(#39). 주소는 저장·로그하지 않는다
+    record HlsSessions(int pageCount, List<HlsSession> items) {
+    }
+
+    record HlsSession(String path, String remoteAddr) {
     }
 }

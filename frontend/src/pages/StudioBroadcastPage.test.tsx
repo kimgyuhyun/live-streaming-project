@@ -20,6 +20,7 @@ const CHANNEL: ChannelResponse = {
   title: '하늘의 방송',
   demo: false,
   followerCount: 1234,
+  viewerCount: 0,
 }
 
 function renderPage() {

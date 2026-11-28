@@ -31,8 +31,8 @@ const fetchFollowStatusMock = vi.mocked(fetchFollowStatus)
 const followMock = vi.mocked(follow)
 const unfollowMock = vi.mocked(unfollow)
 
-function channel(live: boolean, demo = false, followerCount = 0): ChannelResponse {
-  return { id: 7, name: '하늘', description: '', live, title: '오늘은 노래', demo, followerCount }
+function channel(live: boolean, demo = false, followerCount = 0, viewerCount = 0): ChannelResponse {
+  return { id: 7, name: '하늘', description: '', live, title: '오늘은 노래', demo, followerCount, viewerCount }
 }
 
 function renderPage() {
@@ -301,5 +301,42 @@ describe('ChannelPage', () => {
     await vi.advanceTimersByTimeAsync(0)
 
     expect([screen.queryByText('팔로워 3명'), screen.queryByRole('button', { name: '팔로우' })]).not.toContain(null)
+  })
+
+  it('should show 3명 시청 중 when the live channel has 3 viewers', async () => {
+    fetchChannelMock.mockResolvedValue(channel(true, false, 0, 3))
+
+    renderPage()
+
+    expect(await screen.findByText('3명 시청 중')).not.toBeNull()
+  })
+
+  it('should show 5명 시청 중 after the next poll returns 5 viewers', async () => {
+    fetchChannelMock.mockResolvedValueOnce(channel(true, false, 0, 3)).mockResolvedValue(channel(true, false, 0, 5))
+    renderPage()
+    await screen.findByText('3명 시청 중')
+
+    await vi.advanceTimersByTimeAsync(LIVE_POLL_INTERVAL_MS)
+
+    expect(await screen.findByText('5명 시청 중')).not.toBeNull()
+  })
+
+  it('should show 0명 시청 중 when the live channel has no viewer', async () => {
+    fetchChannelMock.mockResolvedValue(channel(true, false, 0, 0))
+
+    renderPage()
+
+    expect(await screen.findByText('0명 시청 중')).not.toBeNull()
+  })
+
+  it('should stop showing 시청 중 when the broadcast ends while watching', async () => {
+    fetchChannelMock.mockResolvedValueOnce(channel(true, false, 0, 3)).mockResolvedValue(channel(false))
+    renderPage()
+    await screen.findByText('3명 시청 중')
+
+    await vi.advanceTimersByTimeAsync(LIVE_POLL_INTERVAL_MS)
+    await screen.findByText('방송이 종료되었습니다')
+
+    expect(screen.queryByText(/시청 중/)).toBeNull()
   })
 })
