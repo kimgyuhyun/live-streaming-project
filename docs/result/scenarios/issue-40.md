@@ -125,6 +125,15 @@ IP는 문서용 대역(`203.0.113.0/24`, `198.51.100.0/24`)을 쓴다.
 - 실행: 이슈 두 파일(`ViewerCounterTest` 12·`ViewerCountIntegrationTest` 18) 통과 → 백엔드 전체 527개 통과(실패 0, Red 전 516 + 이번 11) → 프론트 전체 26파일 162개 통과(프론트는 바꾸지 않았다). Red에서는 전체 스위트를 따로 돌리지 않았다(바뀐 곳이 `ViewerCounter`·설정 한 줄뿐이라 이슈 두 파일로 봤다).
 - **로컬 도커 확인(19:08~19:09, KST)** — 이 브랜치로 `docker compose up -d --build api-1 api-2`. 호스트에서 쿠키 없이 `/hls/live/62/index.m3u8`을 7번 열어(요청마다 새 세션, 같은 IP) 집계 로그 `sessions=7` → 채널 62 조회 `viewerCount` **5**. 같은 때 api-1·api-2 로그 2분 치와 로컬 Redis 전체(키 24개, 자료형별로 값까지)에서 그 시청자 주소 0건.
 
+### Refactor 기록
+
+- 기준선: Green 끝의 전체 통과(백엔드 527개, 프론트 162개). AC 검증 때 이슈 테스트 두 파일도 다시 통과했다(19:10).
+- 대상: `git diff main...HEAD`의 소스 중 테스트·설정을 뺀 `ViewerCounter.java` 하나. 다섯 기준으로 보고 **고칠 것이 없다**고 판단해 코드를 바꾸지 않았다(refactor 커밋 없음).
+  - 중복 — 경로 → 채널ID 규칙은 기존 `LivePath.channelIdOf`를 그대로 쓴다. 새로 생긴 반복 없음.
+  - 매직 넘버 — 한도 5는 코드에 없고 설정값(`app.viewer.max-sessions-per-ip`)으로만 들어온다.
+  - 단일 책임 — `aggregate`는 회차 흐름(잠금 → 읽기 → 셈 → 판 쓰기 → 로그), 셈은 `countByChannel`, 주소 해석은 `ipOf`로 이미 나뉘어 있다.
+  - 네이밍 — `sessionsByChannelAndIp`·`sessionsByIp`·`maxSessionsPerIp`가 키와 값을 드러낸다.
+
 ---
 
 ## AC 대조
@@ -289,3 +298,36 @@ AC 4개 중 ✅ 4 / ⚠️ 0 / ❌ 0
 - 판정에는 이견이 없다. "확인하지 않은 것"에 대한 사실 보충만 남긴다.
   - 서버에서 8888: `compose.prod.yml`의 `mediamtx.ports`는 `!override`로 `"1935:1935"` 하나뿐이다. 서버에서는 MediaMTX HLS 포트에 바깥에서 직접 닿지 않는다.
   - 포트 없는 `remoteAddr`: Green 기록대로 "일어나지 않는 경우에 대한 처리는 넣지 않는다"(CLAUDE.md)를 따랐다. 회차가 실패해도 다음 회차(5초 뒤)가 다시 센다.
+
+---
+
+## 보안 점검
+
+> `/harness:security-review 40` (2026-11-28). 대상: `git diff main...HEAD`.
+
+**수집 결과**
+
+- 타입: `./gradlew compileJava compileTestJava` 통과, `npx tsc -b` 오류 0.
+- 의존성: `npm audit` 0건. 이 이슈는 의존성을 바꾸지 않았다(`securityExceptions` 대장은 설정에 없다).
+- 비밀값: 더한 줄에서 비밀값 패턴·알려진 접두사 0건. 이 브랜치가 커밋한 `.env` 없음.
+- 로그: 더한 로그 호출 0건. 기존 집계 로그 둘(`sessions={} broadcasts={} elapsedMs={}`, `실패 cause={예외 클래스 이름} elapsedMs={}`)에 주소가 들어갈 자리가 없다(AC 4 테스트와 로컬 도커 확인).
+
+**🔴 즉시 수정 필요 — 없음**
+
+**🟡 권장 수정**
+
+| 파일·줄 | 무엇 | 왜 이 분류 | 어떻게 |
+| --- | --- | --- | --- |
+| `ViewerCounter.ipOf` | IPv6 시청자는 주소 하나하나가 따로 센다. 집 하나가 보통 `/64` 대역(주소 수십억 개)을 받으므로, IPv6로 주소를 바꿔 가며 열면 IP당 한도를 피해 부풀릴 수 있다 | 이슈 결정은 "IP마다"이고 AC는 IPv4 예로 충족된다. 막는 범위를 넓히는 것은 새 결정이다 | IPv6는 `/64` 앞부분으로 묶을지 #42 측정 때 함께 정한다(PRD V1 "다시 여는 조건"에 더할 후보) |
+| `compose.yml` `networks.default` 대역 고정 | 서버에 같은 대역(`172.27.0.0/16`)을 쓰는 네트워크가 이미 있으면 `docker compose up`이 대역 겹침 오류로 멈춘다 | 보안 위험이 아니라 배포 견고성이다. 조용히 깨지지 않고 시작 단계에서 멈춘다 | 서버 배포 때 `docker network ls`·`inspect`로 겹침을 먼저 본다. 겹치면 비어 있는 대역으로 바꾸고 `mediamtx.yml`의 `hlsTrustedProxies`도 같이 바꾼다 |
+
+**⚪ 무시 가능(판단 근거)**
+
+- **로컬 직접 포트 8888로 `X-Forwarded-For` 꾸미기** — 로컬은 `127.0.0.1:8888`을 열어 두었고 그 요청은 도커 게이트웨이(믿는 대역 안)에서 와서 꾸민 헤더가 먹힌다. 루프백에만 묶여 있어 그 PC 사용자만 닿는다. 서버는 `compose.prod.yml`이 MediaMTX 포트를 `1935`만 남긴다(`!override`).
+- **믿는 대역이 nginx 하나가 아니라 도커 망 전체** — 같은 망에는 이 프로젝트의 컨테이너(api·oracle·redis·demo)뿐이다. 이슈 결정("nginx가 있는 도커 대역")대로다. MediaMTX는 edge 망에 붙지 않는다.
+- **시청자가 보낸 `X-Forwarded-For`** — nginx `/hls/`가 `$remote_addr`(real_ip가 고친 주소)로 덮어쓴다. 꾸민 값이 MediaMTX에 닿지 않는 것을 수동 확인에서 봤다(18:56:21).
+- **포트 없는 `remoteAddr`에서 `ipOf`가 던짐** — MediaMTX는 늘 `주소:포트`로 준다(신뢰 프록시 경유 세션 포함, 로컬 확인). 헤더는 nginx가 덮어써 시청자가 모양을 정할 수 없다. 던져도 그 회차만 실패하고 다음 회차가 다시 센다. 예외 메시지에 주소가 없다.
+- **IP 저장·노출** — IP는 `countByChannel`의 지역 맵에서만 쓰고 버린다. 판(Redis)에는 방송ID → 수만 간다. 로그·응답에 나가지 않는다(AC 4).
+- **공유 IP 과소 집계** — 한 공유기 뒤 6명 넘게 보면 5로 센다. 보안 결함이 아니라 PRD V1이 받아들인 결과다("다시 여는 조건": 민원이 생기면 한도를 올린다 — 설정값 하나).
+
+**처리** — 🔴가 없어 고친 것은 없다. 재스캔은 위 수집 결과가 곧 최종 상태다(코드 변경 없음).
