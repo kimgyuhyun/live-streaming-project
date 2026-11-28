@@ -116,6 +116,15 @@ IP는 문서용 대역(`203.0.113.0/24`, `198.51.100.0/24`)을 쓴다.
 - 결과: 시나리오 11개 = 단위 7 + 통합 4. **11개 전부 실패, 구현 없이 통과한 것 0개.** 모두 `UnsupportedOperationException: not implemented`(stub)에 닿았다.
   - 같은 실행에서 #39 테스트 16개도 같은 stub 메시지로 실패, 판을 쓰지 않는 #39 테스트 1개(`…no snapshot has been made`)는 통과.
 
+### Green 기록
+
+- 구현: `ViewerCounter.countByChannel` 하나. 세션을 (채널ID → (IP → 세션 수))로 모은 뒤 채널마다 `min(IP별 수, maxSessionsPerIp)`를 더한다. IP는 `remoteAddr`의 마지막 `:` 앞(`ipOf`). 첫 구현으로 이번 이슈 11개와 Red 때 함께 깨졌던 #39 테스트 16개가 모두 돌아왔다.
+- **포트 없는 `remoteAddr`는 다루지 않는다** — MediaMTX는 늘 `주소:포트`로 준다. `hlsTrustedProxies`로 `X-Forwarded-For`를 읽은 세션도 로컬에서 `주소:포트` 모양인 것을 확인했다(숫자만 가려서 봤다).
+- 인프라 설정(nginx `/hls/`의 `X-Forwarded-For`, MediaMTX `hlsTrustedProxies`, compose 기본 네트워크 대역)은 시그니처 절의 값 그대로다. 자동 테스트는 없고 "수동 확인"이 본다.
+- 커버리지 명령(`coverage`)이 설정에 없어 측정하지 않았다.
+- 실행: 이슈 두 파일(`ViewerCounterTest` 12·`ViewerCountIntegrationTest` 18) 통과 → 백엔드 전체 527개 통과(실패 0, Red 전 516 + 이번 11) → 프론트 전체 26파일 162개 통과(프론트는 바꾸지 않았다). Red에서는 전체 스위트를 따로 돌리지 않았다(바뀐 곳이 `ViewerCounter`·설정 한 줄뿐이라 이슈 두 파일로 봤다).
+- **로컬 도커 확인(19:08~19:09, KST)** — 이 브랜치로 `docker compose up -d --build api-1 api-2`. 호스트에서 쿠키 없이 `/hls/live/62/index.m3u8`을 7번 열어(요청마다 새 세션, 같은 IP) 집계 로그 `sessions=7` → 채널 62 조회 `viewerCount` **5**. 같은 때 api-1·api-2 로그 2분 치와 로컬 Redis 전체(키 24개, 자료형별로 값까지)에서 그 시청자 주소 0건.
+
 ---
 
 ## AC 대조
