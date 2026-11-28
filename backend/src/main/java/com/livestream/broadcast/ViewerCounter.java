@@ -56,8 +56,23 @@ class ViewerCounter {
     }
 
     // 채널ID → 센 세션 수. 같은 채널에서 같은 IP의 세션은 maxSessionsPerIp개까지만 센다(#40)
+    // IP는 이 메서드 안의 지역 맵에서만 쓰고 버린다 — 판·로그로 나가는 것은 채널별 수뿐이다
     private Map<Long, Long> countByChannel(List<MediaMtxClient.HlsSession> sessions) {
-        throw new UnsupportedOperationException("not implemented");
+        Map<Long, Map<String, Long>> sessionsByChannelAndIp = new HashMap<>();
+        for (MediaMtxClient.HlsSession session : sessions) {
+            LivePath.channelIdOf(session.path()).ifPresent(channelId -> sessionsByChannelAndIp
+                    .computeIfAbsent(channelId, id -> new HashMap<>())
+                    .merge(ipOf(session.remoteAddr()), 1L, Long::sum));
+        }
+        Map<Long, Long> counts = new HashMap<>();
+        sessionsByChannelAndIp.forEach((channelId, sessionsByIp) -> counts.put(channelId,
+                sessionsByIp.values().stream().mapToLong(count -> Math.min(count, maxSessionsPerIp)).sum()));
+        return counts;
+    }
+
+    // remoteAddr는 "주소:포트"(IPv6는 "[주소]:포트"). 탭마다 포트가 달라 포트를 떼야 같은 IP로 묶인다
+    private static String ipOf(String remoteAddr) {
+        return remoteAddr.substring(0, remoteAddr.lastIndexOf(':'));
     }
 
     private static long elapsedMs(long startedAt) {

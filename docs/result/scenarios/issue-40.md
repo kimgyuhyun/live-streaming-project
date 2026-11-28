@@ -87,20 +87,20 @@ IP는 문서용 대역(`203.0.113.0/24`, `198.51.100.0/24`)을 쓴다.
 
 ### 정상
 
-- [ ] [정상] `ViewerCounter.aggregate` — should write A=7 when channel A has 8 sessions from one IP and 2 sessions from two other IPs
-- [ ] [정상] `ViewerCounter.aggregate` — should write A=5 and B=5 when one IP has 5 sessions on A and 5 on B
-- [ ] [정상] `ViewerCounter.aggregate` — should write A=5 and B=3 when one IP has 8 sessions on A and 3 on B
-- [ ] [정상] `ViewerCountIntegration` — should store A=7 in the current snapshot when live channel A has 8 sessions from one IP and 2 from two other IPs
-- [ ] [정상] `ViewerCountIntegration` — should store A=5 and B=5 in the current snapshot when one IP has 5 sessions on live A and 5 on live B
-- [ ] [정상] `ViewerCountIntegration` — should leave no viewer IP in any Redis key or value after aggregating
-- [ ] [정상] `ViewerCountIntegration` — should leave no viewer IP in the log after aggregating
+- [x] [정상] `ViewerCounter.aggregate` — should write A=7 when channel A has 8 sessions from one IP and 2 sessions from two other IPs
+- [x] [정상] `ViewerCounter.aggregate` — should write A=5 and B=5 when one IP has 5 sessions on A and 5 on B
+- [x] [정상] `ViewerCounter.aggregate` — should write A=5 and B=3 when one IP has 8 sessions on A and 3 on B
+- [x] [정상] `ViewerCountIntegration` — should store A=7 in the current snapshot when live channel A has 8 sessions from one IP and 2 from two other IPs
+- [x] [정상] `ViewerCountIntegration` — should store A=5 and B=5 in the current snapshot when one IP has 5 sessions on live A and 5 on live B
+- [x] [정상] `ViewerCountIntegration` — should leave no viewer IP in any Redis key or value after aggregating
+- [x] [정상] `ViewerCountIntegration` — should leave no viewer IP in the log after aggregating
 
 ### 경계
 
-- [ ] [경계] `ViewerCounter.aggregate` — should write A=5 when one IP has exactly 5 sessions on channel A
-- [ ] [경계] `ViewerCounter.aggregate` — should write A=5 when one IP has 6 sessions on channel A
-- [ ] [경계] `ViewerCounter.aggregate` — should count sessions from the same IP on different ports as one IP
-- [ ] [경계] `ViewerCounter.aggregate` — should write A=2 when the limit is set to 2 and one IP has 3 sessions on channel A
+- [x] [경계] `ViewerCounter.aggregate` — should write A=5 when one IP has exactly 5 sessions on channel A
+- [x] [경계] `ViewerCounter.aggregate` — should write A=5 when one IP has 6 sessions on channel A
+- [x] [경계] `ViewerCounter.aggregate` — should count sessions from the same IP on different ports as one IP
+- [x] [경계] `ViewerCounter.aggregate` — should write A=2 when the limit is set to 2 and one IP has 3 sessions on channel A
 
 ### 예외
 
