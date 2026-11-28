@@ -117,3 +117,11 @@ services:
 
 volumes:
   oracle-data:
+
+networks:
+  default:
+    # 대역을 고정한다. MediaMTX가 이 대역(nginx)에서 온 X-Forwarded-For만 진짜 시청자 주소로 믿는다
+    # (infra/mediamtx/mediamtx.yml의 hlsTrustedProxies, #40). 바꾸면 그 값도 같이 바꾼다
+    ipam:
+      config:
+        - subnet: 172.27.0.0/16

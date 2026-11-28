@@ -31,10 +31,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.redis.connection.DataType;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
@@ -87,7 +91,7 @@ class ViewerCountIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     private HttpServer fakeMediaMtx;
-    // 가짜 MediaMTX가 줄 세션 경로. 페이지마다 한 묶음
+    // 가짜 MediaMTX가 줄 세션 경로. 페이지마다 한 묶음. "경로|주소:포트"로 쓰면 그 주소로, 경로만 쓰면 기본 주소로 준다
     private volatile List<List<String>> sessionPages = List.of(List.of());
     private volatile boolean failing;
     private final AtomicInteger listRequests = new AtomicInteger();
@@ -114,9 +118,11 @@ class ViewerCountIntegrationTest {
             List<String> items = page < pages.size() ? pages.get(page) : List.of();
             int pageCount = pages.size() == 1 && pages.get(0).isEmpty() ? 0 : pages.size();
             List<String> json = new ArrayList<>();
-            for (String path : items) {
+            for (String item : items) {
+                String path = item.contains("|") ? item.substring(0, item.indexOf('|')) : item;
+                String remoteAddr = item.contains("|") ? item.substring(item.indexOf('|') + 1) : "172.18.0.9:40000";
                 json.add("{\"id\":\"" + unique() + "\",\"created\":\"2026-11-27T22:05:39Z\","
-                        + "\"remoteAddr\":\"172.18.0.9:40000\",\"path\":\"" + path + "\",\"query\":\"\","
+                        + "\"remoteAddr\":\"" + remoteAddr + "\",\"path\":\"" + path + "\",\"query\":\"\","
                         + "\"user\":\"\",\"expiresAt\":null,\"userAgent\":\"test\",\"isCDN\":false,\"outboundBytes\":1}");
             }
             byte[] body = ("{\"itemCount\":" + items.size() + ",\"pageCount\":" + pageCount + ",\"items\":["
@@ -154,6 +160,15 @@ class ViewerCountIntegrationTest {
 
     private static List<String> sessions(long channelId, int count) {
         return Collections.nCopies(count, "live/" + channelId);
+    }
+
+    // 같은 IP에서 연 세션 count개. 탭마다 포트가 다르다
+    private static List<String> sessionsFrom(String ip, long channelId, int count) {
+        List<String> sessions = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            sessions.add("live/" + channelId + "|" + ip + ":" + (40000 + i));
+        }
+        return sessions;
     }
 
     private static List<String> concat(List<String> a, List<String> b) {
@@ -279,7 +294,7 @@ class ViewerCountIntegrationTest {
             goLive(a);
             sessionPages = List.of(sessions(a, 1));
             // 서버 2대: 같은 Redis·DB·MediaMTX를 보는 집계 객체 두 개
-            ViewerCounter otherServer = new ViewerCounter(mediaMtxClient, broadcastMapper, viewerSnapshot);
+            ViewerCounter otherServer = new ViewerCounter(mediaMtxClient, broadcastMapper, viewerSnapshot, 5);
             CountDownLatch start = new CountDownLatch(1);
             ExecutorService pool = Executors.newFixedThreadPool(2);
             try {
@@ -308,7 +323,7 @@ class ViewerCountIntegrationTest {
             long a = newChannel();
             goLive(a);
             sessionPages = List.of(sessions(a, 1));
-            ViewerCounter otherServer = new ViewerCounter(mediaMtxClient, broadcastMapper, viewerSnapshot);
+            ViewerCounter otherServer = new ViewerCounter(mediaMtxClient, broadcastMapper, viewerSnapshot, 5);
             viewerCounter.aggregate();
 
             otherServer.aggregate();
@@ -332,7 +347,7 @@ class ViewerCountIntegrationTest {
             long a = newChannel();
             goLive(a);
             sessionPages = List.of(sessions(a, 1));
-            ViewerCounter otherServer = new ViewerCounter(mediaMtxClient, broadcastMapper, viewerSnapshot);
+            ViewerCounter otherServer = new ViewerCounter(mediaMtxClient, broadcastMapper, viewerSnapshot, 5);
             // 이 서버가 한 회차를 센 뒤 멈췄다. 잠금은 지우지 않고 만료를 기다린다
             viewerCounter.aggregate();
             await().atMost(Duration.ofSeconds(6)).pollInterval(Duration.ofMillis(100))
@@ -393,5 +408,82 @@ class ViewerCountIntegrationTest {
 
             assertThat(viewerCountOf(a)).isEqualTo(3);
         }
+
+        // ── IP당 세션 한도(#40) ───────────────────────────────
+
+        @Test
+        @DisplayName("should store A=7 in the current snapshot when live channel A has 8 sessions from one IP and 2 from two other IPs")
+        void storesLimitedCount() {
+            long a = newChannel();
+            long broadcastA = goLive(a);
+            sessionPages = List.of(concat(concat(sessionsFrom("203.0.113.7", a, 8), sessionsFrom("203.0.113.8", a, 1)),
+                    sessionsFrom("198.51.100.4", a, 1)));
+
+            viewerCounter.aggregate();
+
+            assertThat(currentSnapshot()).containsEntry(String.valueOf(broadcastA), "7");
+        }
+
+        @Test
+        @DisplayName("should store A=5 and B=5 in the current snapshot when one IP has 5 sessions on live A and 5 on live B")
+        void storesLimitPerPath() {
+            long a = newChannel();
+            long b = newChannel();
+            long broadcastA = goLive(a);
+            long broadcastB = goLive(b);
+            sessionPages = List.of(concat(sessionsFrom("203.0.113.7", a, 5), sessionsFrom("203.0.113.7", b, 5)));
+
+            viewerCounter.aggregate();
+
+            assertThat(currentSnapshot())
+                    .containsEntry(String.valueOf(broadcastA), "5")
+                    .containsEntry(String.valueOf(broadcastB), "5");
+        }
+
+        @Test
+        @DisplayName("should leave no viewer IP in any Redis key or value after aggregating")
+        void leavesNoIpInRedis() {
+            long a = newChannel();
+            goLive(a);
+            sessionPages = List.of(concat(sessionsFrom("203.0.113.7", a, 6), sessionsFrom("198.51.100.4", a, 2)));
+
+            viewerCounter.aggregate();
+
+            assertThat(redisDump()).doesNotContain("203.0.113.7", "198.51.100.4");
+        }
+
+        @Test
+        @DisplayName("should leave no viewer IP in the log after aggregating")
+        @ExtendWith(OutputCaptureExtension.class)
+        void leavesNoIpInLog(CapturedOutput output) {
+            long a = newChannel();
+            goLive(a);
+            sessionPages = List.of(concat(sessionsFrom("203.0.113.7", a, 6), sessionsFrom("198.51.100.4", a, 2)));
+
+            viewerCounter.aggregate();
+
+            // 집계 로그가 잡혔는지 먼저 본다 — 아무것도 안 잡혔으면 "IP가 없다"는 아무 뜻이 없다
+            assertThat(output.getAll()).contains("시청자 수 집계 sessions=8")
+                    .doesNotContain("203.0.113.7", "198.51.100.4");
+        }
+    }
+
+    // Redis 전체(키 이름과 값)를 한 문자열로. 자료형마다 읽는 명령이 다르다
+    private String redisDump() {
+        StringBuilder dump = new StringBuilder();
+        for (String key : redis.keys("*")) {
+            dump.append(key).append('\n');
+            DataType type = redis.type(key);
+            switch (type) {
+                case STRING -> dump.append(redis.opsForValue().get(key));
+                case HASH -> dump.append(redis.opsForHash().entries(key));
+                case SET -> dump.append(redis.opsForSet().members(key));
+                case ZSET -> dump.append(redis.opsForZSet().range(key, 0, -1));
+                case LIST -> dump.append(redis.opsForList().range(key, 0, -1));
+                default -> { }
+            }
+            dump.append('\n');
+        }
+        return dump.toString();
     }
 }

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 
@@ -18,11 +19,14 @@ class ViewerCounter {
     private final MediaMtxClient mediaMtxClient;
     private final BroadcastMapper broadcastMapper;
     private final ViewerSnapshot viewerSnapshot;
+    private final int maxSessionsPerIp;
 
-    ViewerCounter(MediaMtxClient mediaMtxClient, BroadcastMapper broadcastMapper, ViewerSnapshot viewerSnapshot) {
+    ViewerCounter(MediaMtxClient mediaMtxClient, BroadcastMapper broadcastMapper, ViewerSnapshot viewerSnapshot,
+                  @Value("${app.viewer.max-sessions-per-ip}") int maxSessionsPerIp) {
         this.mediaMtxClient = mediaMtxClient;
         this.broadcastMapper = broadcastMapper;
         this.viewerSnapshot = viewerSnapshot;
+        this.maxSessionsPerIp = maxSessionsPerIp;
     }
 
     // 잠금을 못 잡으면(다른 서버가 이번 회차를 센다) 아무것도 하지 않는다.
@@ -40,10 +44,7 @@ class ViewerCounter {
             log.warn("시청자 수 집계 실패 cause={} elapsedMs={}", e.getClass().getSimpleName(), elapsedMs(startedAt));
             return;
         }
-        Map<Long, Long> sessionsByChannel = new HashMap<>();
-        for (MediaMtxClient.HlsSession session : sessions) {
-            LivePath.channelIdOf(session.path()).ifPresent(channelId -> sessionsByChannel.merge(channelId, 1L, Long::sum));
-        }
+        Map<Long, Long> sessionsByChannel = countByChannel(sessions);
         List<LiveBroadcast> live = broadcastMapper.findLiveBroadcasts();
         Map<Long, Long> countsByBroadcast = new HashMap<>();
         for (LiveBroadcast broadcast : live) {
@@ -52,6 +53,26 @@ class ViewerCounter {
         viewerSnapshot.write(countsByBroadcast);
         log.info("시청자 수 집계 sessions={} broadcasts={} elapsedMs={}", sessions.size(), live.size(),
                 elapsedMs(startedAt));
+    }
+
+    // 채널ID → 센 세션 수. 같은 채널에서 같은 IP의 세션은 maxSessionsPerIp개까지만 센다(#40)
+    // IP는 이 메서드 안의 지역 맵에서만 쓰고 버린다 — 판·로그로 나가는 것은 채널별 수뿐이다
+    private Map<Long, Long> countByChannel(List<MediaMtxClient.HlsSession> sessions) {
+        Map<Long, Map<String, Long>> sessionsByChannelAndIp = new HashMap<>();
+        for (MediaMtxClient.HlsSession session : sessions) {
+            LivePath.channelIdOf(session.path()).ifPresent(channelId -> sessionsByChannelAndIp
+                    .computeIfAbsent(channelId, id -> new HashMap<>())
+                    .merge(ipOf(session.remoteAddr()), 1L, Long::sum));
+        }
+        Map<Long, Long> counts = new HashMap<>();
+        sessionsByChannelAndIp.forEach((channelId, sessionsByIp) -> counts.put(channelId,
+                sessionsByIp.values().stream().mapToLong(count -> Math.min(count, maxSessionsPerIp)).sum()));
+        return counts;
+    }
+
+    // remoteAddr는 "주소:포트"(IPv6는 "[주소]:포트"). 탭마다 포트가 달라 포트를 떼야 같은 IP로 묶인다
+    private static String ipOf(String remoteAddr) {
+        return remoteAddr.substring(0, remoteAddr.lastIndexOf(':'));
     }
 
     private static long elapsedMs(long startedAt) {
