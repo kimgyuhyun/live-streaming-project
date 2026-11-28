@@ -104,7 +104,17 @@ IP는 문서용 대역(`203.0.113.0/24`, `198.51.100.0/24`)을 쓴다.
 
 ### 예외
 
-- [ ] [예외] `ViewerCountIntegration` — should leave no viewer IP in the log when the session list cannot be read
+없음 — Red 기록 참고.
+
+### Red 기록
+
+- 만든 stub: `ViewerCounter` 생성자 인자 `maxSessionsPerIp`(`@Value("${app.viewer.max-sessions-per-ip}")`)와 `application.yml`의 `app.viewer.max-sessions-per-ip: 5`(없으면 Spring 컨텍스트가 뜨지 않아 모든 통합 테스트가 나쁜 실패를 낸다), 채널별 셈을 맡는 private `countByChannel`(본문 `UnsupportedOperationException`). `aggregate`의 채널별 셈 루프를 이 호출로 바꿨다.
+- **시나리오 한 줄을 뺐다** — `[예외] ViewerCountIntegration — should leave no viewer IP in the log when the session list cannot be read`. 세션 목록을 못 읽으면 `aggregate`가 셈에 닿기 전에 #39의 실패 처리(예외 이름만 로그)로 끝난다. 이 이슈가 바꾸는 코드를 지나지 않아 구현 없이 통과하는 테스트가 된다. AC 4는 나머지 두 시나리오(Redis·로그)가 덮는다.
+- **stub이 #39 테스트를 깨뜨린다(의도)** — `aggregate`가 stub을 부르므로 판을 쓰는 #39 테스트(`ViewerCounterTest` 3개, `ViewerCountIntegrationTest` 13개)가 Red 동안 함께 실패한다. Green의 첫 구현에서 돌아온다. stub에서 셈을 미리 채우면 "정확히 5개"·"A=5, B=5" 시나리오가 구현 없이 통과한다.
+- 기존 테스트 손질(컴파일): `new ViewerCounter(...)`에 한도 5(`ViewerCounterTest` 1곳, `ViewerCountIntegrationTest` 3곳). 통합 테스트의 가짜 MediaMTX는 세션을 `"경로|주소:포트"`로 받으면 그 주소를 `remoteAddr`로 준다(경로만 쓰면 예전 기본 주소 그대로).
+- 실행: 단위(`ViewerCounterTest`)는 파일로 돌려 하나씩 실패를 봤고, 통합(`ViewerCountIntegrationTest`)은 컨테이너 기동 때문에 다 쓰고 파일 단위로 한 번.
+- 결과: 시나리오 11개 = 단위 7 + 통합 4. **11개 전부 실패, 구현 없이 통과한 것 0개.** 모두 `UnsupportedOperationException: not implemented`(stub)에 닿았다.
+  - 같은 실행에서 #39 테스트 16개도 같은 stub 메시지로 실패, 판을 쓰지 않는 #39 테스트 1개(`…no snapshot has been made`)는 통과.
 
 ---
 
@@ -115,15 +125,14 @@ IP는 문서용 대역(`203.0.113.0/24`, `198.51.100.0/24`)을 쓴다.
 | 1. 같은 IP 세션 8개 + 다른 IP 2개가 A에 → A=7 | `[정상] ViewerCounter.aggregate — …A=7…8 sessions from one IP…`<br>`[정상] ViewerCountIntegration — …store A=7…`<br>`[경계] ViewerCounter.aggregate — …exactly 5 sessions…`·`…6 sessions…`<br>`[경계] ViewerCounter.aggregate — …same IP on different ports as one IP`<br>`[경계] ViewerCounter.aggregate — …limit is set to 2…` |
 | 2. 같은 IP가 A에 5, B에 5 → A=5, B=5(경로마다) | `[정상] ViewerCounter.aggregate — …A=5 and B=5…`<br>`[정상] ViewerCountIntegration — …store A=5 and B=5…`<br>`[정상] ViewerCounter.aggregate — …A=5 and B=3…8 sessions on A and 3 on B` |
 | 3. 로컬 도커에서 nginx 경유 시청 → `remoteAddr`가 nginx 내부 주소가 아니라 요청한 쪽 주소(수동) | 수동 확인 — 아래 "수동 확인" 절에 시각과 관측값을 기록했다(자동 테스트 없음) |
-| 4. 집계 → 로그·Redis 어디에도 시청자 IP가 없다 | `[정상] ViewerCountIntegration — …no viewer IP in any Redis key or value…`<br>`[정상] ViewerCountIntegration — …no viewer IP in the log after aggregating`<br>`[예외] ViewerCountIntegration — …no viewer IP in the log when the session list cannot be read` |
+| 4. 집계 → 로그·Redis 어디에도 시청자 IP가 없다 | `[정상] ViewerCountIntegration — …no viewer IP in any Redis key or value…`<br>`[정상] ViewerCountIntegration — …no viewer IP in the log after aggregating` |
 
-**커버리지:** AC 4개(자동 3 + 수동 1) / 시나리오 12개 / 미커버 0개
+**커버리지:** AC 4개(자동 3 + 수동 1) / 시나리오 11개 / 미커버 0개
 
 AC에 없는데 추가한 것:
 - `…same IP on different ports as one IP` — `remoteAddr`에 포트가 붙어 온다. 포트까지 IP로 보면 탭마다 따로 세져 한도가 동작하지 않는다(이슈 "IP마다").
 - `…limit is set to 2…` — 한도가 고정 숫자가 아니라 설정값(`app.viewer.max-sessions-per-ip`)인지 본다(이슈 "한도는 설정값").
 - `…A=5 and B=3…` — 한 경로의 한도 초과가 다른 경로의 수를 깎지 않는지 본다(AC 2 "경로마다").
-- `[예외] …session list cannot be read` — 응답이 깨졌을 때 예외 메시지에 응답 조각(주소)이 섞여 로그로 새지 않는지 본다(AC 4 "어디에도").
 
 ---
 
